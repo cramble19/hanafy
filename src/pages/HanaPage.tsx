@@ -68,6 +68,7 @@ export function HanaPage({
   const longTermCheckedIds = getLongTermCheckedIds(game)
   const springArc = getSpringArcProgress(game)
   const seasonalQuote = getSeasonalQuote(game.currentDate)
+  const showDevControls = import.meta.env.DEV
   const longTermMetaById = Object.fromEntries(
     visibleQuests.longTerm.map((quest) => [
       quest.id,
@@ -82,7 +83,7 @@ export function HanaPage({
   }
 
   return (
-    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-20 pt-6">
+    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-32 pt-6">
       <SpringDecor />
       <div className="mb-6 flex items-center gap-3">
         <button
@@ -111,14 +112,6 @@ export function HanaPage({
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
               <CalendarDays className="size-4" />
               {displayDate(game.currentDate)}
-            </p>
-          </div>
-          <div className="rounded-full border border-border bg-surface px-3 py-1.5 text-right shadow-sm">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
-              Level
-            </p>
-            <p className="text-xl font-semibold tabular-nums text-ink">
-              {levelProgress.level}
             </p>
           </div>
         </div>
@@ -171,16 +164,51 @@ export function HanaPage({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenGarden}
-          className="mt-5 w-full rounded-control border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-ink shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
-        >
-          Open Hana&apos;s night garden
-        </button>
+        <MiniGardenPreview
+          totalFlowers={game.totalFlowers}
+          springPercent={springArc.percent}
+          onOpenGarden={onOpenGarden}
+        />
       </section>
 
-      <section className="spring-arc-card mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
+      <main className="space-y-8">
+        <QuestSection
+          title="Daily Quests"
+          quests={visibleQuests.daily}
+          checkedIds={dailyCheckedIds}
+          skippedIds={skippedIds}
+          canSkip={skipProgress.remaining > 0}
+          onToggle={onToggle}
+          onSkip={onSkip}
+        />
+        <QuestSection
+          title="Long Term Quests"
+          quests={visibleQuests.longTerm}
+          checkedIds={longTermCheckedIds}
+          skippedIds={skippedIds}
+          canSkip={skipProgress.remaining > 0}
+          metaById={longTermMetaById}
+          onToggle={onToggle}
+          onSkip={onSkip}
+        />
+        <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
+          <span className="font-medium text-ink">Weekly skips:</span>{' '}
+          {skipProgress.remaining}/{skipProgress.limit} left
+          <p className="mt-1 text-xs text-faint">
+            Skips reset every Sunday. A skipped quest gives 0 flowers.
+          </p>
+        </div>
+        <EveningWeeds
+          weeds={eveningWeeds}
+          checkedIds={weedCheckedIds}
+          weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
+          weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
+          wiltedFlowers={weedProgress.wiltedFlowers}
+          onToggle={onToggleWeed}
+        />
+      </main>
+
+      <section className="spring-arc-card mt-10 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-faint">
@@ -226,69 +254,124 @@ export function HanaPage({
               ? `${springArc.flowersRemaining} more flowers to finish this gentle first season.`
               : 'Reach the Spring level target to close Arc 1.'}
         </p>
-
       </section>
 
-      <main className="space-y-8">
-        <QuestSection
-          title="Daily Quests"
-          quests={visibleQuests.daily}
-          checkedIds={dailyCheckedIds}
-          skippedIds={skippedIds}
-          canSkip={skipProgress.remaining > 0}
-          onToggle={onToggle}
-          onSkip={onSkip}
-        />
-        <QuestSection
-          title="Long Term Quests"
-          quests={visibleQuests.longTerm}
-          checkedIds={longTermCheckedIds}
-          skippedIds={skippedIds}
-          canSkip={skipProgress.remaining > 0}
-          metaById={longTermMetaById}
-          onToggle={onToggle}
-          onSkip={onSkip}
-        />
-        <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
-          <span className="font-medium text-ink">Weekly skips:</span>{' '}
-          {skipProgress.remaining}/{skipProgress.limit} left
-          <p className="mt-1 text-xs text-faint">
-            Skips reset every Sunday. A skipped quest gives 0 flowers.
+      {showDevControls ? (
+        <section className="mt-10 rounded-card border border-dashed border-border bg-surface/70 p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
+            Dev testing
           </p>
-        </div>
-        <EveningWeeds
-          weeds={eveningWeeds}
-          checkedIds={weedCheckedIds}
-          weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
-          weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
-          wiltedFlowers={weedProgress.wiltedFlowers}
-          onToggle={onToggleWeed}
-        />
-      </main>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={onNextDay}
+              className="rounded-control bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
+            >
+              Next day
+            </button>
+            <button
+              type="button"
+              onClick={resetWithConfirmation}
+              className="inline-flex items-center justify-center gap-2 rounded-control border border-border bg-surface px-4 py-3 text-sm font-medium text-muted shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
+            >
+              <RotateCcw className="size-4" />
+              Reset
+            </button>
+          </div>
+        </section>
+      ) : null}
 
-      <section className="mt-10 rounded-card border border-dashed border-border bg-surface/70 p-4">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
-          Dev testing
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={onNextDay}
-            className="rounded-control bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
-          >
-            Next day
-          </button>
-          <button
-            type="button"
-            onClick={resetWithConfirmation}
-            className="inline-flex items-center justify-center gap-2 rounded-control border border-border bg-surface px-4 py-3 text-sm font-medium text-muted shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
-          >
-            <RotateCcw className="size-4" />
-            Reset
-          </button>
-        </div>
-      </section>
+      <div className="sticky-garden-bar">
+        <button
+          type="button"
+          onClick={onOpenGarden}
+          className="sticky-garden-button"
+          aria-label="Open Hana's night garden"
+        >
+          <span className="sticky-garden-moon" aria-hidden="true" />
+          <span>
+            <span className="block text-sm font-semibold text-ink">
+              Open night garden
+            </span>
+            <span className="block text-xs text-muted">
+              {game.totalFlowers} flowers planted · {skipProgress.remaining} skips left
+            </span>
+          </span>
+        </button>
+      </div>
     </div>
+  )
+}
+
+function MiniGardenPreview({
+  totalFlowers,
+  springPercent,
+  onOpenGarden,
+}: {
+  totalFlowers: number
+  springPercent: number
+  onOpenGarden: () => void
+}) {
+  const bloomCount = Math.min(5, Math.max(1, Math.ceil(springPercent / 20)))
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenGarden}
+      className="mini-garden-card mt-5 w-full text-left transition active:scale-[0.98] motion-reduce:transition-none"
+      aria-label="Open Hana's night garden"
+    >
+      <span className="mini-garden-sky" aria-hidden="true">
+        <span className="mini-garden-moon" />
+        {Array.from({ length: bloomCount }, (_, index) => (
+          <MiniBloom key={index} index={index} />
+        ))}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-ink">
+          Night garden preview
+        </span>
+        <span className="mt-0.5 block text-xs leading-5 text-muted">
+          {totalFlowers === 0
+            ? 'Plant the first flower today.'
+            : `${totalFlowers} net flowers are blooming under the moon.`}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+function MiniBloom({ index }: { index: number }) {
+  const left = 18 + index * 13
+  const colors = ['#f7a6be', '#d98ba0', '#f1b56f', '#9e8fd0', '#8fb48a']
+
+  return (
+    <svg
+      viewBox="0 0 24 34"
+      className="mini-garden-flower"
+      style={{ left: `${left}%`, animationDelay: `${index * 120}ms` }}
+      aria-hidden="true"
+    >
+      <path
+        d="M12 31 C12 23 12 17 12 11"
+        fill="none"
+        stroke="#78ab63"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      {[0, 72, 144, 216, 288].map((deg) => (
+        <ellipse
+          key={deg}
+          cx="12"
+          cy="9"
+          rx="3.5"
+          ry="6"
+          fill={colors[index % colors.length]}
+          transform={`rotate(${deg} 12 12)`}
+        />
+      ))}
+      <circle cx="12" cy="12" r="2.8" fill="#eea63a" />
+    </svg>
   )
 }
 

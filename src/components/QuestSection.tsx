@@ -26,6 +26,11 @@ export function QuestSection({
     <section className="space-y-3">
       <div className="px-1">
         <h2 className="text-xl font-semibold text-ink">{title}</h2>
+        <div className="section-bloom-divider" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
       <div className="space-y-3">
         {quests.map((quest) => (

@@ -40,12 +40,17 @@ The quest page only shows Hana's flower balance and progress. The actual garden
 is a dedicated page with a night sky, a softly drifting moon, twinkling stars,
 occasional comets, hills, and planted flowers.
 
+Hana's page also has a small night-garden preview and a soft bottom Garden button
+so the garden feels close without crowding the quest list.
+
 At the center of the garden, a quiet couple silhouette sits together watching
 the stars.
 
 Every net flower in Hana's balance plants a real illustrated flower in the garden
 (not an emoji). Evening Weeds can wilt flowers from the balance, so the visible
 garden reflects the current net flower count.
+
+As Spring gets closer to full, the Garden page gets warmer, richer, and glowier.
 
 ## Evening Weeds
 
@@ -125,10 +130,11 @@ Hana collects flowers and levels up, a few extra supportive quests unlock slowly
 
 ## Dev testing
 
-For now, the Hana page has two temporary testing buttons:
+In local development, the Hana page has two temporary testing buttons:
 
 - **Next day:** moves the tracker forward one day so we can test daily resets and
   long-term deadlines.
 - **Reset:** clears Hana's flowers and checked quests.
 
-These are temporary while we build and test the game.
+These only appear when running locally with the dev server. They are hidden from
+the deployed production app.

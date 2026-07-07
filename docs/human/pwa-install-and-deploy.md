@@ -7,7 +7,7 @@ Hanafy is now set up as an installable web app.
 The app can be opened in a phone browser and added to the home screen like a
 normal app. It has:
 
-- an app name
+- an app name: **Hanafy - Spring Garden**
 - app icons
 - a mobile theme color
 - standalone app mode

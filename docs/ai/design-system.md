@@ -136,9 +136,10 @@ non-interactive.
 - Durations: fast `120ms`, base `180ms`, slow `240ms`; celebration up to `900ms`.
 - Easing: `cubic-bezier(0.2, 0, 0, 1)` for enter/among UI; spring for check-off / ring-fill.
 - Interactions:
-  - Check off: ring fills (animate stroke) + check scales `0.9 -> 1` (spring); haptic if available.
+  - Check off: whole quest card toggles completion; completed cards get a soft
+    green wash, tiny bloom sparkles, and a small `+N flowers planted` feedback pill.
   - Card press: scale `0.98`.
-  - XP gain: bar width transitions + short count-up on the number.
+  - Flower gain: bar width transitions + short planted-flower copy.
   - Milestone / goal reached: brief `canvas-confetti` burst (< 900ms).
 - **`prefers-reduced-motion`: always respected** — disable transforms and confetti,
   keep instant opacity changes. Celebrations are also toggleable in Settings.
@@ -157,9 +158,10 @@ to taps or logins.
   rounded linecap. Fills on completion; also renders daily-goal percentage.
 - **Streak:** flame icon + tabular number. Grows subtly. **Never punitive** — no
   guilt copy; a missed day offers a gentle "streak freeze" (limited) or "start fresh".
-- **XP bar:** slim (`8px`), `--radius-full`, `--success` fill; label `x / y XP`.
-  XP = `+10` per completion + milestone bonuses. Level = `floor(sqrt(xp / 50)) + 1`.
-- **Level badge:** circular outlined chip, `Lv N`.
+- **Flower bar:** slim (`8px`), `--radius-full`, `--success` fill; labels use
+  flower counts, not XP.
+- **Level display:** keep level visible in progress cards; avoid large circular
+  level badges on the main deployed Hana page.
 - **Badges / achievements:** grid of chips. Locked = outlined + lock + greyscale
   icon. Unlocked = soft fill + colored icon + title + one-line description.
   Unlock -> `sonner` toast + short celebration. Reserve for meaningful milestones only.
@@ -170,10 +172,14 @@ to taps or logins.
 
 ## 9. Layout, navigation & screens
 
-- **Bottom tab bar:** `Today` / `Progress` / `Profile`. Thin line icons + label;
-  active = `--ink`, inactive = `--muted`.
-- **Today (hero):** header (greeting eyebrow, "Today" title, date, `Lv` badge),
-  slim XP bar, list of habit cards (ring + emoji + name + streak + check), FAB `+`.
+- **Sticky Garden action:** Hana's main page may use a soft sticky bottom action
+  that opens the night garden and shows flower/skip context.
+- **Mini garden preview:** a compact SVG night-garden preview can sit near the
+  flower balance card. It should use illustrated flowers and moon shapes, not emoji clutter.
+- **Section dividers:** use tiny stem/petal dividers under section titles instead
+  of heavy rules.
+- **Today (hero):** header (arc eyebrow, "Today" title, date), flower balance,
+  slim flower bar, list of quest cards, and Garden access.
 - **Progress:** current/longest streak stat tiles, heatmap, "This week" bar chart,
   achievements grid.
 - **Profile / Settings:** level + XP summary; theme (light by default, more later);

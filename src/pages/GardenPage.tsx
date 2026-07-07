@@ -1,4 +1,5 @@
 import { ChevronLeft } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import {
   getLevelProgress,
   getSpringArcProgress,
@@ -38,11 +39,23 @@ export function GardenPage({ game, onBack }: Props) {
   const levelProgress = getLevelProgress(game.totalFlowers)
   const weedProgress = getWeedProgress(game)
   const springArc = getSpringArcProgress(game)
+  const springFullness = springArc.percent / 100
+  const springGardenStyle = {
+    '--spring-fullness': springFullness,
+    '--spring-aura-opacity': 0.12 + springFullness * 0.58,
+    '--spring-stage-saturation': 0.92 + springFullness * 0.32,
+    '--spring-hill-opacity': 0.82 + springFullness * 0.16,
+    '--spring-hill-glow': 0.12 + springFullness * 0.18,
+    '--spring-flower-opacity': 0.86 + springFullness * 0.14,
+  } as CSSProperties
   const plantedCount = Math.min(game.totalFlowers, 48)
   const flowers = Array.from({ length: plantedCount })
 
   return (
-    <div className="mx-auto min-h-full w-full max-w-md bg-[#0d1535] text-white">
+    <div
+      className="garden-page-shell mx-auto min-h-full w-full max-w-md bg-[#0d1535] text-white"
+      style={springGardenStyle}
+    >
       <div className="relative min-h-full overflow-hidden">
         <div className="garden-night-sky" aria-hidden="true">
           <div className="garden-moon" />
@@ -96,6 +109,7 @@ export function GardenPage({ game, onBack }: Props) {
             className={`garden-stage ${springArc.isComplete ? 'garden-stage-complete' : ''}`}
             aria-label="Hana's planted garden"
           >
+            <div className="spring-fullness-aura" aria-hidden="true" />
             <div className="garden-horizon" aria-hidden="true" />
             <div className="garden-hill garden-hill-back" aria-hidden="true" />
             <div className="garden-hill garden-hill-front" aria-hidden="true" />

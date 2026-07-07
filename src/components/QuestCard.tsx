@@ -50,7 +50,7 @@ export function QuestCard({
       aria-pressed={checked}
       aria-disabled={skipped}
       aria-label={`${quest.title}. ${quest.description}. Worth ${flowerReward} flowers.`}
-      className={`flex w-full select-none items-center gap-3 rounded-card border bg-surface p-3 text-left shadow-sm outline-none transition active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none ${
+      className={`relative flex w-full select-none items-center gap-3 overflow-hidden rounded-card border bg-surface p-3 text-left shadow-sm outline-none transition active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none ${
         checked
           ? 'quest-card-complete border-transparent'
           : skipped
@@ -58,6 +58,13 @@ export function QuestCard({
             : 'border-border'
       } ${skipped ? 'cursor-default' : 'cursor-pointer'}`}
     >
+      {checked ? (
+        <span className="quest-bloom-sparkles" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      ) : null}
       <span
         aria-hidden="true"
         className="flex size-12 shrink-0 items-center justify-center rounded-full text-2xl"
@@ -93,6 +100,11 @@ export function QuestCard({
         {meta ? (
           <span className="ml-2 inline-flex items-center rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-faint">
             {meta}
+          </span>
+        ) : null}
+        {checked ? (
+          <span className="quest-flower-feedback">
+            +{flowerReward} {flowerReward === 1 ? 'flower' : 'flowers'} planted
           </span>
         ) : null}
       </span>

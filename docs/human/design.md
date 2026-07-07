@@ -15,6 +15,10 @@ mood: warm, bright, and calm, with a little moment of joy when you succeed.
   or reach a streak.
 - **Spring details.** Hana's Spring page can have slow, faint petals behind the
   cards, but the edges should stay clean and the page should never feel busy.
+- **Soft game feedback.** Completed quests get a gentle green wash, tiny bloom
+  sparkles, and a small flower-planted message.
+- **Garden close by.** Hana's page can show a small illustrated night-garden
+  preview and a soft bottom Garden button.
 
 ## What you see
 

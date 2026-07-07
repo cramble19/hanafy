@@ -19,27 +19,28 @@ export default defineConfig({
       ],
       manifest: {
         id: '/',
-        name: "Hanafy - Hana's Garden",
+        name: 'Hanafy - Spring Garden',
         short_name: 'Hanafy',
-        description: "A gentle flower quest tracker for Hana's healthy lifestyle arc.",
+        description: 'A gentle spring flower game for Hana and Cramble.',
         theme_color: '#fffaf0',
         background_color: '#fffaf0',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        categories: ['health', 'lifestyle', 'productivity'],
         icons: [
           {
             src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any',
+            purpose: 'any maskable',
           },
           {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any',
+            purpose: 'any maskable',
           },
           {
             src: '/maskable-icon-512x512.png',

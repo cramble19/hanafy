@@ -93,8 +93,9 @@ the day. Quote `kind` values are:
 
 ## Garden page
 
-The mini emoji garden was removed from `HanaPage`. The quest page now only shows
-flower balance, level progress, and an "Open Hana's night garden" button.
+The mini emoji garden was removed from `HanaPage`. The quest page shows flower
+balance, level progress, a compact illustrated mini garden preview, and a sticky
+Garden action bar.
 
 `GardenPage` is the dedicated visual reward space. It renders:
 
@@ -109,6 +110,12 @@ flower balance, level progress, and an "Open Hana's night garden" button.
 The visible garden uses net flowers after Evening Weed penalties. It caps the
 rendered flowers for layout/performance, while the balance still shows the true
 count.
+
+`GardenPage` reads `getSpringArcProgress()` and sets CSS variables for fullness
+(`--spring-aura-opacity`, `--spring-stage-saturation`, `--spring-hill-opacity`,
+`--spring-hill-glow`, `--spring-flower-opacity`). These make the garden warmer
+and richer as Spring approaches 100% while keeping the flower count tied to
+`game.totalFlowers`.
 
 ## Leveling
 
@@ -245,9 +252,11 @@ buckets so older local progress does not crash the app.
 
 ## Dev controls
 
-The Hana page has temporary controls:
+The Hana page has local-only temporary controls, rendered behind
+`import.meta.env.DEV`:
 
 - **Next day:** increments `currentDate` by one day to test daily reset and long-term deadlines.
 - **Reset:** clears `localStorage` and resets Hana's flowers/completions.
 
-Remove or hide these before a polished release build.
+They are hidden from production/Vercel builds but remain available during
+`npm run dev`.

@@ -79,6 +79,66 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.home-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.home-shell > :not(.home-orb):not(.home-memory-overlay) {
+  position: relative;
+  z-index: 1;
+}
+.home-orb {
+  position: absolute;
+  z-index: 0;
+  border-radius: 9999px;
+  filter: blur(18px);
+  opacity: 0.46;
+  pointer-events: none;
+}
+.home-orb-flower {
+  top: 18%;
+  left: 12%;
+  width: 10rem;
+  height: 10rem;
+  background: rgba(247, 166, 190, 0.42);
+}
+.home-orb-sun {
+  right: 9%;
+  bottom: 22%;
+  width: 12rem;
+  height: 12rem;
+  background: rgba(255, 240, 196, 0.72);
+}
+.home-whose {
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.08em;
+  text-decoration-color: rgba(217, 139, 160, 0.34);
+  text-underline-offset: 0.16em;
+}
+.home-memory-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: rgba(43, 38, 32, 0.35);
+  padding: 1.25rem;
+  backdrop-filter: blur(10px);
+  animation: memory-overlay-in 180ms ease-out both;
+}
+.home-memory-card {
+  width: min(100%, 24rem);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 28px;
+  background: var(--surface);
+  padding: 0.75rem;
+  box-shadow: 0 24px 80px rgba(43, 38, 32, 0.22);
+  animation: memory-card-in 260ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
 .hana-spring-shell {
   position: relative;
   isolation: isolate;
@@ -111,6 +171,36 @@ body {
   box-shadow: 0 0 16px rgba(247, 166, 190, 0.26);
   transform: rotate(32deg);
   animation: petal-drift 9s linear infinite;
+}
+
+.section-bloom-divider {
+  margin-top: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--faint);
+}
+.section-bloom-divider::before {
+  content: "";
+  width: 2.8rem;
+  height: 1px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(120, 171, 99, 0.38), transparent);
+}
+.section-bloom-divider span {
+  width: 0.34rem;
+  height: 0.52rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(217, 139, 160, 0.46);
+  rotate: 35deg;
+}
+.section-bloom-divider span:nth-child(2) {
+  background: rgba(238, 166, 58, 0.36);
+  scale: 0.84;
+}
+.section-bloom-divider span:nth-child(3) {
+  background: rgba(120, 171, 99, 0.36);
+  scale: 0.72;
 }
 
 /* Home chooser emblems (flower = Hana, sun = Cramble) */
@@ -161,9 +251,56 @@ body {
 }
 
 .quest-card-complete {
+  background:
+    linear-gradient(0deg, rgba(120, 171, 99, 0.09), rgba(120, 171, 99, 0.09)),
+    radial-gradient(circle at 92% 18%, rgba(255, 244, 191, 0.34), transparent 24%),
+    var(--surface);
   box-shadow:
     0 8px 22px -14px rgba(120, 171, 99, 0.65),
     inset 0 0 0 1px rgba(120, 171, 99, 0.08);
+}
+.quest-bloom-sparkles {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+.quest-bloom-sparkles span {
+  position: absolute;
+  width: 0.42rem;
+  height: 0.62rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(247, 166, 190, 0.68);
+  opacity: 0;
+  animation: quest-sparkle 1.15s ease-out forwards;
+}
+.quest-bloom-sparkles span:nth-child(1) {
+  right: 3.4rem;
+  top: 0.8rem;
+}
+.quest-bloom-sparkles span:nth-child(2) {
+  right: 1.6rem;
+  top: 2.7rem;
+  animation-delay: 120ms;
+  background: rgba(255, 244, 191, 0.78);
+}
+.quest-bloom-sparkles span:nth-child(3) {
+  right: 5.2rem;
+  bottom: 0.9rem;
+  animation-delay: 220ms;
+  background: rgba(120, 171, 99, 0.5);
+}
+.quest-flower-feedback {
+  margin-top: 0.35rem;
+  display: block;
+  width: fit-content;
+  border-radius: 9999px;
+  background: rgba(120, 171, 99, 0.12);
+  padding: 0.2rem 0.55rem;
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  animation: reward-rise 520ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 .quest-card-skipped {
@@ -196,11 +333,135 @@ body {
   animation: flower-pulse 2.8s ease-in-out infinite;
 }
 
-.spring-quote-card {
+.mini-garden-card {
+  display: grid;
+  grid-template-columns: 6.4rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background:
+    radial-gradient(circle at 18% 18%, rgba(255, 244, 191, 0.42), transparent 28%),
+    linear-gradient(135deg, rgba(253, 243, 227, 0.84), rgba(255, 255, 255, 0.76));
+  padding: 0.7rem;
+  box-shadow: 0 12px 28px -22px rgba(43, 38, 32, 0.35);
+}
+.mini-garden-sky {
+  position: relative;
+  min-height: 4.6rem;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 76% 22%, rgba(255, 244, 191, 0.74), transparent 16%),
+    linear-gradient(180deg, #222b5a, #6f8d5f);
+}
+.mini-garden-sky::after {
+  content: "";
+  position: absolute;
+  inset-inline: -10%;
+  bottom: -1.1rem;
+  height: 2.8rem;
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, #7ca06a, #527746);
+}
+.mini-garden-moon {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.62rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 9999px;
+  background: #fff4bf;
+  box-shadow: 0 0 16px rgba(255, 244, 191, 0.72);
+}
+.mini-garden-flower {
+  position: absolute;
+  bottom: 0.45rem;
+  z-index: 1;
+  width: 1.45rem;
+  height: 2.2rem;
+  transform: translateX(-50%);
+  animation: mini-bloom 520ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+.sticky-garden-bar {
+  position: sticky;
+  bottom: 0.8rem;
+  z-index: 10;
+  margin-top: 1.4rem;
+}
+.sticky-garden-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(90, 65, 25, 0.12);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.72rem 0.9rem;
+  text-align: left;
+  box-shadow:
+    0 16px 50px -28px rgba(43, 38, 32, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+  transition:
+    transform 180ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 180ms;
+}
+.sticky-garden-button:active {
+  transform: scale(0.98);
+}
+.sticky-garden-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  outline-offset: 3px;
+}
+.sticky-garden-moon {
+  position: relative;
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #1f2855, #59674c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+.sticky-garden-moon::before {
+  content: "";
+  width: 0.82rem;
+  height: 0.82rem;
+  border-radius: 9999px;
+  background: #fff4bf;
+  box-shadow: 0 0 12px rgba(255, 244, 191, 0.64);
+}
+
+.spring-quote-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px),
     radial-gradient(circle at 92% 0%, rgba(247, 166, 190, 0.18), transparent 28%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(253, 243, 227, 0.78)),
     var(--surface);
+  background-size: 100% 1.45rem, auto, auto, auto;
+}
+.spring-quote-card::after {
+  content: "";
+  position: absolute;
+  right: 1rem;
+  bottom: 0.9rem;
+  width: 1.1rem;
+  height: 1.5rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.32), transparent 28%),
+    rgba(217, 139, 160, 0.24);
+  rotate: 34deg;
+}
+.spring-quote-card blockquote {
+  font-size: 0.96rem;
+  letter-spacing: -0.01em;
+  line-height: 1.72;
 }
 
 .spring-arc-card {
@@ -208,6 +469,15 @@ body {
     radial-gradient(circle at 85% 8%, rgba(247, 166, 190, 0.26), transparent 28%),
     radial-gradient(circle at 8% 0%, rgba(255, 240, 196, 0.62), transparent 34%),
     var(--surface);
+}
+
+.garden-page-shell {
+  --spring-fullness: 0;
+  --spring-aura-opacity: 0.12;
+  --spring-stage-saturation: 0.92;
+  --spring-hill-opacity: 0.82;
+  --spring-hill-glow: 0.12;
+  --spring-flower-opacity: 0.86;
 }
 
 .garden-night-sky {
@@ -308,6 +578,18 @@ body {
     0 22px 80px -48px rgba(0, 0, 0, 0.9),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(2px);
+  filter: saturate(var(--spring-stage-saturation));
+}
+.spring-fullness-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--spring-aura-opacity);
+  background:
+    radial-gradient(circle at 52% 58%, rgba(255, 244, 191, 0.18), transparent 22%),
+    radial-gradient(circle at 22% 72%, rgba(247, 166, 190, 0.16), transparent 18%),
+    radial-gradient(circle at 82% 76%, rgba(120, 171, 99, 0.18), transparent 20%);
 }
 .garden-stage-complete {
   box-shadow:
@@ -366,15 +648,18 @@ body {
 .garden-hill-back {
   bottom: 6.5rem;
   height: 10rem;
-  background: linear-gradient(180deg, #607a55, #435c40);
-  opacity: 0.9;
+  background:
+    radial-gradient(circle at 65% 28%, rgba(255, 244, 191, var(--spring-hill-glow)), transparent 18%),
+    linear-gradient(180deg, #607a55, #435c40);
+  opacity: var(--spring-hill-opacity);
   animation: hill-breathe 10s ease-in-out infinite;
 }
 .garden-hill-front {
   bottom: -2.2rem;
   height: 13rem;
   background:
-    radial-gradient(circle at 18% 32%, rgba(255, 244, 191, 0.12), transparent 18%),
+    radial-gradient(circle at 18% 32%, rgba(255, 244, 191, var(--spring-hill-glow)), transparent 18%),
+    radial-gradient(circle at 72% 44%, rgba(247, 166, 190, var(--spring-hill-glow)), transparent 16%),
     linear-gradient(180deg, #6f8d5f, #3e5c38);
   animation: hill-breathe 12s ease-in-out infinite reverse;
 }
@@ -411,6 +696,7 @@ body {
   height: 5.2rem;
   transform-origin: 50% 100%;
   filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.22));
+  opacity: var(--spring-flower-opacity);
   animation:
     flower-grow 520ms cubic-bezier(0.2, 0, 0, 1) backwards,
     flower-sway 4.8s ease-in-out infinite;
@@ -430,6 +716,24 @@ body {
     transform: rotate(360deg);
   }
 }
+@keyframes memory-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes memory-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.65rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 @keyframes flower-pulse {
   0%,
   100% {
@@ -437,6 +741,45 @@ body {
   }
   50% {
     transform: scale(1.06) rotate(2deg);
+  }
+}
+@keyframes mini-bloom {
+  from {
+    opacity: 0;
+    translate: 0 0.8rem;
+    scale: 0.68;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+@keyframes reward-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.45rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes quest-sparkle {
+  0% {
+    opacity: 0;
+    translate: 0 0.4rem;
+    rotate: 0deg;
+    scale: 0.5;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: -0.4rem -1.1rem;
+    rotate: 70deg;
+    scale: 1;
   }
 }
 @keyframes petal-drift {
@@ -562,7 +905,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .emblem-wrap,
   .sun-rays,
+  .home-memory-overlay,
+  .home-memory-card,
   .flower-pulse,
+  .mini-garden-flower,
+  .quest-bloom-sparkles span,
+  .quest-flower-feedback,
   .spring-petal,
   .garden-night-sky::before,
   .garden-moon,
