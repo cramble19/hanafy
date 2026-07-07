@@ -94,6 +94,26 @@
     "minLevel": 2
   },
   {
+    "id": "sunlit-selfie",
+    "emoji": "📸",
+    "title": "Sunlit Selfie",
+    "description": "Step into daylight and take or send one cute photo.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#eea63a",
+    "minLevel": 2
+  },
+  {
+    "id": "pretty-plate",
+    "emoji": "🥗",
+    "title": "Pretty Plate",
+    "description": "Add one colorful thing to food: fruit, salad, lemon, or tomatoes.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#8fb48a",
+    "minLevel": 2
+  },
+  {
     "id": "bottle-bloom",
     "emoji": "🫗",
     "title": "Bottle Bloom",
@@ -104,6 +124,16 @@
     "minLevel": 2
   },
   {
+    "id": "slow-sip-rule",
+    "emoji": "🧊",
+    "title": "Slow Sip Rule",
+    "description": "Finish one bottle slowly before evening.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#6ea3c4",
+    "minLevel": 3
+  },
+  {
     "id": "tea-pause",
     "emoji": "☕",
     "title": "Tea Pause",
@@ -111,6 +141,26 @@
     "group": "daily",
     "difficulty": "easy",
     "color": "#a9866a",
+    "minLevel": 3
+  },
+  {
+    "id": "cramble-ping",
+    "emoji": "💌",
+    "title": "Cramble Ping",
+    "description": "Send or think one sweet line for Cramble.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 3
+  },
+  {
+    "id": "stretch-like-a-cat",
+    "emoji": "🐈",
+    "title": "Stretch Like a Cat",
+    "description": "Do 60 seconds of stretching after waking or before bed.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#8fb48a",
     "minLevel": 3
   },
   {
@@ -124,6 +174,26 @@
     "minLevel": 4
   },
   {
+    "id": "body-battery-check",
+    "emoji": "🔋",
+    "title": "Body Battery Check",
+    "description": "Rate energy 1-5 once today. No judgment.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 4
+  },
+  {
+    "id": "hair-hydration-check",
+    "emoji": "🚿",
+    "title": "Hair Hydration Check",
+    "description": "Drink water before or after hair wash.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#6ea3c4",
+    "minLevel": 4
+  },
+  {
     "id": "landing-lights",
     "emoji": "🕯️",
     "title": "Landing Lights",
@@ -131,6 +201,36 @@
     "group": "daily",
     "difficulty": "medium",
     "color": "#9e8fd0",
+    "minLevel": 5
+  },
+  {
+    "id": "silk-satin-sleep",
+    "emoji": "🪷",
+    "title": "Silk/Satin Sleep",
+    "description": "Use a soft pillowcase or tie hair loosely before sleep.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 5
+  },
+  {
+    "id": "moon-wash",
+    "emoji": "🫧",
+    "title": "Moon Wash",
+    "description": "Before bed, brush teeth and wash face.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#9e8fd0",
+    "minLevel": 5
+  },
+  {
+    "id": "protein-plate-for-hair",
+    "emoji": "🍛",
+    "title": "Protein Plate for Hair",
+    "description": "Have one protein-rich meal or snack, already aligned with iron.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#cb7e5c",
     "minLevel": 5
   },
   {
@@ -161,6 +261,39 @@
     "group": "longTerm",
     "difficulty": "easy",
     "color": "#d98ba0",
+    "minLevel": 4,
+    "durationDays": 7
+  },
+  {
+    "id": "one-real-meal",
+    "emoji": "🍽️",
+    "title": "One Real Meal",
+    "description": "Eat one proper meal without rushing.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#e8946a",
+    "minLevel": 2,
+    "durationDays": 4
+  },
+  {
+    "id": "snack-shield",
+    "emoji": "🛡️",
+    "title": "Snack Shield",
+    "description": "Keep one better snack nearby before cravings hit.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#cb7e5c",
+    "minLevel": 4,
+    "durationDays": 7
+  },
+  {
+    "id": "hair-oiling-ritual",
+    "emoji": "💆‍♀️",
+    "title": "Hair Oiling Ritual",
+    "description": "Light oil or scalp massage once this week.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#a9866a",
     "minLevel": 4,
     "durationDays": 7
   },

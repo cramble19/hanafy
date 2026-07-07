@@ -189,6 +189,12 @@ uses conservative lifestyle nudges only:
 - Hydration.
 - Realistic sleep hygiene that respects her late-night social life.
 - A doctor-note task for asking a clinician about iron/vitamin D/supplements.
+- Personality-aligned gentle tasks: daylight selfie, colorful plate, Cramble
+  ping, body battery check, moon wash, slow sipping, stretching, one real meal,
+  and snack shield.
+- Hair-care self-care tasks: hair-wash hydration, silk/satin or loose-hair sleep,
+  protein plate for hair, and weekly light oil/scalp massage. These are supportive
+  routines only, not medical treatment for hair fall or deficiencies.
 
 Psychology rule: start with very easy tasks, then unlock more tasks by level.
 This follows tiny-habit behavior design: increase ability, anchor small actions,

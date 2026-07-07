@@ -124,6 +124,10 @@ not diagnose or prescribe treatment. It simply nudges small daily actions:
 - pair iron foods with vitamin-C foods
 - keep tea/coffee away from iron-focused meals
 - wind down more gently at night
+- add colorful food, daylight photos, gentle stretching, energy checks, and
+  small Cramble connection moments
+- add gentle hair-care rituals like loose/satin sleep, hair-wash hydration,
+  weekly oiling, and protein support
 
 The early levels stay easy on purpose. Hard lifestyle changes usually fail. As
 Hana collects flowers and levels up, a few extra supportive quests unlock slowly.
