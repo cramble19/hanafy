@@ -1,0 +1,351 @@
+import { CalendarDays, ChevronLeft, RotateCcw } from 'lucide-react'
+import { quests } from '@/data/quests'
+import hanaWeeds from '@/data/hanaWeeds.json'
+import springQuotes from '@/data/springQuotes.json'
+import { EveningWeeds } from '@/components/EveningWeeds'
+import { QuestSection } from '@/components/QuestSection'
+import { FlowerMark } from '@/components/icons/FlowerMark'
+import {
+  displayDate,
+  getLongTermCheckedIds,
+  getLongTermQuestStatus,
+  getLevelProgress,
+  getSkippedIdsForState,
+  getSkipProgress,
+  getSpringArcProgress,
+  getWeedProgress,
+  visibleQuestsForState,
+} from '@/lib/hanaGame'
+import type { GardenWeed, HanaGameState } from '@/types'
+
+const eveningWeeds = hanaWeeds as GardenWeed[]
+const seasonalQuotes = springQuotes as SeasonQuote[]
+const PETAL_POSITIONS = [
+  [8, 0.2, 8.5],
+  [20, 2.6, 10.5],
+  [34, 1.1, 9.4],
+  [49, 3.2, 11.2],
+  [63, 0.8, 8.9],
+  [78, 2.1, 10.8],
+  [91, 1.7, 9.8],
+] as const
+
+type SeasonQuote = {
+  id: string
+  kind: 'spring' | 'april-inspired' | 'anime-quote'
+  text: string
+  source: string
+}
+
+type Props = {
+  game: HanaGameState
+  onToggle: (id: string) => void
+  onSkip: (id: string) => void
+  onToggleWeed: (id: string) => void
+  onOpenGarden: () => void
+  onNextDay: () => void
+  onReset: () => void
+  onBack: () => void
+}
+
+export function HanaPage({
+  game,
+  onToggle,
+  onSkip,
+  onToggleWeed,
+  onOpenGarden,
+  onNextDay,
+  onReset,
+  onBack,
+}: Props) {
+  const levelProgress = getLevelProgress(game.totalFlowers)
+  const visibleQuests = visibleQuestsForState(quests, game)
+  const dailyCheckedIds = game.dailyCompletions[game.currentDate] ?? {}
+  const skippedIds = getSkippedIdsForState(quests, game)
+  const skipProgress = getSkipProgress(game)
+  const weedCheckedIds = game.eveningWeeds?.[game.currentDate] ?? {}
+  const weedProgress = getWeedProgress(game)
+  const longTermCheckedIds = getLongTermCheckedIds(game)
+  const springArc = getSpringArcProgress(game)
+  const seasonalQuote = getSeasonalQuote(game.currentDate)
+  const longTermMetaById = Object.fromEntries(
+    visibleQuests.longTerm.map((quest) => [
+      quest.id,
+      getLongTermQuestStatus(game, quest).label,
+    ]),
+  )
+
+  const resetWithConfirmation = () => {
+    if (window.confirm("Reset Hana's flowers and checked quests?")) {
+      onReset()
+    }
+  }
+
+  return (
+    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-20 pt-6">
+      <SpringDecor />
+      <div className="mb-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to home"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
+          <FlowerMark className="size-4" />
+          Hana
+        </span>
+      </div>
+
+      <header className="mb-5">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
+          Arc {springArc.arcNumber} · {springArc.season} season
+        </p>
+        <div className="mt-1 flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-ink">
+              {springArc.isComplete ? 'Spring Complete' : 'Today'}
+            </h1>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+              <CalendarDays className="size-4" />
+              {displayDate(game.currentDate)}
+            </p>
+          </div>
+          <div className="rounded-full border border-border bg-surface px-3 py-1.5 text-right shadow-sm">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+              Level
+            </p>
+            <p className="text-xl font-semibold tabular-nums text-ink">
+              {levelProgress.level}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
+            {getQuoteLabel(seasonalQuote)}
+          </p>
+          <span className="text-sm" aria-hidden="true">
+            {getQuoteIcon(seasonalQuote)}
+          </span>
+        </div>
+        <blockquote className="mt-2 text-sm leading-6 text-ink">
+          "{seasonalQuote.text}"
+        </blockquote>
+        <p className="mt-2 text-xs font-medium text-muted">
+          {seasonalQuote.source}
+        </p>
+      </section>
+
+      <section className="mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted">Flower balance</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
+              {game.totalFlowers} 🌸
+            </p>
+          </div>
+          <FlowerMark className="size-14 flower-pulse" />
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-2 flex justify-between text-xs font-medium text-muted">
+            <span>Level {levelProgress.level}</span>
+            <span>
+              {levelProgress.collectedThisLevel}/{levelProgress.neededThisLevel}{' '}
+              flowers
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+            <div
+              className="h-full rounded-full bg-success transition-all duration-500"
+              style={{ width: `${levelProgress.percent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-faint">
+            New gentle quests unlock as Hana collects flowers.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpenGarden}
+          className="mt-5 w-full rounded-control border border-border bg-surface-2 px-4 py-3 text-sm font-medium text-ink shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
+        >
+          Open Hana&apos;s night garden
+        </button>
+      </section>
+
+      <section className="spring-arc-card mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-faint">
+              Arc {springArc.arcNumber}: {springArc.season}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+              {springArc.isComplete ? 'First bloom unlocked' : 'Make spring bloom'}
+            </h2>
+          </div>
+          <div className="rounded-full bg-surface/80 px-3 py-1 text-xs font-semibold text-ink shadow-sm">
+            {springArc.percent}%
+          </div>
+        </div>
+
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/65">
+          <div
+            className="h-full rounded-full bg-success transition-all duration-500"
+            style={{ width: `${springArc.percent}%` }}
+          />
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-control bg-white/60 p-3">
+            <p className="text-xs font-medium text-faint">Spring level</p>
+            <p className="mt-1 font-semibold text-ink">
+              Level {Math.min(levelProgress.level, springArc.targetLevel)}/
+              {springArc.targetLevel}
+            </p>
+          </div>
+          <div className="rounded-control bg-white/60 p-3">
+            <p className="text-xs font-medium text-faint">Garden fullness</p>
+            <p className="mt-1 font-semibold text-ink">
+              {Math.min(game.totalFlowers, springArc.targetFlowers)}/
+              {springArc.targetFlowers} flowers
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-muted">
+          {springArc.isComplete
+            ? `Spring is fully bloomed. ${springArc.nextSeason} will bring ${springArc.nextTheme.toLowerCase()}.`
+            : springArc.flowersRemaining > 0
+              ? `${springArc.flowersRemaining} more flowers to finish this gentle first season.`
+              : 'Reach the Spring level target to close Arc 1.'}
+        </p>
+
+      </section>
+
+      <main className="space-y-8">
+        <QuestSection
+          title="Daily Quests"
+          quests={visibleQuests.daily}
+          checkedIds={dailyCheckedIds}
+          skippedIds={skippedIds}
+          canSkip={skipProgress.remaining > 0}
+          onToggle={onToggle}
+          onSkip={onSkip}
+        />
+        <QuestSection
+          title="Long Term Quests"
+          quests={visibleQuests.longTerm}
+          checkedIds={longTermCheckedIds}
+          skippedIds={skippedIds}
+          canSkip={skipProgress.remaining > 0}
+          metaById={longTermMetaById}
+          onToggle={onToggle}
+          onSkip={onSkip}
+        />
+        <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
+          <span className="font-medium text-ink">Weekly skips:</span>{' '}
+          {skipProgress.remaining}/{skipProgress.limit} left
+          <p className="mt-1 text-xs text-faint">
+            Skips reset every Sunday. A skipped quest gives 0 flowers.
+          </p>
+        </div>
+        <EveningWeeds
+          weeds={eveningWeeds}
+          checkedIds={weedCheckedIds}
+          weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
+          weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
+          wiltedFlowers={weedProgress.wiltedFlowers}
+          onToggle={onToggleWeed}
+        />
+      </main>
+
+      <section className="mt-10 rounded-card border border-dashed border-border bg-surface/70 p-4">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
+          Dev testing
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onNextDay}
+            className="rounded-control bg-ink px-4 py-3 text-sm font-medium text-canvas shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
+          >
+            Next day
+          </button>
+          <button
+            type="button"
+            onClick={resetWithConfirmation}
+            className="inline-flex items-center justify-center gap-2 rounded-control border border-border bg-surface px-4 py-3 text-sm font-medium text-muted shadow-sm transition active:scale-[0.98] motion-reduce:transition-none"
+          >
+            <RotateCcw className="size-4" />
+            Reset
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function SpringDecor() {
+  return (
+    <div className="spring-decor-layer" aria-hidden="true">
+      <div className="money-vine money-vine-left">
+        {Array.from({ length: 8 }, (_, index) => (
+          <span key={index} />
+        ))}
+      </div>
+      <div className="money-vine money-vine-right">
+        {Array.from({ length: 7 }, (_, index) => (
+          <span key={index} />
+        ))}
+      </div>
+      <div className="spring-petals">
+        {PETAL_POSITIONS.map(([left, delay, duration]) => (
+          <span
+            key={`${left}-${delay}`}
+            className="spring-petal"
+            style={{
+              left: `${left}%`,
+              animationDelay: `${delay}s`,
+              animationDuration: `${duration}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function getSeasonalQuote(dateKey: string) {
+  const index =
+    dateKey.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) %
+    seasonalQuotes.length
+
+  return seasonalQuotes[index]
+}
+
+function getQuoteLabel(quote: SeasonQuote) {
+  if (quote.kind === 'spring') {
+    return 'Spring quote'
+  }
+  if (quote.kind === 'anime-quote') {
+    return 'Your Lie in April quote'
+  }
+  return 'April-inspired note'
+}
+
+function getQuoteIcon(quote: SeasonQuote) {
+  if (quote.kind === 'spring') {
+    return '🌷'
+  }
+  if (quote.kind === 'anime-quote') {
+    return '🎼'
+  }
+  return '🎻'
+}

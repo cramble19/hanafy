@@ -1,0 +1,690 @@
+@import "tailwindcss";
+
+/* Class-based dark mode kept for later theming; the app is LIGHT by default. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Calm Garden design tokens — "flowers & sunlight" (see docs/ai/design-system.md) */
+:root {
+  --canvas: #fffaf0; /* warm sunlit cream (floral white) */
+  --surface: #ffffff;
+  --surface-2: #fdf3e3; /* soft warm fill */
+  --ink: #2b2620; /* warm near-black */
+  --muted: #7c7264;
+  --faint: #a99f8e;
+  --border: rgba(90, 65, 25, 0.1); /* warm hairline */
+
+  --success: #78ab63; /* leaf green */
+  --warning: #e7a53c; /* sunflower */
+  --danger: #d76a54; /* warm coral */
+
+  --radius-lg: 20px;
+  --radius-md: 12px;
+}
+
+/* Optional dark theme — NOT applied by default; reserved for later theming. */
+.dark {
+  --canvas: #0a0a0a;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --ink: #fafaf9;
+  --muted: #a1a1a1;
+  --faint: #6b6b6b;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+/* Map tokens to Tailwind utilities. `inline` lets the .dark overrides cascade. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --radius-card: var(--radius-lg);
+  --radius-control: var(--radius-md);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* soft sunlight glow at the top over a warm cream canvas */
+  background:
+    radial-gradient(
+      1100px 520px at 50% -10%,
+      #fff0c4 0%,
+      rgba(255, 240, 196, 0) 60%
+    ),
+    var(--canvas);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.dark body {
+  background: var(--canvas);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hana-spring-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.hana-spring-shell > :not(.spring-decor-layer) {
+  position: relative;
+  z-index: 1;
+}
+
+.spring-decor-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.money-vine {
+  position: absolute;
+  top: 2.2rem;
+  width: 4.8rem;
+  height: 24rem;
+  opacity: 0.62;
+  transform-origin: 50% 0;
+  animation: vine-sway 8s ease-in-out infinite;
+}
+.money-vine::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    rgba(120, 171, 99, 0.05),
+    rgba(120, 171, 99, 0.48),
+    rgba(120, 171, 99, 0.08)
+  );
+}
+.money-vine-left {
+  left: -1.2rem;
+}
+.money-vine-left::before {
+  left: 1.4rem;
+}
+.money-vine-right {
+  right: -1.35rem;
+  height: 20rem;
+  scale: -1 1;
+  animation-delay: 1.3s;
+}
+.money-vine-right::before {
+  left: 1.4rem;
+}
+.money-vine span {
+  position: absolute;
+  left: 0.55rem;
+  width: 1.2rem;
+  height: 1.7rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.42), transparent 28%),
+    linear-gradient(135deg, rgba(142, 190, 117, 0.75), rgba(95, 149, 79, 0.7));
+  box-shadow: 0 8px 18px -12px rgba(95, 149, 79, 0.65);
+  transform: rotate(-42deg);
+  animation: leaf-breathe 5.4s ease-in-out infinite;
+}
+.money-vine span:nth-child(odd) {
+  left: 1.55rem;
+  border-radius: 9999px 9999px 0 9999px;
+  transform: rotate(42deg);
+}
+.money-vine span:nth-child(1) {
+  top: 1.2rem;
+}
+.money-vine span:nth-child(2) {
+  top: 3.8rem;
+  animation-delay: 0.3s;
+}
+.money-vine span:nth-child(3) {
+  top: 6.4rem;
+  animation-delay: 0.6s;
+}
+.money-vine span:nth-child(4) {
+  top: 9.2rem;
+  animation-delay: 0.9s;
+}
+.money-vine span:nth-child(5) {
+  top: 12.1rem;
+  animation-delay: 1.2s;
+}
+.money-vine span:nth-child(6) {
+  top: 15rem;
+  animation-delay: 1.5s;
+}
+.money-vine span:nth-child(7) {
+  top: 18rem;
+  animation-delay: 1.8s;
+}
+.money-vine span:nth-child(8) {
+  top: 21rem;
+  animation-delay: 2.1s;
+}
+
+.spring-petals {
+  position: absolute;
+  inset: 0;
+}
+.spring-petal {
+  position: absolute;
+  top: -2rem;
+  width: 0.55rem;
+  height: 0.82rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(247, 166, 190, 0.54);
+  box-shadow: 0 0 16px rgba(247, 166, 190, 0.26);
+  transform: rotate(32deg);
+  animation: petal-drift 9s linear infinite;
+}
+
+/* Home chooser emblems (flower = Hana, sun = You) */
+.emblem-wrap {
+  animation: emblem-float 5s ease-in-out infinite;
+}
+.emblem-wrap.is-delayed {
+  animation-delay: 0.9s;
+}
+
+.emblem {
+  display: grid;
+  place-items: center;
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.3s;
+}
+.emblem-flower {
+  box-shadow:
+    0 12px 34px -8px rgba(217, 139, 160, 0.5),
+    inset 0 0 0 1px rgba(217, 139, 160, 0.14);
+}
+.emblem-sun {
+  box-shadow:
+    0 12px 34px -8px rgba(238, 166, 58, 0.5),
+    inset 0 0 0 1px rgba(238, 166, 58, 0.16);
+}
+
+.emblem-btn:hover .emblem {
+  transform: translateY(-3px);
+}
+.emblem-btn:active .emblem {
+  transform: scale(0.95);
+}
+.emblem-btn:focus-visible .emblem {
+  outline: 2px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  outline-offset: 4px;
+}
+
+.sun-rays {
+  transform-origin: 50% 50%;
+  animation: emblem-spin 22s linear infinite;
+}
+
+.quest-card-complete {
+  box-shadow:
+    0 8px 22px -14px rgba(120, 171, 99, 0.65),
+    inset 0 0 0 1px rgba(120, 171, 99, 0.08);
+}
+
+.quest-card-skipped {
+  background:
+    linear-gradient(
+      0deg,
+      rgba(231, 165, 60, 0.07),
+      rgba(231, 165, 60, 0.07)
+    ),
+    var(--surface);
+  box-shadow:
+    0 8px 22px -16px rgba(231, 165, 60, 0.35),
+    inset 0 0 0 1px rgba(231, 165, 60, 0.08);
+}
+
+.weed-card-checked {
+  background:
+    linear-gradient(
+      0deg,
+      rgba(215, 106, 84, 0.06),
+      rgba(215, 106, 84, 0.06)
+    ),
+    var(--surface);
+  box-shadow:
+    0 8px 22px -16px rgba(215, 106, 84, 0.45),
+    inset 0 0 0 1px rgba(215, 106, 84, 0.08);
+}
+
+.flower-pulse {
+  animation: flower-pulse 2.8s ease-in-out infinite;
+}
+
+.spring-quote-card {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(247, 166, 190, 0.18), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(253, 243, 227, 0.78)),
+    var(--surface);
+}
+
+.spring-arc-card {
+  background:
+    radial-gradient(circle at 85% 8%, rgba(247, 166, 190, 0.26), transparent 28%),
+    radial-gradient(circle at 8% 0%, rgba(255, 240, 196, 0.62), transparent 34%),
+    var(--surface);
+}
+
+.garden-night-sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(255, 242, 184, 0.34), transparent 18%),
+    radial-gradient(circle at 18% 18%, rgba(158, 143, 208, 0.16), transparent 25%),
+    linear-gradient(180deg, #11183b 0%, #172052 42%, #28355e 68%, #59674c 100%);
+}
+.garden-night-sky::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.08), transparent 16%),
+    radial-gradient(circle at 84% 36%, rgba(158, 143, 208, 0.12), transparent 18%),
+    radial-gradient(circle at 42% 58%, rgba(255, 244, 191, 0.06), transparent 22%);
+  filter: blur(10px);
+  opacity: 0.75;
+  animation: sky-drift 18s ease-in-out infinite alternate;
+}
+
+.garden-moon {
+  position: absolute;
+  right: 3.25rem;
+  top: 5.25rem;
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 9999px;
+  background: #fff4bf;
+  box-shadow:
+    0 0 28px rgba(255, 244, 191, 0.7),
+    0 0 80px rgba(255, 244, 191, 0.25);
+  animation: moon-drift 8s ease-in-out infinite;
+}
+.garden-moon::after {
+  content: "";
+  position: absolute;
+  right: -0.6rem;
+  top: -0.25rem;
+  width: 4.3rem;
+  height: 4.3rem;
+  border-radius: 9999px;
+  background: #11183b;
+}
+
+.garden-star {
+  position: absolute;
+  width: 0.2rem;
+  height: 0.2rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+  animation: star-twinkle 2.8s ease-in-out infinite;
+}
+
+.garden-comet {
+  position: absolute;
+  width: 7rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.88),
+    rgba(255, 244, 191, 0.2)
+  );
+  opacity: 0;
+  transform: rotate(-24deg);
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.65));
+  animation: comet-fall 9s linear infinite;
+}
+.garden-comet-one {
+  left: 72%;
+  top: 17%;
+  animation-delay: 1.2s;
+}
+.garden-comet-two {
+  left: 55%;
+  top: 31%;
+  width: 5rem;
+  animation-delay: 6.8s;
+  animation-duration: 12s;
+}
+
+.garden-stage {
+  position: relative;
+  min-height: 28rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(13, 21, 53, 0.15) 0%, rgba(13, 21, 53, 0) 45%),
+    rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 22px 80px -48px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(2px);
+}
+.garden-stage-complete {
+  box-shadow:
+    0 22px 90px -44px rgba(247, 166, 190, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 60px rgba(255, 244, 191, 0.1);
+}
+.garden-stage-complete::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 24% 52%, rgba(247, 166, 190, 0.14), transparent 12%),
+    radial-gradient(circle at 78% 50%, rgba(255, 244, 191, 0.13), transparent 14%),
+    radial-gradient(circle at 50% 74%, rgba(255, 255, 255, 0.08), transparent 18%);
+}
+
+.spring-complete-glow {
+  position: absolute;
+  inset-inline: 0;
+  top: 28%;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  gap: 2.6rem;
+  color: rgba(255, 244, 191, 0.88);
+  font-size: 1.35rem;
+  text-shadow: 0 0 16px rgba(255, 244, 191, 0.56);
+}
+.spring-complete-glow span {
+  animation: spring-note-float 4.8s ease-in-out infinite;
+}
+.spring-complete-glow span:nth-child(2) {
+  animation-delay: 0.8s;
+}
+.spring-complete-glow span:nth-child(3) {
+  animation-delay: 1.6s;
+}
+
+.garden-horizon {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 30%;
+  height: 45%;
+  background:
+    radial-gradient(closest-side at 50% 100%, rgba(255, 240, 196, 0.2), transparent),
+    linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.05));
+}
+
+.garden-hill {
+  position: absolute;
+  inset-inline: -12%;
+  border-radius: 55% 55% 0 0;
+}
+.garden-hill-back {
+  bottom: 6.5rem;
+  height: 10rem;
+  background: linear-gradient(180deg, #607a55, #435c40);
+  opacity: 0.9;
+  animation: hill-breathe 10s ease-in-out infinite;
+}
+.garden-hill-front {
+  bottom: -2.2rem;
+  height: 13rem;
+  background:
+    radial-gradient(circle at 18% 32%, rgba(255, 244, 191, 0.12), transparent 18%),
+    linear-gradient(180deg, #6f8d5f, #3e5c38);
+  animation: hill-breathe 12s ease-in-out infinite reverse;
+}
+
+.garden-empty {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: min(16rem, 76%);
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.garden-couple {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  z-index: 2;
+  width: min(12rem, 52%);
+  transform: translateX(-50%);
+  filter:
+    drop-shadow(0 10px 12px rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 18px rgba(255, 244, 191, 0.08));
+  animation: couple-breathe 7s ease-in-out infinite;
+}
+
+.planted-flower {
+  position: absolute;
+  z-index: 3;
+  width: 3.25rem;
+  height: 5.2rem;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.22));
+  animation:
+    flower-grow 520ms cubic-bezier(0.2, 0, 0, 1) backwards,
+    flower-sway 4.8s ease-in-out infinite;
+}
+
+@keyframes emblem-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes emblem-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes flower-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06) rotate(2deg);
+  }
+}
+@keyframes vine-sway {
+  0%,
+  100% {
+    transform: rotate(-1.4deg);
+  }
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+@keyframes leaf-breathe {
+  0%,
+  100% {
+    opacity: 0.68;
+    scale: 0.96;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.04;
+  }
+}
+@keyframes petal-drift {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  8% {
+    opacity: 0.72;
+  }
+  82% {
+    opacity: 0.58;
+  }
+  100% {
+    opacity: 0;
+    translate: 1.8rem 34rem;
+    rotate: 210deg;
+  }
+}
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+@keyframes sky-drift {
+  from {
+    transform: translate3d(-1%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 1.5%, 0) scale(1.04);
+  }
+}
+@keyframes moon-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    box-shadow:
+      0 0 28px rgba(255, 244, 191, 0.68),
+      0 0 80px rgba(255, 244, 191, 0.24);
+  }
+  50% {
+    transform: translate3d(-4px, 6px, 0);
+    box-shadow:
+      0 0 36px rgba(255, 244, 191, 0.82),
+      0 0 96px rgba(255, 244, 191, 0.32);
+  }
+}
+@keyframes comet-fall {
+  0%,
+  70% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  75% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    translate: -18rem 9rem;
+  }
+}
+@keyframes hill-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+@keyframes couple-breathe {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 2px;
+  }
+}
+@keyframes flower-grow {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+    scale: 0.55;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+@keyframes flower-sway {
+  0%,
+  100% {
+    rotate: -1.5deg;
+  }
+  50% {
+    rotate: 1.5deg;
+  }
+}
+@keyframes spring-note-float {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-14px) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblem-wrap,
+  .sun-rays,
+  .flower-pulse,
+  .money-vine,
+  .money-vine span,
+  .spring-petal,
+  .garden-night-sky::before,
+  .garden-moon,
+  .garden-star,
+  .garden-comet,
+  .garden-hill,
+  .garden-couple,
+  .spring-complete-glow span,
+  .planted-flower {
+    animation: none;
+  }
+  .emblem {
+    transition: none;
+  }
+}

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "morning-dew",
+    "emoji": "💧",
+    "title": "Morning Dew",
+    "description": "Drink a glass of water immediately upon waking.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#6ea3c4",
+    "required": true,
+    "minLevel": 1
+  },
+  {
+    "id": "sun-catch",
+    "emoji": "☀️",
+    "title": "Sun Catch",
+    "description": "10 minutes of afternoon sunlight — no early alarms needed.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#eea63a",
+    "required": true,
+    "minLevel": 1
+  },
+  {
+    "id": "remember-cramble",
+    "emoji": "🍪",
+    "title": "Remember Cramble",
+    "description": "Remember Cramble once today — just one tiny happy thought.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "required": true,
+    "minLevel": 1
+  },
+  {
+    "id": "iron-armor",
+    "emoji": "🥩",
+    "title": "Iron Armor",
+    "description": "Eat one protein or iron-rich snack.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#cb7e5c",
+    "required": true,
+    "minLevel": 2
+  },
+  {
+    "id": "flower-breath",
+    "emoji": "🌸",
+    "title": "Flower Breath",
+    "description": "Take 5 slow breaths and relax your shoulders.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 1
+  },
+  {
+    "id": "tiny-stretch",
+    "emoji": "🌿",
+    "title": "Tiny Stretch",
+    "description": "Two minutes of gentle stretching.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#8fb48a",
+    "minLevel": 1
+  },
+  {
+    "id": "peace-note",
+    "emoji": "📝",
+    "title": "Peace Note",
+    "description": "Write one kind sentence about today.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#9e8fd0",
+    "minLevel": 2
+  },
+  {
+    "id": "april-duet",
+    "emoji": "🎻",
+    "title": "April Duet",
+    "description": "Play one soft song, hum for a minute, or let a tiny spring tune exist.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#9e8fd0",
+    "minLevel": 3
+  },
+  {
+    "id": "citrus-sidekick",
+    "emoji": "🍊",
+    "title": "Citrus Sidekick",
+    "description": "Add one vitamin-C friend to an iron meal: lemon, amla, orange, guava, or tomatoes.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#eea63a",
+    "minLevel": 2
+  },
+  {
+    "id": "bottle-bloom",
+    "emoji": "🫗",
+    "title": "Bottle Bloom",
+    "description": "Refill your bottle once before evening.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#6ea3c4",
+    "minLevel": 2
+  },
+  {
+    "id": "tea-pause",
+    "emoji": "☕",
+    "title": "Tea Pause",
+    "description": "Keep tea or coffee away from your iron snack for about an hour.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#a9866a",
+    "minLevel": 3
+  },
+  {
+    "id": "sunny-plate",
+    "emoji": "🍳",
+    "title": "Sunny Plate",
+    "description": "Add one vitamin-D friendly food today: egg yolk, fish, paneer, or fortified milk.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#e8946a",
+    "minLevel": 4
+  },
+  {
+    "id": "landing-lights",
+    "emoji": "🕯️",
+    "title": "Landing Lights",
+    "description": "After midnight, switch to dim lights and one calm app/show instead of endless scrolling.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#9e8fd0",
+    "minLevel": 5
+  },
+  {
+    "id": "protein-plus",
+    "emoji": "🥜",
+    "title": "Protein Plus",
+    "description": "Add one small protein bite: nuts, chana, egg, paneer, curd, chicken, or tofu.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#cb7e5c",
+    "minLevel": 6
+  },
+  {
+    "id": "energy-check",
+    "emoji": "💛",
+    "title": "Energy Check",
+    "description": "Notice your energy once today: low, okay, or glowing. No judgment.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 7
+  },
+  {
+    "id": "spring-canele",
+    "emoji": "🍮",
+    "title": "Spring Canelé",
+    "description": "Have one small treat slowly, without turning it into a snack spiral.",
+    "group": "longTerm",
+    "difficulty": "easy",
+    "color": "#d98ba0",
+    "minLevel": 4,
+    "durationDays": 7
+  },
+  {
+    "id": "badminton-boss",
+    "emoji": "🏸",
+    "title": "Badminton Boss",
+    "description": "Play a game with friends.",
+    "group": "longTerm",
+    "difficulty": "hard",
+    "color": "#78ab63",
+    "minLevel": 1,
+    "durationDays": 4
+  },
+  {
+    "id": "dark-mode-protocol",
+    "emoji": "🌙",
+    "title": "Dark Mode Protocol",
+    "description": "Dim the lights and use blue-light filters after midnight.",
+    "group": "longTerm",
+    "difficulty": "hard",
+    "color": "#9e8fd0",
+    "minLevel": 3,
+    "durationDays": 10
+  },
+  {
+    "id": "sunny-walk",
+    "emoji": "🚶‍♀️",
+    "title": "Sunny Walk",
+    "description": "Take a relaxed walk outside.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#eea63a",
+    "minLevel": 2,
+    "durationDays": 7
+  },
+  {
+    "id": "protein-prep",
+    "emoji": "🍳",
+    "title": "Protein Prep",
+    "description": "Prepare one easy protein option for the week.",
+    "group": "longTerm",
+    "difficulty": "hard",
+    "color": "#e8946a",
+    "minLevel": 3,
+    "durationDays": 7
+  },
+  {
+    "id": "snack-shelf",
+    "emoji": "🧺",
+    "title": "Snack Shelf",
+    "description": "Keep one easy iron/protein snack ready for the week.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#cb7e5c",
+    "minLevel": 3,
+    "durationDays": 7
+  },
+  {
+    "id": "doctor-note",
+    "emoji": "🩺",
+    "title": "Doctor Note",
+    "description": "Write one question for the doctor about iron, vitamin D, or supplements.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#6ea3c4",
+    "minLevel": 4,
+    "durationDays": 14
+  },
+  {
+    "id": "sun-date",
+    "emoji": "🌤️",
+    "title": "Sun Date",
+    "description": "Plan one relaxed daylight outing this week — balcony, walk, cafe, or park.",
+    "group": "longTerm",
+    "difficulty": "medium",
+    "color": "#eea63a",
+    "minLevel": 5,
+    "durationDays": 7
+  },
+  {
+    "id": "sleep-nest",
+    "emoji": "🛏️",
+    "title": "Sleep Nest",
+    "description": "Make the room sleep-friendly once this week: dim, cool, and phone a little away.",
+    "group": "longTerm",
+    "difficulty": "hard",
+    "color": "#9e8fd0",
+    "minLevel": 6,
+    "durationDays": 10
+  },
+  {
+    "id": "meal-of-honor",
+    "emoji": "🍲",
+    "title": "Meal of Honor",
+    "description": "Have one proper iron-rich meal this week without rushing.",
+    "group": "longTerm",
+    "difficulty": "hard",
+    "color": "#e8946a",
+    "minLevel": 7,
+    "durationDays": 10
+  }
+]

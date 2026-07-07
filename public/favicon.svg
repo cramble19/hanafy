@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hanafy flower favicon">
+  <rect width="64" height="64" rx="16" fill="#fffaf0"/>
+  <circle cx="32" cy="25" r="10" fill="#eea63a"/>
+  <ellipse cx="32" cy="14" rx="7" ry="13" fill="#f7a6be"/>
+  <ellipse cx="46" cy="25" rx="7" ry="13" fill="#d98ba0" transform="rotate(72 46 25)"/>
+  <ellipse cx="40" cy="42" rx="7" ry="13" fill="#f1b56f" transform="rotate(144 40 42)"/>
+  <ellipse cx="24" cy="42" rx="7" ry="13" fill="#f7a6be" transform="rotate(216 24 42)"/>
+  <ellipse cx="18" cy="25" rx="7" ry="13" fill="#d98ba0" transform="rotate(288 18 25)"/>
+  <path d="M32 36 C32 44 32 49 32 56" fill="none" stroke="#6ea765" stroke-width="4" stroke-linecap="round"/>
+</svg>

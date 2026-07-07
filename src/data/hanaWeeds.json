@@ -1,0 +1,32 @@
+[
+  {
+    "id": "scroll-fog",
+    "emoji": "🌫️",
+    "title": "Scroll Fog",
+    "description": "Did reels or scrolling quietly eat too much time?"
+  },
+  {
+    "id": "midnight-snack-vine",
+    "emoji": "🌙",
+    "title": "Midnight Snack Vine",
+    "description": "Was there heavy snacking very late at night?"
+  },
+  {
+    "id": "sweet-sip-cloud",
+    "emoji": "🥤",
+    "title": "Sweet Sip Cloud",
+    "description": "Did sugary or caffeinated drinks go a bit too far?"
+  },
+  {
+    "id": "hydration-drought",
+    "emoji": "🏜️",
+    "title": "Hydration Drought",
+    "description": "Did water mostly disappear after the morning?"
+  },
+  {
+    "id": "phone-in-bed-ivy",
+    "emoji": "📱",
+    "title": "Phone-in-Bed Ivy",
+    "description": "Did the phone stay in bed long enough to disturb rest?"
+  }
+]

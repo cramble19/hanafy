@@ -1,0 +1,27 @@
+---
+description: Approved tech stack and project layout for the habit tracker
+alwaysApply: true
+---
+
+# Tech stack
+
+- TypeScript (strict) + React 19 + Vite.
+- Tailwind CSS v4 via `@tailwindcss/vite` (CSS-first `@theme`, not a JS config).
+- shadcn/ui (`new-york`) primitives; `lucide-react` icons; `sonner` toasts.
+- State + persistence: Zustand with the `persist` middleware -> `localStorage` (versioned key).
+- Animation: `motion` (Framer Motion); celebrations: `canvas-confetti`.
+- Dates: `date-fns`. PWA: `vite-plugin-pwa` + `@vite-pwa/assets-generator`.
+
+## Layout
+
+- `src/lib/gamification.ts` — pure XP/level/streak/achievement logic (no React/store imports).
+- `src/store/useHabitStore.ts` — Zustand store + persist.
+- `src/components/ui/` — shadcn primitives; feature components alongside.
+- `src/types.ts` — shared types.
+
+## Rules
+
+- Keep business/gamification logic in `lib/` pure functions, not in components.
+- Do NOT add a backend, server, or database.
+- Prefer zero new dependencies; any addition must be free and static-host compatible.
+- Full details: `docs/ai/architecture.md`.

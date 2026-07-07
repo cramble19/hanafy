@@ -1,0 +1,47 @@
+---
+description: Non-negotiable UI/UX design laws (Calm Garden - flowers & sunlight). Full token spec in docs/ai/design-system.md
+alwaysApply: true
+---
+
+# Design laws — "Calm Garden" (UI/UX is the top priority)
+
+Authoritative token spec: `docs/ai/design-system.md` (read it before building or
+changing any UI). Token values live in `src/styles/globals.css`. Visual source of
+truth: `docs/design/references/`.
+
+## Non-negotiables
+
+- Minimal first: reduce to essentials, whitespace is a feature, one primary action per screen.
+- One typeface (Inter); hierarchy via weight/size only — never add a second display font.
+- Theme = "flowers & sunlight", LIGHT by default: a warm sunlit cream canvas (with a
+  soft ambient sun-glow) + warm near-black ink + ONE accent, and the accent is the
+  PER-HABIT color. App chrome stays warm and quiet; a habit's color appears only inside
+  its own card/ring/streak/check. The FAB/primary CTA uses ink, not an accent.
+- Borders are hairlines; elevation is subtle. No heavy drop shadows; no gradient fills
+  on components or text (one subtle ambient background glow on the canvas is allowed).
+- Corners: cards ~20px, controls 12px, circular for rings/avatars/checks/FAB.
+- Spacing on a 4px scale (8/12/16/20/24/32); 16-20px card padding and screen gutters.
+- Use tabular numbers for streaks, XP, and stats.
+- Light by default; a dark theme is deferred to later theming. Never hardcode colors —
+  consume the design tokens (CSS vars / Tailwind theme).
+
+## Motion
+
+- Feedback only: 120-240ms; spring on check-off and ring-fill. Celebrations (confetti) < 900ms and optional.
+- ALWAYS respect `prefers-reduced-motion`.
+
+## Honest gamification (never an arcade)
+
+- Anchor every element (XP, streak, badge) to a REAL completed action in the data model, not taps.
+- NEVER punish a missed day and never use guilt copy — offer a gentle streak-freeze or "start fresh".
+- Reserve badges for meaningful milestones; introduce mechanics sparingly (rings + streaks + XP first). No leaderboards.
+- Never signal state with color alone — pair with an icon, label, or fill.
+
+## Accessibility (required)
+
+- Contrast >= 4.5:1; tap targets >= 44px; visible focus rings; `rem` units; semantic HTML + aria-labels on icon buttons.
+
+## Workflow
+
+- Use Tailwind v4 tokens + shadcn/ui primitives (restyle, don't hand-roll). Keep components small and composable.
+- Any UI change must stay consistent with `docs/ai/design-system.md`; update that spec if the design genuinely evolves.

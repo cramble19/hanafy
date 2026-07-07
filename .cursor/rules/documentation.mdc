@@ -1,0 +1,22 @@
+---
+description: Two-track documentation convention (human + ai) that every change must follow
+alwaysApply: true
+---
+
+# Documentation convention
+
+This project maintains two parallel docs for every feature or decision:
+
+- `docs/human/<topic>.md` — concise, non-technical, no code or jargon. Explains
+  what it is and why it matters to a user.
+- `docs/ai/<topic>.md` — technical and complete. Explains how it works: stack,
+  data model, file paths, logic, trade-offs.
+
+## Rules
+
+- When you add or change a feature, update BOTH tracks in the same change.
+- Keep the two docs consistent with each other and with the code.
+- Register new topics in the table in `docs/README.md`.
+- If a change clearly affects only one track, still confirm the other is accurate.
+
+See `docs/README.md` for the full explanation.

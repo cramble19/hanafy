@@ -1,0 +1,80 @@
+[
+  {
+    "id": "shelley-spring",
+    "kind": "spring",
+    "text": "If winter comes, can spring be far behind?",
+    "source": "Percy Bysshe Shelley"
+  },
+  {
+    "id": "shakespeare-april",
+    "kind": "spring",
+    "text": "April hath put a spirit of youth in everything.",
+    "source": "William Shakespeare"
+  },
+  {
+    "id": "spring-bloom",
+    "kind": "spring",
+    "text": "Spring does not ask for perfection. It only asks you to bloom again.",
+    "source": "Spring Arc note"
+  },
+  {
+    "id": "quiet-music",
+    "kind": "april-inspired",
+    "text": "Even a quiet day can become music if one small note begins.",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "piano-violin",
+    "kind": "april-inspired",
+    "text": "Some days are soft piano. Some days are bright violin. Both count.",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "sunlit-stage",
+    "kind": "april-inspired",
+    "text": "Let sunlight be the stage and one tiny habit be today's song.",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "cramble-note",
+    "kind": "april-inspired",
+    "text": "Remember Cramble, smile once, and let the day stay gentle.",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "cramble-note",
+    "kind": "april-inspired",
+    "text": "I love you",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "cramble-note",
+    "kind": "april-inspired",
+    "text": "Boobies are beautiful",
+    "source": "April-inspired note"
+  },
+  {
+    "id": "kaori-heart-promise",
+    "kind": "anime-quote",
+    "text": "Was I able to live inside someone's heart? Was I able to live inside your heart? Do you think you'll remember me at least a little? You'd better not hit 'reset!' Don't forget me, okay? That's a promise, okay?",
+    "source": "Kaori Miyazono"
+  },
+  {
+    "id": "kaori-dark-road-stars",
+    "kind": "anime-quote",
+    "text": "Maybe there's only a dark road ahead. But you still have to believe and keep going. Believe that the stars will light your path, even a little bit. Come on... Let's go on a journey!",
+    "source": "Kaori Miyazono"
+  },
+  {
+    "id": "tsubaki-far-away",
+    "kind": "anime-quote",
+    "text": "Sure, I know that I have no right to be feeling this way. But I still don't like it! I just don't like it. We were always together. I was always by his side. During time of joy, and grief as well. But... I realize he's far away from me now...",
+    "source": "Tsubaki Sawabe"
+  },
+  {
+    "id": "kaori-music-speaks",
+    "kind": "anime-quote",
+    "text": "Music speaks. We play with the hope that our notes will reach the hearts of the ones we love.",
+    "source": "Kaori Miyazono"
+  }
+]

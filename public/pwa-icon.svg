@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hanafy flower icon">
+  <defs>
+    <radialGradient id="sunGlow" cx="50%" cy="34%" r="68%">
+      <stop offset="0%" stop-color="#fff4bf"/>
+      <stop offset="54%" stop-color="#fff0c4"/>
+      <stop offset="100%" stop-color="#fffaf0"/>
+    </radialGradient>
+    <linearGradient id="leaf" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#9bc77e"/>
+      <stop offset="100%" stop-color="#5f954f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#sunGlow)"/>
+  <circle cx="256" cy="254" r="180" fill="#ffffff" opacity="0.62"/>
+  <path d="M256 384 C256 315 256 266 256 214" fill="none" stroke="#6ea765" stroke-width="18" stroke-linecap="round"/>
+  <path d="M255 314 C202 287 180 253 178 211 C226 211 253 252 255 314Z" fill="url(#leaf)" opacity="0.95"/>
+  <path d="M260 342 C317 305 340 267 343 222 C291 224 264 272 260 342Z" fill="url(#leaf)" opacity="0.9"/>
+  <g transform="translate(256 181)">
+    <ellipse rx="48" ry="86" fill="#f7a6be" transform="rotate(0) translate(0 -46)"/>
+    <ellipse rx="48" ry="86" fill="#d98ba0" transform="rotate(72) translate(0 -46)"/>
+    <ellipse rx="48" ry="86" fill="#f1b56f" transform="rotate(144) translate(0 -46)"/>
+    <ellipse rx="48" ry="86" fill="#f7a6be" transform="rotate(216) translate(0 -46)"/>
+    <ellipse rx="48" ry="86" fill="#d98ba0" transform="rotate(288) translate(0 -46)"/>
+    <circle r="45" fill="#eea63a"/>
+    <circle r="20" fill="#fff4bf" opacity="0.72"/>
+  </g>
+  <path d="M145 408 C198 431 312 431 367 408" fill="none" stroke="#e7a53c" stroke-width="12" stroke-linecap="round" opacity="0.35"/>
+</svg>

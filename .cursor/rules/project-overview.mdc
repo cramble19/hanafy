@@ -1,0 +1,29 @@
+---
+description: What this project is and the core principles to always respect
+alwaysApply: true
+---
+
+# Project: Gamified Habit Tracker (offline-first PWA)
+
+A minimalist habit tracker that gamifies a healthy lifestyle. The website and the
+installable phone app are ONE codebase: a static site + web app manifest + service
+worker (a PWA).
+
+## Non-negotiable principles
+
+- Offline-first: the app must work with no network after first load.
+- On-device only: all data persists to `localStorage`; nothing is sent to a server.
+- No backend, no database, no auth, no accounts.
+- Static and free to host. Minimalist UI, few dependencies.
+
+## Where the truth lives
+
+- Human overview: `docs/human/overview.md`
+- Technical architecture, stack, data model, gamification: `docs/ai/architecture.md`
+
+Read `docs/ai/architecture.md` before making structural changes.
+
+## Scope guardrails (for now)
+
+- No cross-device sync, social features, or notifications unless explicitly requested.
+- Keep new dependencies minimal and free/static-host compatible.
