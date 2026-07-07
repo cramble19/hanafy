@@ -295,16 +295,6 @@ export function HanaPage({
 function SpringDecor() {
   return (
     <div className="spring-decor-layer" aria-hidden="true">
-      <div className="money-vine money-vine-left">
-        {Array.from({ length: 8 }, (_, index) => (
-          <span key={index} />
-        ))}
-      </div>
-      <div className="money-vine money-vine-right">
-        {Array.from({ length: 7 }, (_, index) => (
-          <span key={index} />
-        ))}
-      </div>
       <div className="spring-petals">
         {PETAL_POSITIONS.map(([left, delay, duration]) => (
           <span

@@ -97,94 +97,6 @@ body {
   overflow: hidden;
 }
 
-.money-vine {
-  position: absolute;
-  top: 2.2rem;
-  width: 4.8rem;
-  height: 24rem;
-  opacity: 0.62;
-  transform-origin: 50% 0;
-  animation: vine-sway 8s ease-in-out infinite;
-}
-.money-vine::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 1.5px;
-  height: 100%;
-  border-radius: 9999px;
-  background: linear-gradient(
-    180deg,
-    rgba(120, 171, 99, 0.05),
-    rgba(120, 171, 99, 0.48),
-    rgba(120, 171, 99, 0.08)
-  );
-}
-.money-vine-left {
-  left: -1.2rem;
-}
-.money-vine-left::before {
-  left: 1.4rem;
-}
-.money-vine-right {
-  right: -1.35rem;
-  height: 20rem;
-  scale: -1 1;
-  animation-delay: 1.3s;
-}
-.money-vine-right::before {
-  left: 1.4rem;
-}
-.money-vine span {
-  position: absolute;
-  left: 0.55rem;
-  width: 1.2rem;
-  height: 1.7rem;
-  border-radius: 9999px 9999px 9999px 0;
-  background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.42), transparent 28%),
-    linear-gradient(135deg, rgba(142, 190, 117, 0.75), rgba(95, 149, 79, 0.7));
-  box-shadow: 0 8px 18px -12px rgba(95, 149, 79, 0.65);
-  transform: rotate(-42deg);
-  animation: leaf-breathe 5.4s ease-in-out infinite;
-}
-.money-vine span:nth-child(odd) {
-  left: 1.55rem;
-  border-radius: 9999px 9999px 0 9999px;
-  transform: rotate(42deg);
-}
-.money-vine span:nth-child(1) {
-  top: 1.2rem;
-}
-.money-vine span:nth-child(2) {
-  top: 3.8rem;
-  animation-delay: 0.3s;
-}
-.money-vine span:nth-child(3) {
-  top: 6.4rem;
-  animation-delay: 0.6s;
-}
-.money-vine span:nth-child(4) {
-  top: 9.2rem;
-  animation-delay: 0.9s;
-}
-.money-vine span:nth-child(5) {
-  top: 12.1rem;
-  animation-delay: 1.2s;
-}
-.money-vine span:nth-child(6) {
-  top: 15rem;
-  animation-delay: 1.5s;
-}
-.money-vine span:nth-child(7) {
-  top: 18rem;
-  animation-delay: 1.8s;
-}
-.money-vine span:nth-child(8) {
-  top: 21rem;
-  animation-delay: 2.1s;
-}
-
 .spring-petals {
   position: absolute;
   inset: 0;
@@ -201,7 +113,7 @@ body {
   animation: petal-drift 9s linear infinite;
 }
 
-/* Home chooser emblems (flower = Hana, sun = You) */
+/* Home chooser emblems (flower = Hana, sun = Cramble) */
 .emblem-wrap {
   animation: emblem-float 5s ease-in-out infinite;
 }
@@ -527,26 +439,6 @@ body {
     transform: scale(1.06) rotate(2deg);
   }
 }
-@keyframes vine-sway {
-  0%,
-  100% {
-    transform: rotate(-1.4deg);
-  }
-  50% {
-    transform: rotate(1.6deg);
-  }
-}
-@keyframes leaf-breathe {
-  0%,
-  100% {
-    opacity: 0.68;
-    scale: 0.96;
-  }
-  50% {
-    opacity: 1;
-    scale: 1.04;
-  }
-}
 @keyframes petal-drift {
   0% {
     opacity: 0;
@@ -671,8 +563,6 @@ body {
   .emblem-wrap,
   .sun-rays,
   .flower-pulse,
-  .money-vine,
-  .money-vine span,
   .spring-petal,
   .garden-night-sky::before,
   .garden-moon,

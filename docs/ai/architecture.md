@@ -58,6 +58,9 @@ public/                 # PWA icons, favicon
 vite.config.ts          # React + Tailwind + VitePWA plugins
 ```
 
+Personal static assets also live in `public/`. `public/couple-watercolor.png` is
+used by the hidden home-page easter egg opened from the word "Whose".
+
 ## 5. Data model
 
 ```ts

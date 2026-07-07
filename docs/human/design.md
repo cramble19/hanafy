@@ -13,9 +13,8 @@ mood: warm, bright, and calm, with a little moment of joy when you succeed.
   shows up in its ring and its checkmark. The rest of the app stays quiet and warm.
 - **A little delight.** A quick, optional celebration when you complete something
   or reach a streak.
-- **Spring details.** Hana's Spring page can have faint side vines, tiny leaves,
-  and slow petals, but they should stay behind the cards and never make the page
-  feel busy.
+- **Spring details.** Hana's Spring page can have slow, faint petals behind the
+  cards, but the edges should stay clean and the page should never feel busy.
 
 ## What you see
 

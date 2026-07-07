@@ -26,10 +26,11 @@ Principles: reduce to essentials; whitespace is an active element; one primary
 action per screen; one typeface; warm chrome + a single **per-habit** accent;
 feedback-only motion; kindness over punishment.
 
-Hana's Spring page may use a restrained ambient decorative layer: faint side
-vines, small money-plant-style leaves, and slow drifting petals behind the cards.
-These elements must be `aria-hidden`, `pointer-events: none`, visually secondary,
-and disabled by `prefers-reduced-motion`.
+Hana's Spring page may use a restrained ambient decorative layer: slow drifting
+petals behind the cards. Keep page edges clean; avoid side vines/leaves if they
+compete with the cards. Decorative elements must be `aria-hidden`,
+`pointer-events: none`, visually secondary, and disabled by
+`prefers-reduced-motion`.
 
 ## 1. Color
 

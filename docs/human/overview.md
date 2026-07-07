@@ -35,6 +35,7 @@ Anyone who wants to build healthier routines without a complicated app.
 - **Free.** No servers and no subscriptions.
 - **One app, everywhere.** The website and the installable phone app are the
   same thing.
+- **Personal touches.** The home page has a small hidden photo easter egg.
 
 ## What it is NOT (for now)
 
