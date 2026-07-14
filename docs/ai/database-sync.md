@@ -91,7 +91,7 @@ The API route auto-creates these tables:
 ```sql
 hana_state_snapshots (
   profile_id text primary key,
-  current_date text not null,
+  current_date_key text not null,
   total_flowers integer not null,
   state jsonb not null,
   synced_at timestamptz not null

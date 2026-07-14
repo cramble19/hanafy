@@ -73,7 +73,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     await sql`
       INSERT INTO hana_state_snapshots (
         profile_id,
-        current_date,
+        current_date_key,
         total_flowers,
         state,
         synced_at
@@ -87,7 +87,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       )
       ON CONFLICT (profile_id)
       DO UPDATE SET
-        current_date = EXCLUDED.current_date,
+        current_date_key = EXCLUDED.current_date_key,
         total_flowers = EXCLUDED.total_flowers,
         state = EXCLUDED.state,
         synced_at = EXCLUDED.synced_at
@@ -174,7 +174,7 @@ async function ensureTables(sql: NeonSql) {
   await sql`
     CREATE TABLE IF NOT EXISTS hana_state_snapshots (
       profile_id text PRIMARY KEY,
-      current_date text NOT NULL,
+      current_date_key text NOT NULL,
       total_flowers integer NOT NULL,
       state jsonb NOT NULL,
       synced_at timestamptz NOT NULL
