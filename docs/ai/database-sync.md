@@ -8,6 +8,9 @@ The app is DB-first in production: Neon/Postgres is the authoritative source of
 Hana state. `localStorage` remains only as an offline/cache fallback. Production
 builds read and write Hana state through a Vercel serverless function.
 
+Hana state is consent-first: no normal DB write happens until Hana chooses
+`HanaGameState.startDate`. Preview/explore state stays session-only.
+
 There is no login or auth layer. Static profile ids are used:
 
 ```ts
@@ -21,7 +24,8 @@ Only `hana` is currently wired in the UI. `cramble` is reserved for the future.
 - `src/lib/hanaCloudSync.ts` builds a database-ready sync payload from
   `HanaGameState` and the quest catalog.
 - `src/lib/hanaRemoteState.ts` loads/saves the authoritative DB snapshot and
-  chooses DB state before cache/initial state.
+  chooses DB state before cache/initial state. It also clears Hana DB rows before
+  the first committed start date.
 - `src/App.tsx` loads DB state on startup/resume, writes changes to DB, and uses
   `localStorage` only as cache/fallback.
 - `api/hana-sync.ts` is the Vercel API route. It creates tables if needed and
@@ -31,15 +35,21 @@ Only `hana` is currently wired in the UI. `cramble` is reserved for the future.
 ## Runtime flow
 
 1. App startup calls `GET /api/hana-sync?profileId=hana`.
-2. If a DB snapshot exists, it becomes `HanaGameState` and overwrites the local
+2. If no started DB snapshot exists, Home -> Hana shows the start-date setup page.
+3. Preview mode can open the app without DB writes.
+4. When Hana chooses her first day, the app calls `DELETE /api/hana-sync?profileId=hana`
+   to clear old rows, then `POST /api/hana-sync` to save the fresh started state.
+5. If a DB snapshot exists with `state.startDate`, it becomes `HanaGameState` and overwrites the local
    cache.
-3. If no DB snapshot exists, the app seeds the DB from local cache or a fresh
-   initial state.
-4. Hana taps a quest, skip, or weed.
-5. `App.tsx` computes the next `HanaGameState`.
-6. Production saves the new state with `POST /api/hana-sync`.
-7. On success, UI and `localStorage` cache are updated from the saved state.
-8. If offline or DB fails, the local cache can be shown temporarily, but the next
+6. Hana taps a quest, skip, or weed.
+7. `App.tsx` computes the next `HanaGameState` and updates UI/local cache
+   immediately.
+8. Production saves the newest queued state with `POST /api/hana-sync` in the
+   background.
+9. If multiple taps happen quickly, `pendingDbSaveRef` keeps only the latest state
+   while `isDbSaveInFlightRef` serializes writes so stale requests do not race the
+   latest snapshot.
+10. If offline or DB fails, the local cache can be shown temporarily, but the next
    successful DB refresh is authoritative.
 
 Local dev does not call the backend because `import.meta.env.DEV` disables cloud
@@ -55,6 +65,7 @@ shows one of these states:
 - `error`
 - `offline`
 - `disabled`
+- `preview`
 
 ## Source of truth
 
@@ -76,6 +87,9 @@ type HanaCloudSyncPayload = {
   weedStatuses: HanaWeedSyncRow[]
 }
 ```
+
+The payload's `state.startDate` must be a string. The API rejects `POST` payloads
+without it so unstarted preview state cannot become authoritative history.
 
 Quest rows use:
 

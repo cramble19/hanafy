@@ -13,6 +13,7 @@ Technical source of truth for Hana's flower-based game loop.
 - `src/lib/hanaStats.ts` — derives user-facing stats from the same normalized rows.
 - `src/App.tsx` — owns Hana's current game state and persistence.
 - `api/hana-sync.ts` — Vercel API route that stores Hana history in Postgres.
+- `src/pages/HanaStartPage.tsx` — start-date gate before Hana's tracker.
 - `src/pages/HanaPage.tsx` — renders the game UI, task sections, dev controls.
 - `src/pages/GardenPage.tsx` — renders the dedicated night-garden reward page.
 - `src/pages/StatsPage.tsx` — renders Hana's garden-journal stats view.
@@ -245,6 +246,7 @@ and make the user feel successful instead of guilty.
 
 ```ts
 type HanaGameState = {
+  startDate: string | null
   currentDate: string // YYYY-MM-DD
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
@@ -256,6 +258,9 @@ type HanaGameState = {
   totalFlowers: number
 }
 ```
+
+`startDate` is `null` until Hana commits her first day. While it is `null`, the
+app may show preview/explore state, but that state must not be saved to Postgres.
 
 `dailyCompletions[dateKey][questId]` stores whether a daily task was completed
 on a specific day.
@@ -294,6 +299,16 @@ catalog edits.
 In production, Hana state is loaded from Postgres through `/api/hana-sync`.
 Postgres is the source of truth. `localStorage` under `hana-game/v1` is only a
 fallback cache for offline or failed-network moments.
+
+Before `startDate` exists, Home -> Hana shows `HanaStartPage`. The setup page can:
+
+- commit a first day, which clears Hana's old DB rows and saves a fresh started
+  state
+- open preview mode, which lets the app be explored without database writes
+
+`saveHanaStateToDb()` rejects unstarted states, and the API route also rejects
+`POST` payloads whose `state.startDate` is missing. `DELETE /api/hana-sync`
+clears the profile snapshot and analytics rows before the first committed start.
 
 Saved state is normalized on load from both DB snapshots and local cache. The
 previous single `completions[date][quest]` shape and the later

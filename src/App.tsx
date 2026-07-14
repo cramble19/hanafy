@@ -4,9 +4,11 @@ import { quests } from '@/data/quests'
 import {
   addDays,
   createInitialHanaState,
+  createStartedHanaState,
   getSkipEventKey,
   getSkipProgress,
   getSkipWeekKey,
+  hasHanaStarted,
   parseStoredHanaState,
   recomputeTotalFlowers,
   STORAGE_KEY,
@@ -15,11 +17,13 @@ import {
   todayKey,
 } from '@/lib/hanaGame'
 import {
+  clearHanaStateFromDb,
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveHanaStateToDb,
 } from '@/lib/hanaRemoteState'
 import { HomePage } from '@/pages/HomePage'
+import { HanaStartPage } from '@/pages/HanaStartPage'
 import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
 import { StatsPage } from '@/pages/StatsPage'
@@ -31,6 +35,7 @@ import type { HanaGameState } from '@/types'
 
 type View =
   | 'home'
+  | 'hanaStart'
   | 'hana'
   | 'garden'
   | 'stats'
@@ -46,13 +51,18 @@ type CloudSyncStatus =
   | 'error'
   | 'offline'
   | 'disabled'
+  | 'preview'
 
 export default function App() {
   const [view, setView] = useState<View>('home')
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [selectedWeedId, setSelectedWeedId] = useState<string | null>(null)
+  const [isExploringHana, setIsExploringHana] = useState(false)
   const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
   const hanaGameRef = useRef<HanaGameState | null>(null)
+  const clearedUnstartedDbRef = useRef(false)
+  const pendingDbSaveRef = useRef<HanaGameState | null>(null)
+  const isDbSaveInFlightRef = useRef(false)
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(
     import.meta.env.DEV ? 'disabled' : 'loading',
   )
@@ -64,6 +74,10 @@ export default function App() {
 
   const cacheHanaGame = useCallback((state: HanaGameState) => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, [])
+
+  const clearHanaCache = useCallback(() => {
+    window.localStorage.removeItem(STORAGE_KEY)
   }, [])
 
   const readCachedHanaGame = useCallback(() => {
@@ -85,6 +99,10 @@ export default function App() {
 
   const hydrateFromDb = useCallback(
     async (silent = false) => {
+      if (silent && (pendingDbSaveRef.current || isDbSaveInFlightRef.current)) {
+        return false
+      }
+
       if (import.meta.env.DEV) {
         const cachedState = readCachedHanaGame()
         const initialState = createInitialSyncedState()
@@ -94,7 +112,11 @@ export default function App() {
           initialState,
         })
         setHanaGame(chosen.state)
-        cacheHanaGame(chosen.state)
+        if (hasHanaStarted(chosen.state)) {
+          cacheHanaGame(chosen.state)
+        } else {
+          clearHanaCache()
+        }
         setCloudSyncStatus('disabled')
         return true
       }
@@ -108,7 +130,11 @@ export default function App() {
           initialState,
         })
         setHanaGame(chosen.state)
-        cacheHanaGame(chosen.state)
+        if (hasHanaStarted(chosen.state)) {
+          cacheHanaGame(chosen.state)
+        } else {
+          clearHanaCache()
+        }
         if (!silent) {
           setCloudSyncStatus('offline')
         }
@@ -124,7 +150,11 @@ export default function App() {
         const fallbackState =
           hanaGameRef.current ?? readCachedHanaGame() ?? createInitialSyncedState()
         setHanaGame(fallbackState)
-        cacheHanaGame(fallbackState)
+        if (hasHanaStarted(fallbackState)) {
+          cacheHanaGame(fallbackState)
+        } else {
+          clearHanaCache()
+        }
         if (!silent) {
           setCloudSyncStatus('error')
         }
@@ -142,6 +172,17 @@ export default function App() {
         initialState,
       })
       const stateForToday = syncStateToDate(chosen.state, quests)
+
+      if (!hasHanaStarted(stateForToday)) {
+        setHanaGame(initialState)
+        clearHanaCache()
+        if (remote.snapshot && !clearedUnstartedDbRef.current) {
+          clearedUnstartedDbRef.current = true
+          await clearHanaStateFromDb('hana')
+        }
+        setCloudSyncStatus('preview')
+        return true
+      }
 
       setHanaGame(stateForToday)
       cacheHanaGame(stateForToday)
@@ -165,23 +206,55 @@ export default function App() {
       setCloudSyncStatus('synced')
       return true
     },
-    [cacheHanaGame, createInitialSyncedState, readCachedHanaGame],
+    [cacheHanaGame, clearHanaCache, createInitialSyncedState, readCachedHanaGame],
   )
+
+  const flushQueuedDbSave = useCallback(async () => {
+    if (import.meta.env.DEV || isDbSaveInFlightRef.current) {
+      return
+    }
+
+    isDbSaveInFlightRef.current = true
+    try {
+      while (pendingDbSaveRef.current) {
+        const stateToSave = pendingDbSaveRef.current
+        pendingDbSaveRef.current = null
+        const saveResult = await saveHanaStateToDb(stateToSave, 'hana')
+
+        if (!saveResult.ok) {
+          pendingDbSaveRef.current ??= stateToSave
+          setCloudSyncStatus('error')
+          return
+        }
+
+        setLastCloudSyncAt(saveResult.syncedAt)
+      }
+
+      setCloudSyncStatus('synced')
+    } finally {
+      isDbSaveInFlightRef.current = false
+    }
+  }, [])
 
   const commitHanaState = useCallback(
     async (nextState: HanaGameState, silent = false) => {
       const stateForToday = syncStateToDate(nextState, quests, nextState.currentDate)
 
-      if (import.meta.env.DEV) {
+      if (!hasHanaStarted(stateForToday)) {
         setHanaGame(stateForToday)
-        cacheHanaGame(stateForToday)
+        setCloudSyncStatus('preview')
+        return false
+      }
+
+      setHanaGame(stateForToday)
+      cacheHanaGame(stateForToday)
+
+      if (import.meta.env.DEV) {
         setCloudSyncStatus('disabled')
         return true
       }
 
       if (!navigator.onLine) {
-        setHanaGame(stateForToday)
-        cacheHanaGame(stateForToday)
         setCloudSyncStatus('offline')
         return false
       }
@@ -190,22 +263,11 @@ export default function App() {
         setCloudSyncStatus('syncing')
       }
 
-      const saveResult = await saveHanaStateToDb(stateForToday, 'hana')
-      setHanaGame(stateForToday)
-      cacheHanaGame(stateForToday)
-
-      if (!saveResult.ok) {
-        if (!silent) {
-          setCloudSyncStatus('error')
-        }
-        return false
-      }
-
-      setLastCloudSyncAt(saveResult.syncedAt)
-      setCloudSyncStatus('synced')
+      pendingDbSaveRef.current = stateForToday
+      void flushQueuedDbSave()
       return true
     },
-    [cacheHanaGame],
+    [cacheHanaGame, flushQueuedDbSave],
   )
 
   useEffect(() => {
@@ -219,7 +281,7 @@ export default function App() {
 
     const syncToToday = () => {
       const previousState = hanaGameRef.current
-      if (!previousState) {
+      if (!previousState || !hasHanaStarted(previousState)) {
         return
       }
 
@@ -372,19 +434,97 @@ export default function App() {
   }
 
   const resetHana = () => {
-    window.localStorage.removeItem(STORAGE_KEY)
+    clearHanaCache()
+    const previousState = hanaGameRef.current
+    const resetDate = previousState?.startDate ?? todayKey()
     void commitHanaState(
       syncActiveQuestPlan(
         {
-          ...createInitialHanaState(),
-          currentDate: todayKey(),
+          ...createStartedHanaState(resetDate),
         },
         quests,
       ),
     )
   }
 
+  const startHanaOnDate = async (startDate: string) => {
+    const startedState = syncStateToDate(createStartedHanaState(startDate), quests)
+
+    setIsExploringHana(false)
+    clearHanaCache()
+
+    if (import.meta.env.DEV) {
+      setHanaGame(startedState)
+      cacheHanaGame(startedState)
+      setCloudSyncStatus('disabled')
+      setView('hana')
+      return
+    }
+
+    if (!navigator.onLine) {
+      setCloudSyncStatus('offline')
+      return
+    }
+
+    setCloudSyncStatus('syncing')
+    const clearResult = await clearHanaStateFromDb('hana')
+    if (!clearResult.ok) {
+      setCloudSyncStatus('error')
+      return
+    }
+
+    const saveResult = await saveHanaStateToDb(startedState, 'hana')
+    if (!saveResult.ok) {
+      setCloudSyncStatus('error')
+      return
+    }
+
+    setHanaGame(startedState)
+    cacheHanaGame(startedState)
+    setLastCloudSyncAt(saveResult.syncedAt)
+    setCloudSyncStatus('synced')
+    setView('hana')
+  }
+
+  const exploreHana = () => {
+    setIsExploringHana(true)
+    setCloudSyncStatus('preview')
+    setHanaGame(syncActiveQuestPlan(createInitialHanaState(), quests))
+    setView('hana')
+  }
+
+  const openHana = () => {
+    setIsExploringHana(false)
+    setView(hasHanaStarted(hanaGameRef.current) ? 'hana' : 'hanaStart')
+  }
+
+  if (view === 'hanaStart') {
+    return hanaGame ? (
+      <HanaStartPage
+        onBack={() => setView('home')}
+        onStart={(startDate) => void startHanaOnDate(startDate)}
+        onExplore={exploreHana}
+        isSaving={cloudSyncStatus === 'syncing'}
+        statusText={getStartPageStatus(cloudSyncStatus)}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
   if (view === 'hana') {
+    if (hanaGame && !hasHanaStarted(hanaGame) && !isExploringHana) {
+      return (
+        <HanaStartPage
+          onBack={() => setView('home')}
+          onStart={(startDate) => void startHanaOnDate(startDate)}
+          onExplore={exploreHana}
+          isSaving={cloudSyncStatus === 'syncing'}
+          statusText={getStartPageStatus(cloudSyncStatus)}
+        />
+      )
+    }
+
     return hanaGame ? (
       <HanaPage
         game={hanaGame}
@@ -398,7 +538,10 @@ export default function App() {
         onSyncCloud={() => void hydrateFromDb(false)}
         cloudSyncStatus={cloudSyncStatus}
         lastCloudSyncAt={lastCloudSyncAt}
-        onBack={() => setView('home')}
+        onBack={() => {
+          setIsExploringHana(false)
+          setView('home')
+        }}
       />
     ) : (
       <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
@@ -480,7 +623,7 @@ export default function App() {
     )
   }
 
-  return <HomePage onSelectHana={() => setView('hana')} />
+  return <HomePage onSelectHana={openHana} />
 }
 
 function HanaLoadingPage({
@@ -515,6 +658,22 @@ function HanaLoadingPage({
       </div>
     </div>
   )
+}
+
+function getStartPageStatus(status: CloudSyncStatus) {
+  if (status === 'syncing') {
+    return 'Clearing the old garden and saving Hana\'s first day...'
+  }
+  if (status === 'offline') {
+    return 'Starting needs internet once, so the first day can be saved to the database.'
+  }
+  if (status === 'error') {
+    return 'Could not prepare the database yet. Please try again in a moment.'
+  }
+  if (status === 'preview') {
+    return 'Preview mode is open. It will not save progress until a start date is chosen.'
+  }
+  return 'Choose today when Hana is ready. Explore is okay if she wants to look around first.'
 }
 
 function toggleDailyQuest(state: HanaGameState, questId: string): HanaGameState {

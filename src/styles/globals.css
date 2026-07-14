@@ -149,6 +149,54 @@ body {
   z-index: 1;
 }
 
+.hana-start-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 240, 196, 0.66), transparent 36%),
+    radial-gradient(circle at 12% 82%, rgba(247, 166, 190, 0.18), transparent 28%),
+    transparent;
+}
+.hana-start-shell::before,
+.hana-start-shell::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(247, 166, 190, 0.2);
+  filter: blur(0.2px);
+}
+.hana-start-shell::before {
+  top: 7.5rem;
+  right: 2.2rem;
+  width: 2.2rem;
+  height: 3.1rem;
+  rotate: 34deg;
+}
+.hana-start-shell::after {
+  bottom: 5.5rem;
+  left: 1.5rem;
+  width: 1.8rem;
+  height: 2.6rem;
+  background: rgba(238, 166, 58, 0.18);
+  rotate: -42deg;
+}
+.hana-start-shell > * {
+  position: relative;
+  z-index: 1;
+}
+.hana-start-card {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(255, 240, 196, 0.56), transparent 32%),
+    radial-gradient(circle at 6% 100%, rgba(120, 171, 99, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 18px 48px -38px rgba(43, 38, 32, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+}
+
 .spring-decor-layer {
   pointer-events: none;
   position: absolute;

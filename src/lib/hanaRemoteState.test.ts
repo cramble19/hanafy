@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { HanaGameState } from '@/types'
 import {
+  clearHanaStateFromDb,
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveHanaStateToDb,
@@ -88,10 +89,37 @@ describe('Hana remote state helpers', () => {
       }),
     )
   })
+
+  it('does not save before Hana has chosen a start date', async () => {
+    const state = createState({ startDate: null })
+    const fetchImpl = vi.fn() as unknown as typeof fetch
+
+    const result = await saveHanaStateToDb(state, 'hana', fetchImpl)
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Cannot save Hana before start date is set',
+    })
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('clears Hana state from the DB endpoint', async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    const result = await clearHanaStateFromDb('hana', fetchImpl)
+
+    expect(result).toEqual({ ok: true })
+    expect(fetchImpl).toHaveBeenCalledWith('/api/hana-sync?profileId=hana', {
+      method: 'DELETE',
+    })
+  })
 })
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
+    startDate: '2026-07-14',
     currentDate: '2026-07-14',
     activeDailyQuests: {},
     activeLongTermQuestIds: [],

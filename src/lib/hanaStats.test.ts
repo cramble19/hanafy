@@ -100,6 +100,7 @@ describe('Hana stats', () => {
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
+    startDate: '2026-07-14',
     currentDate: '2026-07-14',
     activeDailyQuests: {},
     activeLongTermQuestIds: [],

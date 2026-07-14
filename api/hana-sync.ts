@@ -43,14 +43,14 @@ type SyncPayload = {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  res.setHeader('Allow', 'GET, POST, OPTIONS')
+  res.setHeader('Allow', 'GET, POST, DELETE, OPTIONS')
 
   if (req.method === 'OPTIONS') {
     res.status(204).end()
     return
   }
 
-  if (req.method !== 'GET' && req.method !== 'POST') {
+  if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'DELETE') {
     res.status(405).json({ error: 'Method not allowed' })
     return
   }
@@ -64,6 +64,23 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     const sql = neon(databaseUrl)
     await ensureTables(sql)
+
+    if (req.method === 'DELETE') {
+      const profileId = readProfileId(req.query?.profileId)
+      if (!profileId) {
+        res.status(400).json({ error: 'Invalid profileId' })
+        return
+      }
+
+      await Promise.all([
+        sql`DELETE FROM hana_quest_statuses WHERE profile_id = ${profileId}`,
+        sql`DELETE FROM hana_weed_statuses WHERE profile_id = ${profileId}`,
+        sql`DELETE FROM hana_state_snapshots WHERE profile_id = ${profileId}`,
+      ])
+
+      res.status(200).json({ ok: true })
+      return
+    }
 
     if (req.method === 'GET') {
       const profileId = readProfileId(req.query?.profileId)
@@ -262,6 +279,8 @@ function parsePayload(body: unknown): SyncPayload | null {
     typeof value.syncedAt !== 'string' ||
     typeof value.currentDate !== 'string' ||
     typeof value.totalFlowers !== 'number' ||
+    !isRecord(value.state) ||
+    typeof value.state.startDate !== 'string' ||
     !Array.isArray(value.questStatuses) ||
     !Array.isArray(value.weedStatuses)
   ) {
@@ -276,7 +295,7 @@ function parsePayload(body: unknown): SyncPayload | null {
     syncedAt: value.syncedAt,
     currentDate: value.currentDate,
     totalFlowers: value.totalFlowers,
-    state: value.state ?? {},
+    state: value.state,
     questStatuses,
     weedStatuses,
   }

@@ -61,6 +61,7 @@ type Props = {
     | 'error'
     | 'offline'
     | 'disabled'
+    | 'preview'
   lastCloudSyncAt: string | null
   onBack: () => void
 }
@@ -141,7 +142,8 @@ export function HanaPage({
             disabled={
               cloudSyncStatus === 'loading' ||
               cloudSyncStatus === 'syncing' ||
-              cloudSyncStatus === 'disabled'
+              cloudSyncStatus === 'disabled' ||
+              cloudSyncStatus === 'preview'
             }
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
             aria-label="Refresh Hana's progress from database"
@@ -485,6 +487,9 @@ function getCloudSyncLabel(
 ) {
   if (status === 'disabled') {
     return 'Local development uses the saved cache.'
+  }
+  if (status === 'preview') {
+    return 'Preview only. Pick Hana\'s start date before saving to the database.'
   }
   if (status === 'loading') {
     return 'Loading the latest garden from the database...'

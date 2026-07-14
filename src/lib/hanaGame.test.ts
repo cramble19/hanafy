@@ -85,6 +85,7 @@ describe('Hana game date sync', () => {
 
 function createSavedState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
+    startDate: '2026-07-07',
     currentDate: '2026-07-07',
     activeDailyQuests: {},
     activeLongTermQuestIds: [],

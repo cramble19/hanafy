@@ -48,6 +48,7 @@ export function displayDate(dateKey: string) {
 
 export function createInitialHanaState(): HanaGameState {
   return {
+    startDate: null,
     currentDate: todayKey(),
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
@@ -58,6 +59,18 @@ export function createInitialHanaState(): HanaGameState {
     eveningWeeds: {},
     totalFlowers: 0,
   }
+}
+
+export function createStartedHanaState(startDate: string): HanaGameState {
+  return {
+    ...createInitialHanaState(),
+    startDate,
+    currentDate: startDate,
+  }
+}
+
+export function hasHanaStarted(state: HanaGameState | null | undefined) {
+  return typeof state?.startDate === 'string' && state.startDate.length > 0
 }
 
 export function getCompletionsForQuestGroup(
@@ -488,8 +501,13 @@ function normalizeHanaState(value: unknown, quests: Quest[]): HanaGameState {
 
   const currentDate =
     typeof value.currentDate === 'string' ? value.currentDate : todayKey()
+  const startDate =
+    typeof value.startDate === 'string' && value.startDate.length > 0
+      ? value.startDate
+      : null
 
   const migratedState: HanaGameState = {
+    startDate,
     currentDate,
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),
     activeLongTermQuestIds: readStringArray(value.activeLongTermQuestIds),

@@ -3,6 +3,7 @@ import {
   createHanaCloudSyncPayload,
   type HanaProfileId,
 } from '@/lib/hanaCloudSync'
+import { hasHanaStarted } from '@/lib/hanaGame'
 import type { HanaGameState } from '@/types'
 
 type FetchLike = typeof fetch
@@ -22,6 +23,8 @@ export type LoadHanaStateResult =
 export type SaveHanaStateResult =
   | { ok: true; syncedAt: string }
   | { ok: false; error: string }
+
+export type ClearHanaStateResult = { ok: true } | { ok: false; error: string }
 
 export type DbFirstStateSource = 'database' | 'cache' | 'initial'
 
@@ -55,6 +58,10 @@ export async function saveHanaStateToDb(
   profileId: HanaProfileId = 'hana',
   fetchImpl: FetchLike = fetch,
 ): Promise<SaveHanaStateResult> {
+  if (!hasHanaStarted(state)) {
+    return { ok: false, error: 'Cannot save Hana before start date is set' }
+  }
+
   const payload = createHanaCloudSyncPayload(profileId, state, quests)
 
   try {
@@ -78,6 +85,28 @@ export async function saveHanaStateToDb(
     }
   }
 }
+
+export async function clearHanaStateFromDb(
+  profileId: HanaProfileId = 'hana',
+  fetchImpl: FetchLike = fetch,
+): Promise<ClearHanaStateResult> {
+  try {
+    const response = await fetchImpl(`/api/hana-sync?profileId=${profileId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      return { ok: false, error: `Clear failed with ${response.status}` }
+    }
+
+    return { ok: true }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Clear failed',
+    }
+  }
+}
+
 
 export function chooseDbFirstState({
   databaseState,
