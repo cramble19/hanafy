@@ -29,6 +29,8 @@ be added later with the same structure.
 
 The app still keeps a small saved cache on the device. That cache is only for
 offline fallback. When the app is online, the database is the source of truth.
+If the online database has no Hana state, the app clears the local cache and shows
+the Start Health Overhaul screen instead of restoring old device progress.
 
 ## When sync happens
 

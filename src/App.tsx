@@ -161,11 +161,20 @@ export default function App() {
         return false
       }
 
-      const databaseState = remote.snapshot
-        ? parseStoredHanaState(JSON.stringify(remote.snapshot.state), quests)
-        : null
-      const cachedState = readCachedHanaGame()
       const initialState = createInitialSyncedState()
+      if (!remote.snapshot) {
+        setHanaGame(initialState)
+        clearHanaCache()
+        setLastCloudSyncAt(null)
+        setCloudSyncStatus('idle')
+        return true
+      }
+
+      const databaseState = parseStoredHanaState(
+        JSON.stringify(remote.snapshot.state),
+        quests,
+      )
+      const cachedState = readCachedHanaGame()
       const chosen = chooseDbFirstState({
         databaseState,
         cachedState,
@@ -180,7 +189,7 @@ export default function App() {
           clearedUnstartedDbRef.current = true
           await clearHanaStateFromDb('hana')
         }
-        setCloudSyncStatus('preview')
+        setCloudSyncStatus('idle')
         return true
       }
 

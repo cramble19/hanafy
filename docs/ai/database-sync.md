@@ -37,21 +37,23 @@ Only `hana` is currently wired in the UI. `cramble` is reserved for the future.
 
 1. App startup calls `GET /api/hana-sync?profileId=hana`.
 2. If no started DB snapshot exists, Home -> Hana shows the start setup page.
-3. Preview mode can open the app without DB writes.
-4. When Hana presses **Start Health Overhaul**, the app calls
+3. If the online DB has no snapshot, the app clears local cache instead of
+   reseeding the database from old device state.
+4. Preview mode can open the app without DB writes.
+5. When Hana presses **Start Health Overhaul**, the app calls
    `DELETE /api/hana-sync?profileId=hana` to clear old rows, then
    `POST /api/hana-sync` to save the fresh started state for today.
-5. If a DB snapshot exists with `state.startDate`, it becomes `HanaGameState` and overwrites the local
+6. If a DB snapshot exists with `state.startDate`, it becomes `HanaGameState` and overwrites the local
    cache.
-6. Hana taps a quest, skip, or weed.
-7. `App.tsx` computes the next `HanaGameState` and updates UI/local cache
+7. Hana taps a quest, skip, or weed.
+8. `App.tsx` computes the next `HanaGameState` and updates UI/local cache
    immediately.
-8. Production saves the newest queued state with `POST /api/hana-sync` in the
+9. Production saves the newest queued state with `POST /api/hana-sync` in the
    background.
-9. If multiple taps happen quickly, `pendingDbSaveRef` keeps only the latest state
+10. If multiple taps happen quickly, `pendingDbSaveRef` keeps only the latest state
    while `isDbSaveInFlightRef` serializes writes so stale requests do not race the
    latest snapshot.
-10. If offline or DB fails, the local cache can be shown temporarily, but the next
+11. If offline or DB fails, the local cache can be shown temporarily, but the next
    successful DB refresh is authoritative.
 
 Local dev does not call the backend because `import.meta.env.DEV` disables cloud
