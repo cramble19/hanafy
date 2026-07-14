@@ -10,6 +10,7 @@ import {
   recomputeTotalFlowers,
   STORAGE_KEY,
   syncActiveQuestPlan,
+  syncStateToDate,
   todayKey,
 } from '@/lib/hanaGame'
 import { HomePage } from '@/pages/HomePage'
@@ -35,7 +36,35 @@ export default function App() {
   }, [hanaGame])
 
   useEffect(() => {
-    setHanaGame((prev) => syncActiveQuestPlan(prev, quests))
+    if (import.meta.env.DEV) {
+      return undefined
+    }
+
+    const syncToToday = () => {
+      const currentDate = todayKey()
+      setHanaGame((prev) =>
+        prev.currentDate === currentDate
+          ? prev
+          : syncStateToDate(prev, quests, currentDate),
+      )
+    }
+
+    const syncWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncToToday()
+      }
+    }
+
+    syncToToday()
+    window.addEventListener('focus', syncToToday)
+    document.addEventListener('visibilitychange', syncWhenVisible)
+    const intervalId = window.setInterval(syncToToday, 60 * 1000)
+
+    return () => {
+      window.removeEventListener('focus', syncToToday)
+      document.removeEventListener('visibilitychange', syncWhenVisible)
+      window.clearInterval(intervalId)
+    }
   }, [])
 
   const toggleHana = (id: string) =>

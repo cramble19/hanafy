@@ -119,15 +119,38 @@ export function syncActiveQuestPlan(state: HanaGameState, quests: Quest[]) {
   }
 }
 
-export function parseStoredHanaState(raw: string | null, quests: Quest[]) {
+export function syncStateToDate(
+  state: HanaGameState,
+  quests: Quest[],
+  dateKey = todayKey(),
+) {
+  return syncActiveQuestPlan(
+    {
+      ...state,
+      currentDate: dateKey,
+      totalFlowers: recomputeTotalFlowers(state, quests),
+    },
+    quests,
+  )
+}
+
+export function parseStoredHanaState(
+  raw: string | null,
+  quests: Quest[],
+  dateKey = todayKey(),
+) {
   if (!raw) {
-    return syncActiveQuestPlan(createInitialHanaState(), quests)
+    return syncStateToDate(createInitialHanaState(), quests, dateKey)
   }
 
   try {
-    return normalizeHanaState(JSON.parse(raw) as unknown, quests)
+    return syncStateToDate(
+      normalizeHanaState(JSON.parse(raw) as unknown, quests),
+      quests,
+      dateKey,
+    )
   } catch {
-    return syncActiveQuestPlan(createInitialHanaState(), quests)
+    return syncStateToDate(createInitialHanaState(), quests, dateKey)
   }
 }
 
