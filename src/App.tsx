@@ -23,9 +23,21 @@ import { HomePage } from '@/pages/HomePage'
 import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
 import { StatsPage } from '@/pages/StatsPage'
+import { QuestStatsPage } from '@/pages/QuestStatsPage'
+import { QuestDetailPage } from '@/pages/QuestDetailPage'
+import { WeedStatsPage } from '@/pages/WeedStatsPage'
+import { WeedDetailPage } from '@/pages/WeedDetailPage'
 import type { HanaGameState } from '@/types'
 
-type View = 'home' | 'hana' | 'garden' | 'stats'
+type View =
+  | 'home'
+  | 'hana'
+  | 'garden'
+  | 'stats'
+  | 'questStats'
+  | 'questDetail'
+  | 'weedStats'
+  | 'weedDetail'
 type CloudSyncStatus =
   | 'idle'
   | 'loading'
@@ -37,6 +49,8 @@ type CloudSyncStatus =
 
 export default function App() {
   const [view, setView] = useState<View>('home')
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
+  const [selectedWeedId, setSelectedWeedId] = useState<string | null>(null)
   const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
   const hanaGameRef = useRef<HanaGameState | null>(null)
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(
@@ -401,7 +415,66 @@ export default function App() {
 
   if (view === 'stats') {
     return hanaGame ? (
-      <StatsPage game={hanaGame} onBack={() => setView('hana')} />
+      <StatsPage
+        game={hanaGame}
+        onBack={() => setView('hana')}
+        onOpenQuests={() => setView('questStats')}
+        onOpenWeeds={() => setView('weedStats')}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'questStats') {
+    return hanaGame ? (
+      <QuestStatsPage
+        game={hanaGame}
+        onBack={() => setView('stats')}
+        onOpenQuest={(questId) => {
+          setSelectedQuestId(questId)
+          setView('questDetail')
+        }}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'questDetail') {
+    return hanaGame && selectedQuestId ? (
+      <QuestDetailPage
+        game={hanaGame}
+        questId={selectedQuestId}
+        onBack={() => setView('questStats')}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'weedStats') {
+    return hanaGame ? (
+      <WeedStatsPage
+        game={hanaGame}
+        onBack={() => setView('stats')}
+        onOpenWeed={(weedId) => {
+          setSelectedWeedId(weedId)
+          setView('weedDetail')
+        }}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'weedDetail') {
+    return hanaGame && selectedWeedId ? (
+      <WeedDetailPage
+        game={hanaGame}
+        weedId={selectedWeedId}
+        onBack={() => setView('weedStats')}
+      />
     ) : (
       <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
     )

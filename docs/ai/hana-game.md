@@ -16,6 +16,10 @@ Technical source of truth for Hana's flower-based game loop.
 - `src/pages/HanaPage.tsx` — renders the game UI, task sections, dev controls.
 - `src/pages/GardenPage.tsx` — renders the dedicated night-garden reward page.
 - `src/pages/StatsPage.tsx` — renders Hana's garden-journal stats view.
+- `src/pages/QuestStatsPage.tsx` — lists every quest with total done/skipped/shown counts.
+- `src/pages/QuestDetailPage.tsx` — shows one quest's totals and calendar trail.
+- `src/pages/WeedStatsPage.tsx` — lists every Evening Weed with total checks.
+- `src/pages/WeedDetailPage.tsx` — shows one weed's total checks and calendar trail.
 - `src/components/QuestCard.tsx` and `src/components/QuestSection.tsx` — task UI.
 
 ## Task schema
@@ -142,9 +146,14 @@ The page shows:
 
 - overall completion rhythm
 - current-week day petals
-- top completed quests (`mostBlooming`)
-- quests with repeated skips/misses (`needsLove`)
-- most checked Evening Weeds
+- a link to all quest rows and quest-specific detail pages
+- a link to all weed rows and weed-specific detail pages
+- quest detail calendars where green = completed, gold = skipped, pink = missed
+- weed detail calendars where green = checked
+
+`getQuestHistory(state, quests, questId)` and `getWeedHistory(state, weedId)` live
+in `src/lib/hanaStats.ts`. `getCalendarWindow(currentDate)` returns the recent
+35-day window used by detail calendars.
 
 Copy must remain non-guilting. Use language like "needs love", "soft signals",
 and "gentler try" instead of failure/punishment wording.

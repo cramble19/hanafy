@@ -666,6 +666,41 @@ body {
   margin: 0 0.6rem 0.25rem;
   background: linear-gradient(90deg, transparent, rgba(120, 171, 99, 0.34), transparent);
 }
+.stats-calendar-day {
+  display: inline-flex;
+  width: 2.15rem;
+  height: 2.15rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(90, 65, 25, 0.08);
+  border-radius: 9999px;
+  background: rgba(253, 243, 227, 0.68);
+  color: var(--faint);
+  font-size: 0.76rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.stats-calendar-day-complete,
+.stats-calendar-day-weed {
+  border-color: rgba(120, 171, 99, 0.22);
+  background: rgba(120, 171, 99, 0.16);
+  color: var(--ink);
+}
+.stats-calendar-day-skipped {
+  border-color: rgba(231, 165, 60, 0.28);
+  background: rgba(231, 165, 60, 0.16);
+  color: var(--ink);
+}
+.stats-calendar-day-missed {
+  border-color: rgba(217, 139, 160, 0.26);
+  background: rgba(247, 166, 190, 0.18);
+  color: var(--ink);
+}
+.stats-calendar-day-open {
+  border-color: rgba(110, 163, 196, 0.22);
+  background: rgba(110, 163, 196, 0.12);
+  color: var(--ink);
+}
 
 .garden-page-shell {
   --spring-fullness: 0;

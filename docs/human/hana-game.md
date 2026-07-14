@@ -149,9 +149,10 @@ The Stats page is a gentle garden journal. It shows:
 
 - overall quest rhythm
 - this week's tiny day-by-day petals
-- quests that are blooming often
-- quests that may need a softer plan because they are skipped or missed
-- common Evening Weed patterns
+- a Quests page with every quest listed row by row
+- a quest detail page with done/skipped totals and a colored calendar trail
+- a Weeds page with every Evening Weed listed row by row
+- a weed detail page with total checks and a colored calendar trail
 
 The language avoids guilt. Missed or skipped quests are treated as useful signals,
 not failure.

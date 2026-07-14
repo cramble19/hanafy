@@ -24,6 +24,23 @@ export type DailyStat = {
   completionRate: number
 }
 
+export type QuestHistoryDay = {
+  dateKey: string
+  status: 'completed' | 'skipped' | 'missed' | 'open'
+  flowersEarned: number
+}
+
+export type QuestHistory = {
+  stat: QuestStat
+  days: QuestHistoryDay[]
+}
+
+export type WeedHistory = {
+  weedId: string
+  checked: number
+  dates: string[]
+}
+
 export type HanaStats = {
   totalShown: number
   completed: number
@@ -134,6 +151,72 @@ export function getHanaStats(state: HanaGameState, quests: Quest[]): HanaStats {
     needsLove,
     weedStats: getWeedStats(state),
   }
+}
+
+export function getQuestHistory(
+  state: HanaGameState,
+  quests: Quest[],
+  questId: string,
+): QuestHistory {
+  const payload = createHanaCloudSyncPayload('hana', state, quests)
+  const quest = quests.find((item) => item.id === questId)
+  const days = payload.questStatuses
+    .filter((row) => row.questId === questId)
+    .map((row) => ({
+      dateKey: row.dateKey ?? row.windowStart ?? row.periodKey,
+      status: resolveStatus(row, state.currentDate),
+      flowersEarned: row.flowersEarned,
+    }))
+    .sort((first, second) => first.dateKey.localeCompare(second.dateKey))
+
+  const completed = days.filter((day) => day.status === 'completed').length
+  const skipped = days.filter((day) => day.status === 'skipped').length
+  const missed = days.filter((day) => day.status === 'missed').length
+  const open = days.filter((day) => day.status === 'open').length
+  const shown = days.length
+
+  return {
+    stat: {
+      questId,
+      title: quest?.title ?? questId,
+      color: quest?.color ?? '#d98ba0',
+      emoji: quest?.emoji ?? '🌸',
+      shown,
+      completed,
+      skipped,
+      missed,
+      open,
+      completionRate: percent(completed, shown),
+    },
+    days,
+  }
+}
+
+export function getWeedHistory(
+  state: HanaGameState,
+  weedId: string,
+): WeedHistory {
+  const dates = Object.entries(state.eveningWeeds ?? {})
+    .filter(([, weeds]) => Boolean(weeds[weedId]))
+    .map(([dateKey]) => dateKey)
+    .sort()
+
+  return {
+    weedId,
+    checked: dates.length,
+    dates,
+  }
+}
+
+export function getCalendarWindow(currentDateKey: string, daysToShow = 35) {
+  const startDate = parseDateKey(currentDateKey)
+  startDate.setDate(startDate.getDate() - (daysToShow - 1))
+
+  return Array.from({ length: daysToShow }, (_, index) => {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + index)
+    return formatDateKey(date)
+  })
 }
 
 function resolveStatus(

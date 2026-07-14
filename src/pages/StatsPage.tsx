@@ -8,6 +8,8 @@ import type { GardenWeed, HanaGameState } from '@/types'
 type Props = {
   game: HanaGameState
   onBack: () => void
+  onOpenQuests: () => void
+  onOpenWeeds: () => void
 }
 
 const weedLabels = new Map(
@@ -24,7 +26,7 @@ const DAY_FLOWER_COLORS = [
   '#d6b7c8',
 ] as const
 
-export function StatsPage({ game, onBack }: Props) {
+export function StatsPage({ game, onBack, onOpenQuests, onOpenWeeds }: Props) {
   const stats = getHanaStats(game, quests)
   const bestDay = getBestDay(stats.currentWeek.days)
   const needsSofterDay = getNeedsSofterDay(stats.currentWeek.days)
@@ -107,9 +109,9 @@ export function StatsPage({ game, onBack }: Props) {
           title="Skipped most often"
           items={stats.needsLove}
           emptyText="No repeated skips yet."
-          variant="skips"
+          onOpenAll={onOpenQuests}
         />
-        <WeedListCard weeds={stats.weedStats} />
+        <WeedListCard weeds={stats.weedStats} onOpenAll={onOpenWeeds} />
       </div>
 
       <p className="stats-footer-note text-center text-sm leading-6 text-muted">
@@ -194,18 +196,26 @@ function InsightListCard({
   title,
   items,
   emptyText,
+  onOpenAll,
 }: {
   title: string
   items: QuestStat[]
   emptyText: string
-  variant: 'skips'
+  onOpenAll: () => void
 }) {
   return (
     <section className="rounded-card border border-border bg-surface/84 p-4 shadow-sm backdrop-blur">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Leaf className="size-4 text-success" />
-        {title}
-      </h2>
+      <button
+        type="button"
+        onClick={onOpenAll}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <Leaf className="size-4 text-success" />
+          {title}
+        </span>
+        <span className="text-xs font-medium text-muted">View all</span>
+      </button>
       <div className="mt-3 space-y-2">
         {items.length > 0 ? (
           items.slice(0, 3).map((quest) => (
@@ -229,15 +239,24 @@ function InsightListCard({
 
 function WeedListCard({
   weeds,
+  onOpenAll,
 }: {
   weeds: Array<{ weedId: string; checked: number }>
+  onOpenAll: () => void
 }) {
   return (
     <section className="rounded-card border border-border bg-surface/84 p-4 shadow-sm backdrop-blur">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <Leaf className="size-4 text-success" />
-        Evening weeds
-      </h2>
+      <button
+        type="button"
+        onClick={onOpenAll}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <Leaf className="size-4 text-success" />
+          Evening weeds
+        </span>
+        <span className="text-xs font-medium text-muted">View all</span>
+      </button>
       <div className="mt-3 space-y-2">
         {weeds.length > 0 ? (
           weeds.slice(0, 3).map((weed) => (
