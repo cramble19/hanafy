@@ -1,4 +1,10 @@
-import { CalendarDays, ChevronLeft, RotateCcw } from 'lucide-react'
+import {
+  BarChart3,
+  CalendarDays,
+  ChevronLeft,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react'
 import { quests } from '@/data/quests'
 import hanaWeeds from '@/data/hanaWeeds.json'
 import springQuotes from '@/data/springQuotes.json'
@@ -43,8 +49,12 @@ type Props = {
   onSkip: (id: string) => void
   onToggleWeed: (id: string) => void
   onOpenGarden: () => void
+  onOpenStats: () => void
   onNextDay: () => void
   onReset: () => void
+  onSyncCloud: () => void
+  cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'offline' | 'disabled'
+  lastCloudSyncAt: string | null
   onBack: () => void
 }
 
@@ -54,8 +64,12 @@ export function HanaPage({
   onSkip,
   onToggleWeed,
   onOpenGarden,
+  onOpenStats,
   onNextDay,
   onReset,
+  onSyncCloud,
+  cloudSyncStatus,
+  lastCloudSyncAt,
   onBack,
 }: Props) {
   const levelProgress = getLevelProgress(game.totalFlowers)
@@ -83,7 +97,7 @@ export function HanaPage({
   }
 
   return (
-    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-32 pt-6">
+    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-40 pt-6">
       <SpringDecor />
       <div className="mb-6 flex items-center gap-3">
         <button
@@ -114,7 +128,20 @@ export function HanaPage({
               {displayDate(game.currentDate)}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={onSyncCloud}
+            disabled={cloudSyncStatus === 'syncing' || cloudSyncStatus === 'disabled'}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+            aria-label="Sync Hana's progress to database"
+          >
+            <RefreshCw
+              className={`size-3.5 ${cloudSyncStatus === 'syncing' ? 'animate-spin' : ''}`}
+            />
+            Sync
+          </button>
         </div>
+        <p className="mt-3 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
       </header>
 
       <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
@@ -298,6 +325,24 @@ export function HanaPage({
             </span>
           </span>
         </button>
+        <button
+          type="button"
+          onClick={onOpenStats}
+          className="sticky-garden-button sticky-stats-button"
+          aria-label="Open Hana's stats"
+        >
+          <span className="sticky-stats-icon" aria-hidden="true">
+            <BarChart3 className="size-4" />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold text-ink">
+              View garden stats
+            </span>
+            <span className="block text-xs text-muted">
+              See blooms, skips, and soft patterns
+            </span>
+          </span>
+        </button>
       </div>
     </div>
   )
@@ -421,4 +466,38 @@ function getQuoteIcon(quote: SeasonQuote) {
     return '🎼'
   }
   return '🎻'
+}
+
+function getCloudSyncLabel(
+  status: Props['cloudSyncStatus'],
+  lastCloudSyncAt: string | null,
+) {
+  if (status === 'disabled') {
+    return 'Database sync appears after deployment.'
+  }
+  if (status === 'syncing') {
+    return 'Syncing local progress to database...'
+  }
+  if (status === 'error') {
+    return 'Database sync failed. Tap Sync to try again.'
+  }
+  if (status === 'offline') {
+    return 'Offline. Local progress will sync when internet returns.'
+  }
+  if (status === 'synced' && lastCloudSyncAt) {
+    return `Database synced ${formatSyncTime(lastCloudSyncAt)}.`
+  }
+  return 'Local progress is saved. Database sync runs when online.'
+}
+
+function formatSyncTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return 'recently'
+  }
+
+  return date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 }

@@ -7,14 +7,15 @@ code and with the human-facing summary in [../human/overview.md](../human/overvi
 
 An offline-first, installable **Progressive Web App (PWA)** for gamified habit
 tracking. The website and the "installable phone app" are a single codebase: a
-static site plus a web app manifest and a service worker. All user data is
-stored **on-device** — there is **no backend, no database, and no auth**.
+static site plus a web app manifest and a service worker. User progress is
+stored **local-first** in `localStorage`, and production builds can sync Hana's
+quest history to Postgres through a Vercel API route. There is no login/auth.
 
 ## 2. Core principles
 
 - **Offline-first:** the app shell is precached and works with no network.
-- **On-device only:** state persists to `localStorage`; nothing leaves the device.
-- **Static + free:** deployable as static files to any static host.
+- **Local-first:** state persists to `localStorage` before any network sync.
+- **Small backend:** Vercel hosts serverless API routes for cloud persistence.
 - **Minimalist:** mobile-first, few dependencies, small surface area.
 - **Pure logic:** all gamification math lives in pure, testable functions.
 
@@ -30,13 +31,16 @@ stored **on-device** — there is **no backend, no database, and no auth**.
 | Icons | `lucide-react` | |
 | Toasts | `sonner` | shadcn's recommended toast |
 | State + persistence | Zustand + `persist` | Writes to `localStorage` |
+| Backend | Vercel API routes | `api/hana-sync.ts` writes sync payloads |
+| Database | Postgres via Neon/Vercel integration | Stores Hana task history for future stats |
 | Animation | `motion` (Framer Motion) | Micro-interactions |
 | Celebration | `canvas-confetti` | Completion bursts |
 | Dates | `date-fns` | Streak/date math |
 | PWA | `vite-plugin-pwa` + `sharp` icon generation | Manifest, service worker (Workbox), icons |
 
-All of the above are free and static-hostable. If on-device data grows large,
-migrate persistence from `localStorage` to IndexedDB (via `dexie`).
+All of the above are free or have suitable free tiers for a personal app. If
+on-device data grows large, migrate the local cache from `localStorage` to
+IndexedDB (via `dexie`) while keeping Postgres as the analytics store.
 
 ## 4. Intended project structure
 
@@ -54,6 +58,8 @@ src/
     useHabitStore.ts    # Zustand store + persist middleware
   types.ts              # Habit, Profile, Achievement
   styles/globals.css    # Tailwind entry + theme tokens
+api/
+  hana-sync.ts          # Vercel serverless function for Postgres sync
 public/                 # PWA icons, favicon
 vite.config.ts          # React + Tailwind + VitePWA plugins
 ```
@@ -101,11 +107,14 @@ Keep these functions free of React/store imports so they are trivially testable.
 
 ## 7. Persistence
 
-- Single Zustand store in `store/useHabitStore.ts` using the `persist` middleware.
-- Storage key e.g. `habit-tracker/v1`; set a `version` and provide a `migrate`
-  function so schema changes don't corrupt existing users' data.
-- Store shape: `{ habits: Habit[]; profile: Profile }` plus actions
-  (`addHabit`, `toggleCompletion`, `editHabit`, `deleteHabit`).
+- Hana state currently lives in `src/App.tsx` and persists to `localStorage`
+  under `hana-game/v1`.
+- `parseStoredHanaState()` normalizes/migrates older local shapes.
+- `syncStateToDate()` moves persisted state to the real local date on production
+  app launch/resume.
+- `src/lib/hanaCloudSync.ts` converts local state into database rows.
+- `api/hana-sync.ts` upserts those rows into Postgres.
+- See [database-sync.md](database-sync.md) for table schemas and deployment.
 
 ## 8. PWA setup
 
@@ -122,9 +131,10 @@ Keep these functions free of React/store imports so they are trivially testable.
 
 ## 9. Hosting
 
-Static hosting over HTTPS (required for PWA install). Any of: Vercel
-(recommended, zero-config for Vite), Cloudflare Pages, Netlify, or GitHub Pages
-(set `base` in `vite.config.ts` to the repo name). Deploy is git-push -> auto build.
+HTTPS hosting is required for PWA install. Use **Vercel** for this project
+because it hosts both the Vite frontend and the `api/` serverless route. Connect
+a Postgres database through Vercel Storage / Marketplace, then redeploy so
+`DATABASE_URL` or `POSTGRES_URL` is available to the API route.
 
 ## 10. Conventions
 

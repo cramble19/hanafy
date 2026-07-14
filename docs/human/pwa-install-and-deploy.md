@@ -13,12 +13,30 @@ normal app. It has:
 - standalone app mode
 - offline app-shell caching
 
-The data still stays only on the device because there is no backend yet.
+The app saves on the phone first. After the database is connected on Vercel, it
+also syncs Hana's quest history online so future stats pages can use it.
 
 ## Best hosting choice
 
 Use **Vercel** first. It is free for this kind of personal project, simple for a
 Vite app, and gives the HTTPS URL needed for phone installation.
+
+## Database setup
+
+Vercel hosts the backend endpoint, but the database should be a connected
+Postgres database. The simplest choice is Neon Postgres through Vercel's Storage
+or Marketplace flow.
+
+Steps:
+
+1. Open the Hanafy project in Vercel.
+2. Add a Postgres database, preferably Neon Postgres.
+3. Connect it to the Hanafy project.
+4. Make sure Vercel has `DATABASE_URL` or `POSTGRES_URL` in Environment
+   Variables.
+5. Redeploy the project.
+6. Open the deployed app and complete/skip one quest. The database tables are
+   created automatically on the first successful sync.
 
 ## Phone install
 

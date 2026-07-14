@@ -9,9 +9,13 @@ Technical source of truth for Hana's flower-based game loop.
 - `src/data/springQuotes.json` — editable Spring quote / April-inspired note catalog.
 - `src/data/quests.ts` — typed loader for the JSON catalog.
 - `src/lib/hanaGame.ts` — pure game/date/rotation/level helpers.
+- `src/lib/hanaCloudSync.ts` — converts local Hana state into database sync rows.
+- `src/lib/hanaStats.ts` — derives user-facing stats from the same normalized rows.
 - `src/App.tsx` — owns Hana's current game state and persistence.
+- `api/hana-sync.ts` — Vercel API route that stores Hana history in Postgres.
 - `src/pages/HanaPage.tsx` — renders the game UI, task sections, dev controls.
 - `src/pages/GardenPage.tsx` — renders the dedicated night-garden reward page.
+- `src/pages/StatsPage.tsx` — renders Hana's garden-journal stats view.
 - `src/components/QuestCard.tsx` and `src/components/QuestSection.tsx` — task UI.
 
 ## Task schema
@@ -116,6 +120,34 @@ count.
 `--spring-hill-glow`, `--spring-flower-opacity`). These make the garden warmer
 and richer as Spring approaches 100% while keeping the flower count tied to
 `game.totalFlowers`.
+
+## Stats page
+
+`StatsPage` is reachable from the sticky action area on `HanaPage`, below the
+night-garden action. It should feel like a soft garden journal, not an analytics
+dashboard.
+
+`getHanaStats(state, quests)` derives stats from `createHanaCloudSyncPayload()`
+so the UI matches the same normalized rows that are synced to Postgres.
+
+Status interpretation:
+
+- `completed` stays completed.
+- `skipped` stays skipped.
+- pending daily rows before `currentDate` become `missed`.
+- pending daily rows on `currentDate` stay `open`.
+- pending long-term rows become `missed` only after `dueDate`.
+
+The page shows:
+
+- overall completion rhythm
+- current-week day petals
+- top completed quests (`mostBlooming`)
+- quests with repeated skips/misses (`needsLove`)
+- most checked Evening Weeds
+
+Copy must remain non-guilting. Use language like "needs love", "soft signals",
+and "gentler try" instead of failure/punishment wording.
 
 ## Leveling
 
@@ -250,11 +282,21 @@ Checking a task toggles its period bucket and then recomputes `totalFlowers` fro
 all completions. This prevents stale flower totals after migrations or task
 catalog edits.
 
-State is persisted to `localStorage` under `hana-game/v1`.
+State is persisted to `localStorage` under `hana-game/v1`. In production, the
+latest Hana state is also synced to Postgres through `/api/hana-sync` so future
+stats pages can read task history without depending on one phone's browser data.
 
 Saved state is normalized on load. The previous single `completions[date][quest]`
 shape and the later `weeklyCompletions` shape are migrated into daily/long-term
 buckets so older local progress does not crash the app.
+
+The database sync stores:
+
+- a full `hana_state_snapshots` JSON backup for profile `hana`
+- daily and long-term quest rows in `hana_quest_statuses`
+- Evening Weed rows in `hana_weed_statuses`
+
+See `docs/ai/database-sync.md` for the schema and Vercel deployment steps.
 
 ## Dev controls
 

@@ -40,8 +40,8 @@ The quest page only shows Hana's flower balance and progress. The actual garden
 is a dedicated page with a night sky, a softly drifting moon, twinkling stars,
 occasional comets, hills, and planted flowers.
 
-Hana's page also has a small night-garden preview and a soft bottom Garden button
-so the garden feels close without crowding the quest list.
+Hana's page also has a small night-garden preview and soft bottom buttons for
+the Garden and Stats, so progress feels close without crowding the quest list.
 
 At the center of the garden, a quiet couple silhouette sits together watching
 the stars.
@@ -142,3 +142,16 @@ In local development, the Hana page has two temporary testing buttons:
 
 These only appear when running locally with the dev server. They are hidden from
 the deployed production app.
+
+## Stats page
+
+The Stats page is a gentle garden journal. It shows:
+
+- overall quest rhythm
+- this week's tiny day-by-day petals
+- quests that are blooming often
+- quests that may need a softer plan because they are skipped or missed
+- common Evening Weed patterns
+
+The language avoids guilt. Missed or skipped quests are treated as useful signals,
+not failure.

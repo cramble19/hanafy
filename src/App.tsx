@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { quests } from '@/data/quests'
+import { createHanaCloudSyncPayload } from '@/lib/hanaCloudSync'
 import {
   addDays,
   createInitialHanaState,
@@ -16,9 +17,11 @@ import {
 import { HomePage } from '@/pages/HomePage'
 import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
+import { StatsPage } from '@/pages/StatsPage'
 import type { HanaGameState } from '@/types'
 
-type View = 'home' | 'hana' | 'garden'
+type View = 'home' | 'hana' | 'garden' | 'stats'
+type CloudSyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline' | 'disabled'
 
 export default function App() {
   const [view, setView] = useState<View>('home')
@@ -30,10 +33,84 @@ export default function App() {
     const saved = window.localStorage.getItem(STORAGE_KEY)
     return parseStoredHanaState(saved, quests)
   })
+  const hanaGameRef = useRef(hanaGame)
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(
+    import.meta.env.DEV ? 'disabled' : 'idle',
+  )
+  const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null)
+
+  useEffect(() => {
+    hanaGameRef.current = hanaGame
+  }, [hanaGame])
+
+  const syncHanaToCloud = useCallback(async (silent = false) => {
+    if (import.meta.env.DEV) {
+      if (!silent) {
+        setCloudSyncStatus('disabled')
+      }
+      return false
+    }
+
+    if (!navigator.onLine) {
+      if (!silent) {
+        setCloudSyncStatus('offline')
+      }
+      return false
+    }
+
+    if (!silent) {
+      setCloudSyncStatus('syncing')
+    }
+
+    const payload = createHanaCloudSyncPayload(
+      'hana',
+      hanaGameRef.current,
+      quests,
+    )
+
+    try {
+      const response = await fetch('/api/hana-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        console.warn('Hana cloud sync failed', response.status)
+        if (!silent) {
+          setCloudSyncStatus('error')
+        }
+        return false
+      }
+
+      setLastCloudSyncAt(new Date().toISOString())
+      setCloudSyncStatus('synced')
+      return true
+    } catch (error: unknown) {
+      console.warn('Hana cloud sync failed', error)
+      if (!silent) {
+        setCloudSyncStatus('error')
+      }
+      return false
+    }
+  }, [])
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(hanaGame))
   }, [hanaGame])
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void syncHanaToCloud(true)
+    }, 800)
+    return () => window.clearTimeout(timeoutId)
+  }, [hanaGame, syncHanaToCloud])
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -66,6 +143,32 @@ export default function App() {
       window.clearInterval(intervalId)
     }
   }, [])
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      return undefined
+    }
+
+    const syncWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void syncHanaToCloud(true)
+      }
+    }
+
+    const syncSilently = () => {
+      void syncHanaToCloud(true)
+    }
+
+    window.addEventListener('focus', syncSilently)
+    window.addEventListener('online', syncSilently)
+    document.addEventListener('visibilitychange', syncWhenVisible)
+
+    return () => {
+      window.removeEventListener('focus', syncSilently)
+      window.removeEventListener('online', syncSilently)
+      document.removeEventListener('visibilitychange', syncWhenVisible)
+    }
+  }, [syncHanaToCloud])
 
   const toggleHana = (id: string) =>
     setHanaGame((prev) => {
@@ -169,8 +272,12 @@ export default function App() {
         onSkip={toggleSkip}
         onToggleWeed={toggleWeed}
         onOpenGarden={() => setView('garden')}
+        onOpenStats={() => setView('stats')}
         onNextDay={goToNextDay}
         onReset={resetHana}
+        onSyncCloud={() => void syncHanaToCloud(false)}
+        cloudSyncStatus={cloudSyncStatus}
+        lastCloudSyncAt={lastCloudSyncAt}
         onBack={() => setView('home')}
       />
     )
@@ -178,6 +285,10 @@ export default function App() {
 
   if (view === 'garden') {
     return <GardenPage game={hanaGame} onBack={() => setView('hana')} />
+  }
+
+  if (view === 'stats') {
+    return <StatsPage game={hanaGame} onBack={() => setView('hana')} />
   }
 
   return <HomePage onSelectHana={() => setView('hana')} />

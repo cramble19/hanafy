@@ -30,15 +30,17 @@ Anyone who wants to build healthier routines without a complicated app.
 ## Things that keep it simple
 
 - **Works offline.** No internet needed after the first load.
-- **Private.** Everything stays on your device. No account, no sign-up, nothing
-  is sent anywhere.
-- **Free.** No servers and no subscriptions.
+- **No account.** Hana does not need to sign in.
+- **Local first.** The app saves on the phone first, then syncs Hana's progress
+  to a small database when deployed and online.
+- **Low-cost.** Vercel hosts the app/backend, with a free Postgres option for
+  the database.
 - **One app, everywhere.** The website and the installable phone app are the
   same thing.
 - **Personal touches.** The home page has a small hidden photo easter egg.
 
 ## What it is NOT (for now)
 
-- No syncing between devices — your data lives on the one device you use.
+- No full account system or multi-user permissions yet.
 - No social feed or sharing.
 - No reminders/notifications yet (possible future addition).

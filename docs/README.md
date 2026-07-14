@@ -35,6 +35,7 @@ This convention is enforced by the Cursor rule `.cursor/rules/documentation.mdc`
 | Project overview / architecture | [human/overview.md](human/overview.md) | [ai/architecture.md](ai/architecture.md) |
 | Design system (look and feel) | [human/design.md](human/design.md) | [ai/design-system.md](ai/design-system.md) |
 | Hana flower game | [human/hana-game.md](human/hana-game.md) | [ai/hana-game.md](ai/hana-game.md) |
+| Database sync | [human/database-sync.md](human/database-sync.md) | [ai/database-sync.md](ai/database-sync.md) |
 | Install and deploy | [human/pwa-install-and-deploy.md](human/pwa-install-and-deploy.md) | [ai/pwa-install-and-deploy.md](ai/pwa-install-and-deploy.md) |
 
 Approved visual mockups (the visual source of truth) live in

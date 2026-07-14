@@ -388,6 +388,8 @@ body {
   position: sticky;
   bottom: 0.8rem;
   z-index: 10;
+  display: grid;
+  gap: 0.55rem;
   margin-top: 1.4rem;
 }
 .sticky-garden-button {
@@ -434,6 +436,22 @@ body {
   background: #fff4bf;
   box-shadow: 0 0 12px rgba(255, 244, 191, 0.64);
 }
+.sticky-stats-button {
+  background: rgba(255, 255, 255, 0.7);
+}
+.sticky-stats-icon {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 240, 196, 0.82), transparent 28%),
+    rgba(120, 171, 99, 0.16);
+  color: var(--success);
+  box-shadow: inset 0 0 0 1px rgba(120, 171, 99, 0.18);
+}
 
 .spring-quote-card {
   position: relative;
@@ -469,6 +487,184 @@ body {
     radial-gradient(circle at 85% 8%, rgba(247, 166, 190, 0.26), transparent 28%),
     radial-gradient(circle at 8% 0%, rgba(255, 240, 196, 0.62), transparent 34%),
     var(--surface);
+}
+
+.stats-page-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 78% 0%, rgba(255, 240, 196, 0.7), transparent 26%),
+    radial-gradient(circle at 16% 100%, rgba(247, 166, 190, 0.16), transparent 32%),
+    transparent;
+}
+.stats-page-shell > :not(.stats-botanical-corner) {
+  position: relative;
+  z-index: 1;
+}
+.stats-title-card h1 {
+  text-wrap: balance;
+}
+.stats-botanical-corner {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.stats-botanical-corner span {
+  position: absolute;
+  border-radius: 9999px 9999px 9999px 0;
+  opacity: 0.38;
+  filter: drop-shadow(0 8px 16px rgba(217, 139, 160, 0.12));
+}
+.stats-botanical-corner span:nth-child(1) {
+  right: 1.2rem;
+  top: 4.8rem;
+  width: 1.7rem;
+  height: 2.35rem;
+  background: rgba(247, 166, 190, 0.52);
+  rotate: 36deg;
+}
+.stats-botanical-corner span:nth-child(2) {
+  right: 2.9rem;
+  top: 3.85rem;
+  width: 0.16rem;
+  height: 5.4rem;
+  border-radius: 9999px;
+  background: rgba(120, 171, 99, 0.42);
+  rotate: 22deg;
+}
+.stats-botanical-corner span:nth-child(3) {
+  right: 0.35rem;
+  bottom: 2.3rem;
+  width: 2rem;
+  height: 2.8rem;
+  background: rgba(241, 181, 111, 0.38);
+  rotate: 48deg;
+}
+.stats-botanical-corner span:nth-child(4) {
+  right: 2.5rem;
+  bottom: 1.1rem;
+  width: 0.16rem;
+  height: 6.2rem;
+  border-radius: 9999px;
+  background: rgba(120, 171, 99, 0.3);
+  rotate: -24deg;
+}
+.stats-week-scroll {
+  scrollbar-width: none;
+}
+.stats-week-scroll::-webkit-scrollbar {
+  display: none;
+}
+.stats-day-card {
+  min-width: 4.7rem;
+  border: 1px solid rgba(90, 65, 25, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.85rem 0.55rem;
+  text-align: center;
+  box-shadow:
+    0 14px 38px -30px rgba(43, 38, 32, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+}
+.stats-day-card-best {
+  border-color: rgba(238, 166, 58, 0.34);
+  box-shadow:
+    0 16px 34px -24px rgba(238, 166, 58, 0.5),
+    inset 0 0 0 1px rgba(238, 166, 58, 0.08);
+}
+.stats-insight-card {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 240, 196, 0.48), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(253, 243, 227, 0.72));
+}
+.stats-stem-chart {
+  position: relative;
+  height: 10.8rem;
+  padding: 0.7rem 0.2rem 1.15rem 1.9rem;
+}
+.stats-chart-line {
+  position: absolute;
+  left: 0;
+  right: 0.1rem;
+  height: 1px;
+  border-top: 1px dashed rgba(90, 65, 25, 0.09);
+  color: var(--faint);
+  font-size: 0.54rem;
+  line-height: 1;
+  transform: translateY(50%);
+}
+.stats-stem-bars {
+  position: relative;
+  display: grid;
+  height: 100%;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.28rem;
+}
+.stats-stem-column {
+  position: relative;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+}
+.stats-stem {
+  position: absolute;
+  bottom: 0.5rem;
+  width: 0.12rem;
+  min-height: 1.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(120, 171, 99, 0.55), rgba(120, 171, 99, 0.25));
+}
+.stats-stem::after {
+  content: "";
+  position: absolute;
+  left: 0.12rem;
+  top: 40%;
+  width: 0.45rem;
+  height: 0.25rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(120, 171, 99, 0.42);
+  rotate: -26deg;
+}
+.stats-stem-flower {
+  --flower-color: #f7a6be;
+  position: absolute;
+  z-index: 1;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle, #f4cf73 0 22%, transparent 24%),
+    conic-gradient(
+      from 0deg,
+      var(--flower-color),
+      rgba(255, 255, 255, 0.4),
+      var(--flower-color),
+      rgba(255, 255, 255, 0.4),
+      var(--flower-color)
+    );
+  box-shadow: 0 4px 12px rgba(43, 38, 32, 0.12);
+  transform: translateY(50%);
+}
+.stats-stem-label {
+  position: absolute;
+  bottom: -0.8rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--faint);
+}
+.stats-footer-note::before,
+.stats-footer-note::after {
+  content: "";
+  display: inline-block;
+  width: 2.2rem;
+  height: 1px;
+  margin: 0 0.6rem 0.25rem;
+  background: linear-gradient(90deg, transparent, rgba(120, 171, 99, 0.34), transparent);
 }
 
 .garden-page-shell {

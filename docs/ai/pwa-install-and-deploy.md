@@ -5,8 +5,10 @@ This project is configured as an installable Vite PWA.
 ## Runtime behavior
 
 - Static React app built by Vite.
-- No backend, no auth, no server database.
-- User progress is still stored in browser `localStorage`.
+- Vercel API route at `api/hana-sync.ts` handles optional cloud sync.
+- No login/auth.
+- User progress is still stored immediately in browser `localStorage`.
+- Production builds sync Hana's progress to Postgres when online.
 - PWA install and offline app shell are handled by `vite-plugin-pwa`.
 
 ## Key files
@@ -20,6 +22,7 @@ This project is configured as an installable Vite PWA.
 - `public/maskable-icon-512x512.png` is the Android maskable icon.
 - `public/apple-touch-icon.png` is the iOS home-screen icon.
 - `scripts/generate-pwa-icons.mjs` regenerates PNG icons from the SVG source.
+- `api/hana-sync.ts` is the serverless database-sync endpoint.
 
 ## Scripts
 
@@ -59,7 +62,8 @@ Workbox precaches the static app shell:
 globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
 ```
 
-There is currently no runtime API caching because the app has no backend.
+The database sync endpoint is not cached. POST requests to `/api/hana-sync`
+should always go to the network.
 
 ## Deployment
 
@@ -71,6 +75,13 @@ Vercel settings:
 - Build command: `npm run build`
 - Output directory: `dist`
 - Install command: `npm install`
+
+Database settings:
+
+- Add a Postgres database from Vercel Storage / Marketplace, preferably Neon.
+- Connect it to the Hanafy project.
+- Confirm the project has `DATABASE_URL` or `POSTGRES_URL`.
+- Redeploy after adding the variable.
 
 PWA installation requires HTTPS. Vercel provides HTTPS automatically.
 
