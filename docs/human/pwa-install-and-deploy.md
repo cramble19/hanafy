@@ -13,8 +13,8 @@ normal app. It has:
 - standalone app mode
 - offline app-shell caching
 
-The app saves on the phone first. After the database is connected on Vercel, it
-also syncs Hana's quest history online so future stats pages can use it.
+After the database is connected on Vercel, Hana's progress is saved in Postgres
+as the main copy. The phone keeps a small local cache only as a fallback.
 
 ## Best hosting choice
 

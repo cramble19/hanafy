@@ -1,7 +1,8 @@
 # Database Sync
 
-Hanafy now keeps working locally first, but it can also save Hana's progress to
-a cloud database after deployment.
+Hanafy now uses the cloud database as the main saved copy of Hana's progress.
+This means Hana can open the app from another phone or laptop and still see the
+same garden.
 
 ## What gets saved
 
@@ -22,22 +23,21 @@ skip patterns, flower history, and which habits are becoming consistent.
 There is still no login. For now, the only saved profile is **Hana**. Cramble can
 be added later with the same structure.
 
-The app still saves locally on the phone first, so it remains usable even if the
-internet is unavailable. When the app is online, it syncs the latest progress to
-the database.
+The app still keeps a small saved cache on the device. That cache is only for
+offline fallback. When the app is online, the database is the source of truth.
 
 ## When sync happens
 
-The deployed app syncs Hana's local progress to the database:
+The deployed app talks to the database:
 
-- shortly after a quest, skip, or weed changes
+- when Hana opens or resumes the app
+- before showing Hana's current saved garden on a new device
+- when a quest, skip, or weed changes
 - when the app comes back online
-- when the app is opened or resumed
-- when the **Sync** button is tapped on Hana's page
+- when the **Refresh** button is tapped on Hana's page
 
-For now, the phone's local progress is the source of truth. If the phone and
-database disagree, tapping **Sync** uploads the phone's current progress to the
-database. The database is mainly the history/statistics copy.
+If the phone and database disagree while online, the database wins. The local
+cache is updated from the database.
 
 ## Where it runs
 

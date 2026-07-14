@@ -7,14 +7,15 @@ code and with the human-facing summary in [../human/overview.md](../human/overvi
 
 An offline-first, installable **Progressive Web App (PWA)** for gamified habit
 tracking. The website and the "installable phone app" are a single codebase: a
-static site plus a web app manifest and a service worker. User progress is
-stored **local-first** in `localStorage`, and production builds can sync Hana's
-quest history to Postgres through a Vercel API route. There is no login/auth.
+static site plus a web app manifest and a service worker. In production, Hana's
+progress is stored **DB-first** in Postgres through a Vercel API route.
+`localStorage` is only an offline/cache fallback. There is no login/auth.
 
 ## 2. Core principles
 
 - **Offline-first:** the app shell is precached and works with no network.
-- **Local-first:** state persists to `localStorage` before any network sync.
+- **DB-first:** Postgres is the source of truth whenever the app is online.
+- **Offline fallback:** `localStorage` is only a temporary cache.
 - **Small backend:** Vercel hosts serverless API routes for cloud persistence.
 - **Minimalist:** mobile-first, few dependencies, small surface area.
 - **Pure logic:** all gamification math lives in pure, testable functions.
@@ -30,17 +31,17 @@ quest history to Postgres through a Vercel API route. There is no login/auth.
 | Components | shadcn/ui (`new-york`) | Owned/restyled primitives; `npx shadcn@canary` for v4 |
 | Icons | `lucide-react` | |
 | Toasts | `sonner` | shadcn's recommended toast |
-| State + persistence | Zustand + `persist` | Writes to `localStorage` |
-| Backend | Vercel API routes | `api/hana-sync.ts` writes sync payloads |
-| Database | Postgres via Neon/Vercel integration | Stores Hana task history for future stats |
+| State + persistence | React state + `localStorage` cache | DB snapshot hydrates UI; local cache is fallback |
+| Backend | Vercel API routes | `api/hana-sync.ts` reads/writes Hana state |
+| Database | Postgres via Neon/Vercel integration | Source of truth for Hana progress |
 | Animation | `motion` (Framer Motion) | Micro-interactions |
 | Celebration | `canvas-confetti` | Completion bursts |
 | Dates | `date-fns` | Streak/date math |
 | PWA | `vite-plugin-pwa` + `sharp` icon generation | Manifest, service worker (Workbox), icons |
 
 All of the above are free or have suitable free tiers for a personal app. If
-on-device data grows large, migrate the local cache from `localStorage` to
-IndexedDB (via `dexie`) while keeping Postgres as the analytics store.
+on-device cache grows large, migrate the fallback cache from `localStorage` to
+IndexedDB (via `dexie`) while keeping Postgres as the source of truth.
 
 ## 4. Intended project structure
 
@@ -107,13 +108,14 @@ Keep these functions free of React/store imports so they are trivially testable.
 
 ## 7. Persistence
 
-- Hana state currently lives in `src/App.tsx` and persists to `localStorage`
-  under `hana-game/v1`.
+- Hana state currently lives in `src/App.tsx`, but production startup hydrates it
+  from Postgres via `src/lib/hanaRemoteState.ts`.
+- `localStorage` under `hana-game/v1` is a cache/fallback only.
 - `parseStoredHanaState()` normalizes/migrates older local shapes.
 - `syncStateToDate()` moves persisted state to the real local date on production
   app launch/resume.
-- `src/lib/hanaCloudSync.ts` converts local state into database rows.
-- `api/hana-sync.ts` upserts those rows into Postgres.
+- `src/lib/hanaCloudSync.ts` converts state into database rows.
+- `api/hana-sync.ts` reads/writes the DB snapshot and analytics rows.
 - See [database-sync.md](database-sync.md) for table schemas and deployment.
 
 ## 8. PWA setup

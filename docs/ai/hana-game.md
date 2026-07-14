@@ -282,13 +282,14 @@ Checking a task toggles its period bucket and then recomputes `totalFlowers` fro
 all completions. This prevents stale flower totals after migrations or task
 catalog edits.
 
-State is persisted to `localStorage` under `hana-game/v1`. In production, the
-latest Hana state is also synced to Postgres through `/api/hana-sync` so future
-stats pages can read task history without depending on one phone's browser data.
+In production, Hana state is loaded from Postgres through `/api/hana-sync`.
+Postgres is the source of truth. `localStorage` under `hana-game/v1` is only a
+fallback cache for offline or failed-network moments.
 
-Saved state is normalized on load. The previous single `completions[date][quest]`
-shape and the later `weeklyCompletions` shape are migrated into daily/long-term
-buckets so older local progress does not crash the app.
+Saved state is normalized on load from both DB snapshots and local cache. The
+previous single `completions[date][quest]` shape and the later
+`weeklyCompletions` shape are migrated into daily/long-term buckets so older
+progress does not crash the app.
 
 The database sync stores:
 

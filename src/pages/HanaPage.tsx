@@ -53,7 +53,14 @@ type Props = {
   onNextDay: () => void
   onReset: () => void
   onSyncCloud: () => void
-  cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'offline' | 'disabled'
+  cloudSyncStatus:
+    | 'idle'
+    | 'loading'
+    | 'syncing'
+    | 'synced'
+    | 'error'
+    | 'offline'
+    | 'disabled'
   lastCloudSyncAt: string | null
   onBack: () => void
 }
@@ -131,14 +138,18 @@ export function HanaPage({
           <button
             type="button"
             onClick={onSyncCloud}
-            disabled={cloudSyncStatus === 'syncing' || cloudSyncStatus === 'disabled'}
+            disabled={
+              cloudSyncStatus === 'loading' ||
+              cloudSyncStatus === 'syncing' ||
+              cloudSyncStatus === 'disabled'
+            }
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
-            aria-label="Sync Hana's progress to database"
+            aria-label="Refresh Hana's progress from database"
           >
             <RefreshCw
-              className={`size-3.5 ${cloudSyncStatus === 'syncing' ? 'animate-spin' : ''}`}
+              className={`size-3.5 ${cloudSyncStatus === 'loading' || cloudSyncStatus === 'syncing' ? 'animate-spin' : ''}`}
             />
-            Sync
+            Refresh
           </button>
         </div>
         <p className="mt-3 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
@@ -473,21 +484,24 @@ function getCloudSyncLabel(
   lastCloudSyncAt: string | null,
 ) {
   if (status === 'disabled') {
-    return 'Database sync appears after deployment.'
+    return 'Local development uses the saved cache.'
+  }
+  if (status === 'loading') {
+    return 'Loading the latest garden from the database...'
   }
   if (status === 'syncing') {
-    return 'Syncing local progress to database...'
+    return "Saving Hana's latest change to the database..."
   }
   if (status === 'error') {
-    return 'Database sync failed. Tap Sync to try again.'
+    return 'Database refresh failed. Showing the saved cache for now.'
   }
   if (status === 'offline') {
-    return 'Offline. Local progress will sync when internet returns.'
+    return 'Offline. Showing the saved cache until database returns.'
   }
   if (status === 'synced' && lastCloudSyncAt) {
-    return `Database synced ${formatSyncTime(lastCloudSyncAt)}.`
+    return `Database garden loaded ${formatSyncTime(lastCloudSyncAt)}.`
   }
-  return 'Local progress is saved. Database sync runs when online.'
+  return 'Database is the source of truth. Local cache is only a fallback.'
 }
 
 function formatSyncTime(value: string) {

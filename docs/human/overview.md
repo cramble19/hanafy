@@ -31,8 +31,9 @@ Anyone who wants to build healthier routines without a complicated app.
 
 - **Works offline.** No internet needed after the first load.
 - **No account.** Hana does not need to sign in.
-- **Local first.** The app saves on the phone first, then syncs Hana's progress
-  to a small database when deployed and online.
+- **Database saved.** Hana's progress is saved in the cloud database when online,
+  so another phone or laptop can show the same garden.
+- **Offline fallback.** The app keeps a small local cache for weak-network moments.
 - **Low-cost.** Vercel hosts the app/backend, with a free Postgres option for
   the database.
 - **One app, everywhere.** The website and the installable phone app are the

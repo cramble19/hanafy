@@ -7,8 +7,8 @@ This project is configured as an installable Vite PWA.
 - Static React app built by Vite.
 - Vercel API route at `api/hana-sync.ts` handles optional cloud sync.
 - No login/auth.
-- User progress is still stored immediately in browser `localStorage`.
-- Production builds sync Hana's progress to Postgres when online.
+- Production builds read/write Hana's progress from Postgres as the source of truth.
+- Browser `localStorage` is only a fallback cache.
 - PWA install and offline app shell are handled by `vite-plugin-pwa`.
 
 ## Key files

@@ -3,6 +3,7 @@ import { neon } from '@neondatabase/serverless'
 type ApiRequest = {
   method?: string
   body?: unknown
+  query?: Record<string, string | string[] | undefined>
 }
 
 type ApiResponse = {
@@ -42,21 +43,15 @@ type SyncPayload = {
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  res.setHeader('Allow', 'POST, OPTIONS')
+  res.setHeader('Allow', 'GET, POST, OPTIONS')
 
   if (req.method === 'OPTIONS') {
     res.status(204).end()
     return
   }
 
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET' && req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
-    return
-  }
-
-  const payload = parsePayload(req.body)
-  if (!payload) {
-    res.status(400).json({ error: 'Invalid Hana sync payload' })
     return
   }
 
@@ -69,6 +64,50 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     const sql = neon(databaseUrl)
     await ensureTables(sql)
+
+    if (req.method === 'GET') {
+      const profileId = readProfileId(req.query?.profileId)
+      if (!profileId) {
+        res.status(400).json({ error: 'Invalid profileId' })
+        return
+      }
+
+      const rows = await sql`
+        SELECT
+          profile_id,
+          current_date_key,
+          total_flowers,
+          state,
+          synced_at
+        FROM hana_state_snapshots
+        WHERE profile_id = ${profileId}
+        LIMIT 1
+      `
+      const snapshot = rows[0]
+
+      if (!isSnapshotRow(snapshot)) {
+        res.status(200).json({ ok: true, snapshot: null })
+        return
+      }
+
+      res.status(200).json({
+        ok: true,
+        snapshot: {
+          profileId: snapshot.profile_id,
+          currentDate: snapshot.current_date_key,
+          totalFlowers: snapshot.total_flowers,
+          state: snapshot.state,
+          syncedAt: formatSyncedAt(snapshot.synced_at),
+        },
+      })
+      return
+    }
+
+    const payload = parsePayload(req.body)
+    if (!payload) {
+      res.status(400).json({ error: 'Invalid Hana sync payload' })
+      return
+    }
 
     await sql`
       INSERT INTO hana_state_snapshots (
@@ -241,6 +280,35 @@ function parsePayload(body: unknown): SyncPayload | null {
     questStatuses,
     weedStatuses,
   }
+}
+
+function readProfileId(value: string | string[] | undefined) {
+  const profileId = Array.isArray(value) ? value[0] : value
+  return profileId === 'hana' || profileId === 'cramble' ? profileId : null
+}
+
+function isSnapshotRow(value: unknown): value is {
+  profile_id: string
+  current_date_key: string
+  total_flowers: number
+  state: unknown
+  synced_at: string | Date
+} {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    typeof value.profile_id === 'string' &&
+    typeof value.current_date_key === 'string' &&
+    typeof value.total_flowers === 'number' &&
+    isRecord(value.state) &&
+    (typeof value.synced_at === 'string' || value.synced_at instanceof Date)
+  )
+}
+
+function formatSyncedAt(value: string | Date) {
+  return value instanceof Date ? value.toISOString() : value
 }
 
 function isQuestStatus(value: unknown): value is QuestStatus {

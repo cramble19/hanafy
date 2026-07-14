@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { FlowerMark } from '@/components/icons/FlowerMark'
 import { quests } from '@/data/quests'
-import { createHanaCloudSyncPayload } from '@/lib/hanaCloudSync'
 import {
   addDays,
   createInitialHanaState,
@@ -14,6 +14,11 @@ import {
   syncStateToDate,
   todayKey,
 } from '@/lib/hanaGame'
+import {
+  chooseDbFirstState,
+  loadHanaStateFromDb,
+  saveHanaStateToDb,
+} from '@/lib/hanaRemoteState'
 import { HomePage } from '@/pages/HomePage'
 import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
@@ -21,21 +26,21 @@ import { StatsPage } from '@/pages/StatsPage'
 import type { HanaGameState } from '@/types'
 
 type View = 'home' | 'hana' | 'garden' | 'stats'
-type CloudSyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline' | 'disabled'
+type CloudSyncStatus =
+  | 'idle'
+  | 'loading'
+  | 'syncing'
+  | 'synced'
+  | 'error'
+  | 'offline'
+  | 'disabled'
 
 export default function App() {
   const [view, setView] = useState<View>('home')
-  const [hanaGame, setHanaGame] = useState<HanaGameState>(() => {
-    if (typeof window === 'undefined') {
-      return syncActiveQuestPlan(createInitialHanaState(), quests)
-    }
-
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    return parseStoredHanaState(saved, quests)
-  })
-  const hanaGameRef = useRef(hanaGame)
+  const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
+  const hanaGameRef = useRef<HanaGameState | null>(null)
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(
-    import.meta.env.DEV ? 'disabled' : 'idle',
+    import.meta.env.DEV ? 'disabled' : 'loading',
   )
   const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null)
 
@@ -43,74 +48,155 @@ export default function App() {
     hanaGameRef.current = hanaGame
   }, [hanaGame])
 
-  const syncHanaToCloud = useCallback(async (silent = false) => {
-    if (import.meta.env.DEV) {
-      if (!silent) {
-        setCloudSyncStatus('disabled')
-      }
-      return false
-    }
+  const cacheHanaGame = useCallback((state: HanaGameState) => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  }, [])
 
-    if (!navigator.onLine) {
-      if (!silent) {
-        setCloudSyncStatus('offline')
-      }
-      return false
-    }
+  const readCachedHanaGame = useCallback(() => {
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    return saved ? parseStoredHanaState(saved, quests) : null
+  }, [])
 
-    if (!silent) {
-      setCloudSyncStatus('syncing')
-    }
-
-    const payload = createHanaCloudSyncPayload(
-      'hana',
-      hanaGameRef.current,
-      quests,
-    )
-
-    try {
-      const response = await fetch('/api/hana-sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+  const createInitialSyncedState = useCallback(
+    () =>
+      syncActiveQuestPlan(
+        {
+          ...createInitialHanaState(),
+          currentDate: todayKey(),
         },
-        body: JSON.stringify(payload),
-      })
+        quests,
+      ),
+    [],
+  )
 
-      if (!response.ok) {
-        console.warn('Hana cloud sync failed', response.status)
+  const hydrateFromDb = useCallback(
+    async (silent = false) => {
+      if (import.meta.env.DEV) {
+        const cachedState = readCachedHanaGame()
+        const initialState = createInitialSyncedState()
+        const chosen = chooseDbFirstState({
+          databaseState: null,
+          cachedState,
+          initialState,
+        })
+        setHanaGame(chosen.state)
+        cacheHanaGame(chosen.state)
+        setCloudSyncStatus('disabled')
+        return true
+      }
+
+      if (!navigator.onLine) {
+        const cachedState = readCachedHanaGame()
+        const initialState = createInitialSyncedState()
+        const chosen = chooseDbFirstState({
+          databaseState: null,
+          cachedState,
+          initialState,
+        })
+        setHanaGame(chosen.state)
+        cacheHanaGame(chosen.state)
+        if (!silent) {
+          setCloudSyncStatus('offline')
+        }
+        return false
+      }
+
+      if (!silent) {
+        setCloudSyncStatus('loading')
+      }
+
+      const remote = await loadHanaStateFromDb('hana')
+      if (!remote.ok) {
+        const fallbackState =
+          hanaGameRef.current ?? readCachedHanaGame() ?? createInitialSyncedState()
+        setHanaGame(fallbackState)
+        cacheHanaGame(fallbackState)
         if (!silent) {
           setCloudSyncStatus('error')
         }
         return false
       }
 
-      setLastCloudSyncAt(new Date().toISOString())
+      const databaseState = remote.snapshot
+        ? parseStoredHanaState(JSON.stringify(remote.snapshot.state), quests)
+        : null
+      const cachedState = readCachedHanaGame()
+      const initialState = createInitialSyncedState()
+      const chosen = chooseDbFirstState({
+        databaseState,
+        cachedState,
+        initialState,
+      })
+      const stateForToday = syncStateToDate(chosen.state, quests)
+
+      setHanaGame(stateForToday)
+      cacheHanaGame(stateForToday)
+
+      const shouldSeedOrRefreshDb =
+        chosen.source !== 'database' ||
+        remote.snapshot?.currentDate !== stateForToday.currentDate
+      if (shouldSeedOrRefreshDb) {
+        const saveResult = await saveHanaStateToDb(stateForToday, 'hana')
+        if (saveResult.ok) {
+          setLastCloudSyncAt(saveResult.syncedAt)
+          setCloudSyncStatus('synced')
+          return true
+        }
+
+        setCloudSyncStatus('error')
+        return false
+      }
+
+      setLastCloudSyncAt(remote.snapshot?.syncedAt ?? null)
       setCloudSyncStatus('synced')
       return true
-    } catch (error: unknown) {
-      console.warn('Hana cloud sync failed', error)
-      if (!silent) {
-        setCloudSyncStatus('error')
+    },
+    [cacheHanaGame, createInitialSyncedState, readCachedHanaGame],
+  )
+
+  const commitHanaState = useCallback(
+    async (nextState: HanaGameState, silent = false) => {
+      const stateForToday = syncStateToDate(nextState, quests, nextState.currentDate)
+
+      if (import.meta.env.DEV) {
+        setHanaGame(stateForToday)
+        cacheHanaGame(stateForToday)
+        setCloudSyncStatus('disabled')
+        return true
       }
-      return false
-    }
-  }, [])
+
+      if (!navigator.onLine) {
+        setHanaGame(stateForToday)
+        cacheHanaGame(stateForToday)
+        setCloudSyncStatus('offline')
+        return false
+      }
+
+      if (!silent) {
+        setCloudSyncStatus('syncing')
+      }
+
+      const saveResult = await saveHanaStateToDb(stateForToday, 'hana')
+      setHanaGame(stateForToday)
+      cacheHanaGame(stateForToday)
+
+      if (!saveResult.ok) {
+        if (!silent) {
+          setCloudSyncStatus('error')
+        }
+        return false
+      }
+
+      setLastCloudSyncAt(saveResult.syncedAt)
+      setCloudSyncStatus('synced')
+      return true
+    },
+    [cacheHanaGame],
+  )
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(hanaGame))
-  }, [hanaGame])
-
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      return undefined
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void syncHanaToCloud(true)
-    }, 800)
-    return () => window.clearTimeout(timeoutId)
-  }, [hanaGame, syncHanaToCloud])
+    void hydrateFromDb()
+  }, [hydrateFromDb])
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -118,12 +204,15 @@ export default function App() {
     }
 
     const syncToToday = () => {
+      const previousState = hanaGameRef.current
+      if (!previousState) {
+        return
+      }
+
       const currentDate = todayKey()
-      setHanaGame((prev) =>
-        prev.currentDate === currentDate
-          ? prev
-          : syncStateToDate(prev, quests, currentDate),
-      )
+      if (previousState.currentDate !== currentDate) {
+        void commitHanaState(syncStateToDate(previousState, quests, currentDate), true)
+      }
     }
 
     const syncWhenVisible = () => {
@@ -142,118 +231,135 @@ export default function App() {
       document.removeEventListener('visibilitychange', syncWhenVisible)
       window.clearInterval(intervalId)
     }
-  }, [])
+  }, [commitHanaState])
 
   useEffect(() => {
     if (import.meta.env.DEV) {
       return undefined
     }
 
-    const syncWhenVisible = () => {
+    const refreshSilently = () => {
+      void hydrateFromDb(true)
+    }
+
+    const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
-        void syncHanaToCloud(true)
+        refreshSilently()
       }
     }
 
-    const syncSilently = () => {
-      void syncHanaToCloud(true)
-    }
-
-    window.addEventListener('focus', syncSilently)
-    window.addEventListener('online', syncSilently)
-    document.addEventListener('visibilitychange', syncWhenVisible)
+    window.addEventListener('focus', refreshSilently)
+    window.addEventListener('online', refreshSilently)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
 
     return () => {
-      window.removeEventListener('focus', syncSilently)
-      window.removeEventListener('online', syncSilently)
-      document.removeEventListener('visibilitychange', syncWhenVisible)
+      window.removeEventListener('focus', refreshSilently)
+      window.removeEventListener('online', refreshSilently)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [syncHanaToCloud])
+  }, [hydrateFromDb])
 
-  const toggleHana = (id: string) =>
-    setHanaGame((prev) => {
-      const quest = quests.find((item) => item.id === id)
-      if (!quest) {
-        return prev
-      }
+  const toggleHana = (id: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) {
+      return
+    }
 
-      const nextState =
-        quest.group === 'longTerm'
-          ? toggleLongTermQuest(prev, id)
-          : toggleDailyQuest(prev, id)
+    const quest = quests.find((item) => item.id === id)
+    if (!quest) {
+      return
+    }
 
-      const withUpdatedFlowers = {
-        ...nextState,
-        totalFlowers: recomputeTotalFlowers(nextState, quests),
-      }
+    const nextState =
+      quest.group === 'longTerm'
+        ? toggleLongTermQuest(previousState, id)
+        : toggleDailyQuest(previousState, id)
+    const withUpdatedFlowers = {
+      ...nextState,
+      totalFlowers: recomputeTotalFlowers(nextState, quests),
+    }
 
-      return withUpdatedFlowers
-    })
+    void commitHanaState(withUpdatedFlowers)
+  }
 
-  const toggleWeed = (id: string) =>
-    setHanaGame((prev) => {
-      const eveningWeeds = prev.eveningWeeds ?? {}
-      const currentWeeds = eveningWeeds[prev.currentDate] ?? {}
-      const nextState: HanaGameState = {
-        ...prev,
-        eveningWeeds: {
-          ...eveningWeeds,
-          [prev.currentDate]: {
-            ...currentWeeds,
-            [id]: !currentWeeds[id],
-          },
+  const toggleWeed = (id: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) {
+      return
+    }
+
+    const eveningWeeds = previousState.eveningWeeds ?? {}
+    const currentWeeds = eveningWeeds[previousState.currentDate] ?? {}
+    const nextState: HanaGameState = {
+      ...previousState,
+      eveningWeeds: {
+        ...eveningWeeds,
+        [previousState.currentDate]: {
+          ...currentWeeds,
+          [id]: !currentWeeds[id],
         },
-      }
+      },
+    }
 
-      return {
-        ...nextState,
-        totalFlowers: recomputeTotalFlowers(nextState, quests),
-      }
+    void commitHanaState({
+      ...nextState,
+      totalFlowers: recomputeTotalFlowers(nextState, quests),
     })
+  }
 
-  const toggleSkip = (id: string) =>
-    setHanaGame((prev) => {
-      const quest = quests.find((item) => item.id === id)
-      if (!quest) {
-        return prev
-      }
+  const toggleSkip = (id: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) {
+      return
+    }
 
-      const weekKey = getSkipWeekKey(prev.currentDate)
-      const skipKey = getSkipEventKey(prev, quest)
-      const skipsThisWeek = prev.questSkips?.[weekKey] ?? {}
-      const isSkipped = Boolean(skipsThisWeek[skipKey])
-      const skipProgress = getSkipProgress(prev)
+    const quest = quests.find((item) => item.id === id)
+    if (!quest) {
+      return
+    }
 
-      if (!isSkipped && skipProgress.remaining <= 0) {
-        return prev
-      }
+    const weekKey = getSkipWeekKey(previousState.currentDate)
+    const skipKey = getSkipEventKey(previousState, quest)
+    const skipsThisWeek = previousState.questSkips?.[weekKey] ?? {}
+    const isSkipped = Boolean(skipsThisWeek[skipKey])
+    const skipProgress = getSkipProgress(previousState)
 
-      return {
-        ...prev,
-        questSkips: {
-          ...(prev.questSkips ?? {}),
-          [weekKey]: {
-            ...skipsThisWeek,
-            [skipKey]: !isSkipped,
-          },
+    if (!isSkipped && skipProgress.remaining <= 0) {
+      return
+    }
+
+    void commitHanaState({
+      ...previousState,
+      questSkips: {
+        ...(previousState.questSkips ?? {}),
+        [weekKey]: {
+          ...skipsThisWeek,
+          [skipKey]: !isSkipped,
         },
-      }
+      },
     })
+  }
 
-  const goToNextDay = () =>
-    setHanaGame((prev) =>
+  const goToNextDay = () => {
+    const previousState = hanaGameRef.current
+    if (!previousState) {
+      return
+    }
+
+    void commitHanaState(
       syncActiveQuestPlan(
         {
-          ...prev,
-          currentDate: addDays(prev.currentDate, 1),
+          ...previousState,
+          currentDate: addDays(previousState.currentDate, 1),
         },
         quests,
       ),
     )
+  }
 
   const resetHana = () => {
     window.localStorage.removeItem(STORAGE_KEY)
-    setHanaGame(
+    void commitHanaState(
       syncActiveQuestPlan(
         {
           ...createInitialHanaState(),
@@ -265,7 +371,7 @@ export default function App() {
   }
 
   if (view === 'hana') {
-    return (
+    return hanaGame ? (
       <HanaPage
         game={hanaGame}
         onToggle={toggleHana}
@@ -275,23 +381,67 @@ export default function App() {
         onOpenStats={() => setView('stats')}
         onNextDay={goToNextDay}
         onReset={resetHana}
-        onSyncCloud={() => void syncHanaToCloud(false)}
+        onSyncCloud={() => void hydrateFromDb(false)}
         cloudSyncStatus={cloudSyncStatus}
         lastCloudSyncAt={lastCloudSyncAt}
         onBack={() => setView('home')}
       />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
     )
   }
 
   if (view === 'garden') {
-    return <GardenPage game={hanaGame} onBack={() => setView('hana')} />
+    return hanaGame ? (
+      <GardenPage game={hanaGame} onBack={() => setView('hana')} />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
   }
 
   if (view === 'stats') {
-    return <StatsPage game={hanaGame} onBack={() => setView('hana')} />
+    return hanaGame ? (
+      <StatsPage game={hanaGame} onBack={() => setView('hana')} />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
   }
 
   return <HomePage onSelectHana={() => setView('hana')} />
+}
+
+function HanaLoadingPage({
+  status,
+  onBack,
+}: {
+  status: CloudSyncStatus
+  onBack: () => void
+}) {
+  return (
+    <div className="hana-spring-shell mx-auto flex min-h-full w-full max-w-md flex-col px-5 pb-10 pt-6">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex h-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-medium text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+        aria-label="Back to home"
+      >
+        Back
+      </button>
+      <div className="grid flex-1 place-items-center text-center">
+        <div className="rounded-card border border-border bg-surface p-6 shadow-sm">
+          <FlowerMark className="mx-auto size-14 flower-pulse" />
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
+            Opening Hana's garden
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {status === 'offline'
+              ? 'Offline right now. Using the saved garden cache.'
+              : 'Loading the latest garden from the database.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function toggleDailyQuest(state: HanaGameState, questId: string): HanaGameState {
