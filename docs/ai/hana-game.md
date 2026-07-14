@@ -259,8 +259,9 @@ type HanaGameState = {
 }
 ```
 
-`startDate` is `null` until Hana commits her first day. While it is `null`, the
-app may show preview/explore state, but that state must not be saved to Postgres.
+`startDate` is `null` until Hana presses **Start Health Overhaul**. It stores the
+day the button was pressed. While it is `null`, the app may show preview/explore
+state, but that state must not be saved to Postgres.
 
 `dailyCompletions[dateKey][questId]` stores whether a daily task was completed
 on a specific day.
@@ -302,8 +303,8 @@ fallback cache for offline or failed-network moments.
 
 Before `startDate` exists, Home -> Hana shows `HanaStartPage`. The setup page can:
 
-- commit a first day, which clears Hana's old DB rows and saves a fresh started
-  state
+- commit today as Hana's first day, which clears Hana's old DB rows and saves a
+  fresh started state
 - open preview mode, which lets the app be explored without database writes
 
 `saveHanaStateToDb()` rejects unstarted states, and the API route also rejects

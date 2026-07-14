@@ -2,8 +2,8 @@
 
 Hana's tracker now works like a small flower-collecting game.
 
-The game starts only after Hana chooses her own first day. If she is not ready to
-commit, she can explore the app without saving progress to the database.
+The game starts only after Hana presses **Start Health Overhaul**. If she is not
+ready to commit, she can explore the app without saving progress to the database.
 
 ## How it works
 

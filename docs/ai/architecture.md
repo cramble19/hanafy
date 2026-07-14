@@ -15,8 +15,8 @@ progress is stored **DB-first** in Postgres through a Vercel API route.
 
 - **Offline-first:** the app shell is precached and works with no network.
 - **DB-first:** Postgres is the source of truth whenever the app is online.
-- **Consent-first start:** Hana state is not written to Postgres until she chooses
-  `startDate`.
+- **Consent-first start:** Hana state is not written to Postgres until she presses
+  the start button.
 - **Offline fallback:** `localStorage` is only a temporary cache.
 - **Small backend:** Vercel hosts serverless API routes for cloud persistence.
 - **Minimalist:** mobile-first, few dependencies, small surface area.
@@ -112,8 +112,9 @@ Keep these functions free of React/store imports so they are trivially testable.
 
 - Hana state currently lives in `src/App.tsx`, but production startup hydrates it
   from Postgres via `src/lib/hanaRemoteState.ts`.
-- `HanaGameState.startDate` is `null` until Hana commits her first day. Unstarted
-  preview state must not be posted to the database.
+- `HanaGameState.startDate` is `null` until Hana presses **Start Health Overhaul**.
+  The field then stores that day. Unstarted preview state must not be posted to
+  the database.
 - `localStorage` under `hana-game/v1` is a cache/fallback only.
 - `parseStoredHanaState()` normalizes/migrates older local shapes.
 - `syncStateToDate()` moves persisted state to the real local date on production

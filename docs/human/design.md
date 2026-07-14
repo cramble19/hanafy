@@ -19,6 +19,9 @@ mood: warm, bright, and calm, with a little moment of joy when you succeed.
   sparkles, and a small flower-planted message.
 - **Garden close by.** Hana's page can show a small illustrated night-garden
   preview and a soft bottom Garden button.
+- **Moonlit stats.** Stats pages can feel like a lighter cousin of the night
+  garden: cream page, lavender-blue haze, moon-milk cards, tiny stars, and clear
+  rounded bars.
 
 ## What you see
 

@@ -182,6 +182,10 @@ to taps or logins.
   slim flower bar, list of quest cards, and Garden access.
 - **Progress:** current/longest streak stat tiles, heatmap, "This week" bar chart,
   achievements grid.
+- **Stats pages:** use the "Moonlit Garden Journal" variant: still light and
+  readable, but with a warm cream base, lavender-blue haze, moon-milk cards,
+  sage/lavender accents, tiny low-contrast stars, a crescent/constellation corner,
+  and clear rounded rectangle bars.
 - **Profile / Settings:** level + XP summary; theme (light by default, more later);
   motion & celebration toggle; local data export/reset; about.
 - **Add / edit habit:** bottom sheet — name, emoji picker, color swatches (palette

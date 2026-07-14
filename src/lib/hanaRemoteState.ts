@@ -59,7 +59,7 @@ export async function saveHanaStateToDb(
   fetchImpl: FetchLike = fetch,
 ): Promise<SaveHanaStateResult> {
   if (!hasHanaStarted(state)) {
-    return { ok: false, error: 'Cannot save Hana before start date is set' }
+    return { ok: false, error: 'Cannot save Hana before health overhaul is started' }
   }
 
   const payload = createHanaCloudSyncPayload(profileId, state, quests)

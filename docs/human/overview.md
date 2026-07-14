@@ -15,7 +15,7 @@ Anyone who wants to build healthier routines without a complicated app.
 
 1. Open the app in your browser, or install it on your phone's home screen — it
    then behaves like a normal app.
-2. Hana chooses her own first day before the game begins.
+2. Hana presses **Start Health Overhaul** when she is ready to begin.
 3. Tap to check off a habit when you do it.
 4. Watch your streaks grow, earn flowers, level up, and unlock badges.
 
@@ -33,8 +33,8 @@ Anyone who wants to build healthier routines without a complicated app.
 - **No account.** Hana does not need to sign in.
 - **Database saved.** Hana's progress is saved in the cloud database when online,
   so another phone or laptop can show the same garden.
-- **Consent first.** Nothing is saved to the database until Hana picks her start
-  date. She can still explore the app without committing.
+- **Consent first.** Nothing is saved to the database until Hana presses the start
+  button. She can still explore the app without committing.
 - **Offline fallback.** The app keeps a small local cache for weak-network moments.
 - **Low-cost.** Vercel hosts the app/backend, with a free Postgres option for
   the database.

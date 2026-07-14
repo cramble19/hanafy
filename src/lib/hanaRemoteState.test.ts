@@ -90,7 +90,7 @@ describe('Hana remote state helpers', () => {
     )
   })
 
-  it('does not save before Hana has chosen a start date', async () => {
+  it('does not save before Hana has started the health overhaul', async () => {
     const state = createState({ startDate: null })
     const fetchImpl = vi.fn() as unknown as typeof fetch
 
@@ -98,7 +98,7 @@ describe('Hana remote state helpers', () => {
 
     expect(result).toEqual({
       ok: false,
-      error: 'Cannot save Hana before start date is set',
+      error: 'Cannot save Hana before health overhaul is started',
     })
     expect(fetchImpl).not.toHaveBeenCalled()
   })

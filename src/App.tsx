@@ -270,6 +270,16 @@ export default function App() {
     [cacheHanaGame, flushQueuedDbSave],
   )
 
+  const refreshHanaFromDb = useCallback(async () => {
+    if (pendingDbSaveRef.current || isDbSaveInFlightRef.current) {
+      setCloudSyncStatus('syncing')
+      await flushQueuedDbSave()
+      return !pendingDbSaveRef.current
+    }
+
+    return hydrateFromDb(false)
+  }, [flushQueuedDbSave, hydrateFromDb])
+
   useEffect(() => {
     void hydrateFromDb()
   }, [hydrateFromDb])
@@ -447,8 +457,8 @@ export default function App() {
     )
   }
 
-  const startHanaOnDate = async (startDate: string) => {
-    const startedState = syncStateToDate(createStartedHanaState(startDate), quests)
+  const startHanaToday = async () => {
+    const startedState = syncStateToDate(createStartedHanaState(todayKey()), quests)
 
     setIsExploringHana(false)
     clearHanaCache()
@@ -495,14 +505,37 @@ export default function App() {
 
   const openHana = () => {
     setIsExploringHana(false)
-    setView(hasHanaStarted(hanaGameRef.current) ? 'hana' : 'hanaStart')
+    const currentGame = hanaGameRef.current
+    setView(currentGame && !hasHanaStarted(currentGame) ? 'hanaStart' : 'hana')
   }
 
   if (view === 'hanaStart') {
+    if (hanaGame && hasHanaStarted(hanaGame)) {
+      return (
+        <HanaPage
+          game={hanaGame}
+          onToggle={toggleHana}
+          onSkip={toggleSkip}
+          onToggleWeed={toggleWeed}
+          onOpenGarden={() => setView('garden')}
+          onOpenStats={() => setView('stats')}
+          onNextDay={goToNextDay}
+          onReset={resetHana}
+          onSyncCloud={() => void refreshHanaFromDb()}
+          cloudSyncStatus={cloudSyncStatus}
+          lastCloudSyncAt={lastCloudSyncAt}
+          onBack={() => {
+            setIsExploringHana(false)
+            setView('home')
+          }}
+        />
+      )
+    }
+
     return hanaGame ? (
       <HanaStartPage
         onBack={() => setView('home')}
-        onStart={(startDate) => void startHanaOnDate(startDate)}
+        onStart={() => void startHanaToday()}
         onExplore={exploreHana}
         isSaving={cloudSyncStatus === 'syncing'}
         statusText={getStartPageStatus(cloudSyncStatus)}
@@ -517,7 +550,7 @@ export default function App() {
       return (
         <HanaStartPage
           onBack={() => setView('home')}
-          onStart={(startDate) => void startHanaOnDate(startDate)}
+          onStart={() => void startHanaToday()}
           onExplore={exploreHana}
           isSaving={cloudSyncStatus === 'syncing'}
           statusText={getStartPageStatus(cloudSyncStatus)}
@@ -535,7 +568,7 @@ export default function App() {
         onOpenStats={() => setView('stats')}
         onNextDay={goToNextDay}
         onReset={resetHana}
-        onSyncCloud={() => void hydrateFromDb(false)}
+        onSyncCloud={() => void refreshHanaFromDb()}
         cloudSyncStatus={cloudSyncStatus}
         lastCloudSyncAt={lastCloudSyncAt}
         onBack={() => {
@@ -662,18 +695,18 @@ function HanaLoadingPage({
 
 function getStartPageStatus(status: CloudSyncStatus) {
   if (status === 'syncing') {
-    return 'Clearing the old garden and saving Hana\'s first day...'
+    return 'Clearing the old garden and saving today as Hana\'s first day...'
   }
   if (status === 'offline') {
-    return 'Starting needs internet once, so the first day can be saved to the database.'
+    return 'Starting needs internet once, so today can be saved to the database.'
   }
   if (status === 'error') {
     return 'Could not prepare the database yet. Please try again in a moment.'
   }
   if (status === 'preview') {
-    return 'Preview mode is open. It will not save progress until a start date is chosen.'
+    return 'Preview mode is open. It will not save progress until Start Health Overhaul is pressed.'
   }
-  return 'Choose today when Hana is ready. Explore is okay if she wants to look around first.'
+  return 'Explore is okay. Start only when Hana is ready to commit.'
 }
 
 function toggleDailyQuest(state: HanaGameState, questId: string): HanaGameState {

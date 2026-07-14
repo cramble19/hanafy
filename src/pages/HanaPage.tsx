@@ -489,7 +489,7 @@ function getCloudSyncLabel(
     return 'Local development uses the saved cache.'
   }
   if (status === 'preview') {
-    return 'Preview only. Pick Hana\'s start date before saving to the database.'
+    return 'Preview only. Press Start Health Overhaul before saving to the database.'
   }
   if (status === 'loading') {
     return 'Loading the latest garden from the database...'
@@ -498,7 +498,7 @@ function getCloudSyncLabel(
     return "Saving Hana's latest change to the database..."
   }
   if (status === 'error') {
-    return 'Database refresh failed. Showing the saved cache for now.'
+    return 'Database save failed. Refresh will retry the latest local garden first.'
   }
   if (status === 'offline') {
     return 'Offline. Showing the saved cache until database returns.'

@@ -542,9 +542,27 @@ body {
   isolation: isolate;
   overflow: hidden;
   background:
-    radial-gradient(circle at 78% 0%, rgba(255, 240, 196, 0.7), transparent 26%),
-    radial-gradient(circle at 16% 100%, rgba(247, 166, 190, 0.16), transparent 32%),
+    radial-gradient(circle at 82% 2%, rgba(195, 188, 232, 0.34), transparent 28%),
+    radial-gradient(circle at 14% 96%, rgba(110, 163, 196, 0.14), transparent 34%),
+    radial-gradient(circle at 44% 12%, rgba(255, 240, 196, 0.44), transparent 32%),
     transparent;
+}
+.stats-page-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle, rgba(158, 143, 208, 0.32) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(110, 163, 196, 0.2) 0 1px, transparent 1.5px);
+  background-position:
+    1.2rem 2.1rem,
+    4.4rem 5.6rem;
+  background-size:
+    5.8rem 5.8rem,
+    7.2rem 7.2rem;
 }
 .stats-page-shell > :not(.stats-botanical-corner) {
   position: relative;
@@ -562,34 +580,43 @@ body {
 }
 .stats-botanical-corner span {
   position: absolute;
-  border-radius: 9999px 9999px 9999px 0;
-  opacity: 0.38;
-  filter: drop-shadow(0 8px 16px rgba(217, 139, 160, 0.12));
+  opacity: 0.46;
+  filter: drop-shadow(0 8px 18px rgba(110, 163, 196, 0.14));
 }
 .stats-botanical-corner span:nth-child(1) {
   right: 1.2rem;
-  top: 4.8rem;
-  width: 1.7rem;
-  height: 2.35rem;
-  background: rgba(247, 166, 190, 0.52);
-  rotate: 36deg;
+  top: 4.2rem;
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 9999px;
+  background: rgba(255, 248, 226, 0.86);
+  box-shadow:
+    -0.42rem 0.16rem 0 rgba(195, 188, 232, 0.34),
+    0 0 28px rgba(255, 240, 196, 0.46);
 }
 .stats-botanical-corner span:nth-child(2) {
-  right: 2.9rem;
-  top: 3.85rem;
-  width: 0.16rem;
-  height: 5.4rem;
+  right: 4.2rem;
+  top: 8.1rem;
+  width: 0.28rem;
+  height: 0.28rem;
   border-radius: 9999px;
-  background: rgba(120, 171, 99, 0.42);
-  rotate: 22deg;
+  background: rgba(158, 143, 208, 0.42);
+  box-shadow:
+    -2.2rem -1.4rem 0 rgba(110, 163, 196, 0.22),
+    -3.7rem 1.2rem 0 rgba(158, 143, 208, 0.28),
+    1.1rem 2.4rem 0 rgba(120, 171, 99, 0.2);
 }
 .stats-botanical-corner span:nth-child(3) {
   right: 0.35rem;
   bottom: 2.3rem;
-  width: 2rem;
-  height: 2.8rem;
-  background: rgba(241, 181, 111, 0.38);
-  rotate: 48deg;
+  width: 2.2rem;
+  height: 1px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgba(158, 143, 208, 0.28), transparent);
+  box-shadow:
+    -1.6rem -1.1rem 0 rgba(110, 163, 196, 0.12),
+    -3rem 0.75rem 0 rgba(158, 143, 208, 0.14);
+  rotate: -24deg;
 }
 .stats-botanical-corner span:nth-child(4) {
   right: 2.5rem;
@@ -597,7 +624,7 @@ body {
   width: 0.16rem;
   height: 6.2rem;
   border-radius: 9999px;
-  background: rgba(120, 171, 99, 0.3);
+  background: linear-gradient(180deg, transparent, rgba(120, 171, 99, 0.24), transparent);
   rotate: -24deg;
 }
 .stats-week-scroll {
@@ -608,26 +635,36 @@ body {
 }
 .stats-day-card {
   min-width: 4.7rem;
-  border: 1px solid rgba(90, 65, 25, 0.1);
+  border: 1px solid rgba(110, 163, 196, 0.12);
   border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.78);
   padding: 0.85rem 0.55rem;
   text-align: center;
   box-shadow:
-    0 14px 38px -30px rgba(43, 38, 32, 0.5),
+    0 14px 38px -30px rgba(25, 33, 65, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
 }
 .stats-day-card-best {
-  border-color: rgba(238, 166, 58, 0.34);
+  border-color: rgba(158, 143, 208, 0.32);
   box-shadow:
-    0 16px 34px -24px rgba(238, 166, 58, 0.5),
-    inset 0 0 0 1px rgba(238, 166, 58, 0.08);
+    0 16px 34px -24px rgba(110, 163, 196, 0.45),
+    inset 0 0 0 1px rgba(158, 143, 208, 0.08);
 }
 .stats-insight-card {
   background:
-    radial-gradient(circle at 10% 10%, rgba(255, 240, 196, 0.48), transparent 34%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(253, 243, 227, 0.72));
+    radial-gradient(circle at 86% 4%, rgba(195, 188, 232, 0.28), transparent 32%),
+    radial-gradient(circle at 10% 10%, rgba(255, 240, 196, 0.36), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(244, 242, 255, 0.62));
+}
+.stats-moon-card {
+  border-color: rgba(87, 94, 135, 0.11);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(195, 188, 232, 0.2), transparent 34%),
+    rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 14px 38px -30px rgba(25, 33, 65, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 .stats-stem-chart {
   position: relative;
@@ -639,7 +676,7 @@ body {
   left: 0;
   right: 0.1rem;
   height: 1px;
-  border-top: 1px dashed rgba(90, 65, 25, 0.09);
+  border-top: 1px dashed rgba(87, 94, 135, 0.12);
   color: var(--faint);
   font-size: 0.54rem;
   line-height: 1;
@@ -651,7 +688,7 @@ body {
   height: 100%;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: end;
-  gap: 0.28rem;
+  gap: 0.42rem;
 }
 .stats-stem-column {
   position: relative;
@@ -660,43 +697,20 @@ body {
   justify-content: center;
 }
 .stats-stem {
+  --bar-color: #78ab63;
   position: absolute;
   bottom: 0.5rem;
-  width: 0.12rem;
-  min-height: 1.25rem;
-  border-radius: 9999px;
-  background: linear-gradient(180deg, rgba(120, 171, 99, 0.55), rgba(120, 171, 99, 0.25));
-}
-.stats-stem::after {
-  content: "";
-  position: absolute;
-  left: 0.12rem;
-  top: 40%;
-  width: 0.45rem;
-  height: 0.25rem;
-  border-radius: 9999px 9999px 9999px 0;
-  background: rgba(120, 171, 99, 0.42);
-  rotate: -26deg;
-}
-.stats-stem-flower {
-  --flower-color: #f7a6be;
-  position: absolute;
-  z-index: 1;
   width: 1.05rem;
-  height: 1.05rem;
-  border-radius: 9999px;
+  min-height: 1.25rem;
+  border: 1px solid rgba(87, 94, 135, 0.08);
+  border-radius: 9999px 9999px 0.45rem 0.45rem;
   background:
-    radial-gradient(circle, #f4cf73 0 22%, transparent 24%),
-    conic-gradient(
-      from 0deg,
-      var(--flower-color),
-      rgba(255, 255, 255, 0.4),
-      var(--flower-color),
-      rgba(255, 255, 255, 0.4),
-      var(--flower-color)
-    );
-  box-shadow: 0 4px 12px rgba(43, 38, 32, 0.12);
-  transform: translateY(50%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent 34%),
+    color-mix(in srgb, var(--bar-color) 58%, #bfc7ea);
+  box-shadow:
+    0 10px 20px -16px rgba(25, 33, 65, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  transition: height 220ms ease;
 }
 .stats-stem-label {
   position: absolute;
@@ -712,7 +726,7 @@ body {
   width: 2.2rem;
   height: 1px;
   margin: 0 0.6rem 0.25rem;
-  background: linear-gradient(90deg, transparent, rgba(120, 171, 99, 0.34), transparent);
+  background: linear-gradient(90deg, transparent, rgba(158, 143, 208, 0.34), transparent);
 }
 .stats-calendar-day {
   display: inline-flex;
@@ -720,9 +734,9 @@ body {
   height: 2.15rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(90, 65, 25, 0.08);
+  border: 1px solid rgba(87, 94, 135, 0.1);
   border-radius: 9999px;
-  background: rgba(253, 243, 227, 0.68);
+  background: rgba(244, 242, 255, 0.58);
   color: var(--faint);
   font-size: 0.76rem;
   font-weight: 650;
@@ -731,22 +745,22 @@ body {
 .stats-calendar-day-complete,
 .stats-calendar-day-weed {
   border-color: rgba(120, 171, 99, 0.22);
-  background: rgba(120, 171, 99, 0.16);
+  background: rgba(120, 171, 99, 0.15);
   color: var(--ink);
 }
 .stats-calendar-day-skipped {
-  border-color: rgba(231, 165, 60, 0.28);
-  background: rgba(231, 165, 60, 0.16);
+  border-color: rgba(231, 165, 60, 0.24);
+  background: rgba(255, 240, 196, 0.42);
   color: var(--ink);
 }
 .stats-calendar-day-missed {
-  border-color: rgba(217, 139, 160, 0.26);
-  background: rgba(247, 166, 190, 0.18);
+  border-color: rgba(158, 143, 208, 0.3);
+  background: rgba(195, 188, 232, 0.22);
   color: var(--ink);
 }
 .stats-calendar-day-open {
   border-color: rgba(110, 163, 196, 0.22);
-  background: rgba(110, 163, 196, 0.12);
+  background: rgba(110, 163, 196, 0.13);
   color: var(--ink);
 }
 

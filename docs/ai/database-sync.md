@@ -8,8 +8,9 @@ The app is DB-first in production: Neon/Postgres is the authoritative source of
 Hana state. `localStorage` remains only as an offline/cache fallback. Production
 builds read and write Hana state through a Vercel serverless function.
 
-Hana state is consent-first: no normal DB write happens until Hana chooses
-`HanaGameState.startDate`. Preview/explore state stays session-only.
+Hana state is consent-first: no normal DB write happens until Hana presses
+**Start Health Overhaul**. `HanaGameState.startDate` stores the day that button
+was pressed. Preview/explore state stays session-only.
 
 There is no login or auth layer. Static profile ids are used:
 
@@ -25,7 +26,7 @@ Only `hana` is currently wired in the UI. `cramble` is reserved for the future.
   `HanaGameState` and the quest catalog.
 - `src/lib/hanaRemoteState.ts` loads/saves the authoritative DB snapshot and
   chooses DB state before cache/initial state. It also clears Hana DB rows before
-  the first committed start date.
+  the first committed start.
 - `src/App.tsx` loads DB state on startup/resume, writes changes to DB, and uses
   `localStorage` only as cache/fallback.
 - `api/hana-sync.ts` is the Vercel API route. It creates tables if needed and
@@ -35,10 +36,11 @@ Only `hana` is currently wired in the UI. `cramble` is reserved for the future.
 ## Runtime flow
 
 1. App startup calls `GET /api/hana-sync?profileId=hana`.
-2. If no started DB snapshot exists, Home -> Hana shows the start-date setup page.
+2. If no started DB snapshot exists, Home -> Hana shows the start setup page.
 3. Preview mode can open the app without DB writes.
-4. When Hana chooses her first day, the app calls `DELETE /api/hana-sync?profileId=hana`
-   to clear old rows, then `POST /api/hana-sync` to save the fresh started state.
+4. When Hana presses **Start Health Overhaul**, the app calls
+   `DELETE /api/hana-sync?profileId=hana` to clear old rows, then
+   `POST /api/hana-sync` to save the fresh started state for today.
 5. If a DB snapshot exists with `state.startDate`, it becomes `HanaGameState` and overwrites the local
    cache.
 6. Hana taps a quest, skip, or weed.
@@ -56,7 +58,9 @@ Local dev does not call the backend because `import.meta.env.DEV` disables cloud
 sync. This keeps `npm run dev` quiet when no database is configured.
 
 Manual refresh is available from Hana's page. It reads the latest DB snapshot and
-shows one of these states:
+shows one of these states. If `pendingDbSaveRef` or `isDbSaveInFlightRef` exists,
+manual refresh retries/flushed the local queued save first instead of pulling a
+potentially stale DB snapshot over newer local UI state.
 
 - `idle`
 - `loading`

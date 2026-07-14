@@ -26,7 +26,7 @@ export type GardenWeed = {
 }
 
 export type HanaGameState = {
-  /** Null means Hana has not committed to a start date yet. */
+  /** Null means Hana has not pressed Start Health Overhaul yet. */
   startDate: string | null
   currentDate: string
   activeDailyQuests: Record<string, string[]>

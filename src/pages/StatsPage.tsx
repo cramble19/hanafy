@@ -2,7 +2,7 @@ import { ChevronLeft, Leaf } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { quests } from '@/data/quests'
 import hanaWeeds from '@/data/hanaWeeds.json'
-import { getHanaStats, type DailyStat, type QuestStat } from '@/lib/hanaStats'
+import { getHanaStats, type DailyStat } from '@/lib/hanaStats'
 import type { GardenWeed, HanaGameState } from '@/types'
 
 type Props = {
@@ -105,12 +105,7 @@ export function StatsPage({ game, onBack, onOpenQuests, onOpenWeeds }: Props) {
       </section>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
-        <InsightListCard
-          title="Skipped most often"
-          items={stats.needsLove}
-          emptyText="No repeated skips yet."
-          onOpenAll={onOpenQuests}
-        />
+        <AllQuestsCard onOpenAll={onOpenQuests} />
         <WeedListCard weeds={stats.weedStats} onOpenAll={onOpenWeeds} />
       </div>
 
@@ -170,15 +165,11 @@ function FlowerStemChart({ days }: { days: DailyStat[] }) {
           return (
             <div key={day.dateKey} className="stats-stem-column">
               <span
-                className="stats-stem-flower"
-                style={{
-                  bottom: `${height}%`,
-                  '--flower-color': DAY_FLOWER_COLORS[index % DAY_FLOWER_COLORS.length],
-                } as CSSProperties}
-              />
-              <span
                 className="stats-stem"
-                style={{ height: `${height}%` }}
+                style={{
+                  height: `${height}%`,
+                  '--bar-color': DAY_FLOWER_COLORS[index % DAY_FLOWER_COLORS.length],
+                } as CSSProperties}
                 aria-label={`${formatWeekday(day.dateKey)} ${day.completionRate}%`}
               />
               <span className="stats-stem-label">
@@ -192,48 +183,26 @@ function FlowerStemChart({ days }: { days: DailyStat[] }) {
   )
 }
 
-function InsightListCard({
-  title,
-  items,
-  emptyText,
-  onOpenAll,
-}: {
-  title: string
-  items: QuestStat[]
-  emptyText: string
-  onOpenAll: () => void
-}) {
+function AllQuestsCard({ onOpenAll }: { onOpenAll: () => void }) {
   return (
-    <section className="rounded-card border border-border bg-surface/84 p-4 shadow-sm backdrop-blur">
-      <button
-        type="button"
-        onClick={onOpenAll}
-        className="flex w-full items-center justify-between gap-2 text-left"
-      >
-        <span className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <Leaf className="size-4 text-success" />
-          {title}
+    <button
+      type="button"
+      onClick={onOpenAll}
+      className="stats-moon-card rounded-card border border-border bg-surface/84 p-4 text-left shadow-sm backdrop-blur transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/35 motion-reduce:transition-none"
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span>
+          <span className="flex items-center gap-2 text-lg font-semibold leading-6 text-ink">
+            <Leaf className="size-4 text-success" />
+            All quests
+          </span>
+          <span className="mt-2 block text-xs leading-5 text-muted">
+            Open every quest and its calendar trail.
+          </span>
         </span>
-        <span className="text-xs font-medium text-muted">View all</span>
-      </button>
-      <div className="mt-3 space-y-2">
-        {items.length > 0 ? (
-          items.slice(0, 3).map((quest) => (
-            <MiniInsightRow
-              key={quest.questId}
-              icon={quest.emoji}
-              label={quest.title}
-              value={`${quest.skipped + quest.missed}x`}
-              color={quest.color}
-            />
-          ))
-        ) : (
-          <p className="rounded-control bg-surface-2 px-3 py-2 text-xs leading-5 text-muted">
-            {emptyText}
-          </p>
-        )}
-      </div>
-    </section>
+        <span className="shrink-0 text-xs font-medium text-muted">View all</span>
+      </span>
+    </button>
   )
 }
 
@@ -245,7 +214,7 @@ function WeedListCard({
   onOpenAll: () => void
 }) {
   return (
-    <section className="rounded-card border border-border bg-surface/84 p-4 shadow-sm backdrop-blur">
+    <section className="stats-moon-card rounded-card border border-border bg-surface/84 p-4 shadow-sm backdrop-blur">
       <button
         type="button"
         onClick={onOpenAll}
