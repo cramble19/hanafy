@@ -2,6 +2,9 @@
 
 Hana's tracker now works like a small flower-collecting game.
 
+Hana's garden remains its own path. It uses a separate quest list, device cache,
+database profile, progress record, and save queue from Cramble's Archive.
+
 The game starts only after Hana presses **Start Health Overhaul**. If she is not
 ready to commit, she can explore the app without saving progress to the database.
 
@@ -106,6 +109,22 @@ Daily and long-term quests work differently:
 - Once a long-term quest is completed, it stays complete for that challenge
   window. After the deadline passes, a fresh window starts.
 
+## Adding a personal habit
+
+After Hana starts her Health Overhaul, the bottom **Add habit** button can create
+a goal done once in any chosen number of days or weeks, or a goal done several
+times in that period. This covers rhythms such as once daily, once every 3 days,
+once weekly, twice daily, or 3 times in 10 days. Hana supplies the name, a clear
+description, and an easy, medium, or hard difficulty.
+
+Each period goal is worth 1, 2, or 3 flowers. Hana earns that reward only after
+the whole target is complete, not for each repetition. Several completions may
+be recorded on the same day, and **Undo one** corrects an accidental record.
+Partial progress has no penalty, and the period is reviewed as one result instead
+of punishing every unused day. Hana's Explore preview cannot create or save
+habits. See
+[Custom Habits](custom-habits.md) for the full behavior.
+
 ## Weekly skips
 
 Hana gets **3 skips each week**. They reset every Sunday.
@@ -141,21 +160,36 @@ In local development, the Hana page has two temporary testing buttons:
 
 - **Next day:** moves the tracker forward one day so we can test daily resets and
   long-term deadlines.
-- **Reset:** clears Hana's flowers and checked quests.
+- **Reset:** clears Hana's flowers, checked quests, and custom-habit records
+  while keeping the custom habit definitions ready for a fresh start.
 
 These only appear when running locally with the dev server. They are hidden from
 the deployed production app.
 
-## Stats page
+## Hana's Ledger
 
-The Stats page is a gentle garden journal. It shows:
+The Ledger now has the same habit-history tools as Cramble's, styled as Hana's
+lighter garden journal. There is one `Archive index` / `Quest records` list—no
+separate All Quests and Evening Weeds cards. Evening Weeds remain a private
+end-of-day reflection on the tracker instead of being treated like scheduled
+habits that can be missed.
 
-- overall quest rhythm
-- this week's tiny day-by-day petals
-- a Quests page with every quest listed row by row
-- a quest detail page with done/skipped totals and a colored calendar trail
-- a Weeds page with every Evening Weed listed row by row
-- a weed detail page with total checks and a colored calendar trail
+Every built-in quest and every habit Hana adds appears in the Ledger. Each row
+shows its frequency, recent goal windows, 30-day target rate, and any clear
+momentum signal. Opening a row shows current progress, 7/30/90/All history,
+targets met, exact records, weekly pace, each goal window, and the days on which
+the habit was recorded. Weekly and custom X-day goals are judged once per full
+window, never as a string of fake daily misses.
+
+Quest rows and detail pages add a small momentum cue only when the history is
+clear. Two completed goal windows begin a **🔥 combo**. One isolated unfinished
+window does not erase a strong rhythm. A **🥀 Needs care** cue waits until three
+goal windows in a row were unfinished; open goals and skips stay neutral. The
+daily quest list may celebrate a positive combo, but it never displays the
+negative cue while Hana is trying to act.
+
+Hana and Cramble now share the same Ledger calculations and detail interactions.
+Their data, habit catalogs, wording, and visual themes remain separate.
 
 The language avoids guilt. Missed or skipped quests are treated as useful signals,
 not failure.

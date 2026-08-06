@@ -1,14 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { LockKeyhole } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
 
 type Props = {
   onSelectHana: () => void
+  onSelectCramble: () => void
+  focusTarget?: 'hana' | 'cramble' | null
 }
 
-export function HomePage({ onSelectHana }: Props) {
-  const [showSoon, setShowSoon] = useState(false)
+export function HomePage({
+  onSelectHana,
+  onSelectCramble,
+  focusTarget = null,
+}: Props) {
   const [showPhoto, setShowPhoto] = useState(false)
+  const hanaButtonRef = useRef<HTMLButtonElement>(null)
+  const crambleButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (focusTarget === 'hana') {
+      hanaButtonRef.current?.focus({ preventScroll: true })
+    }
+    if (focusTarget === 'cramble') {
+      crambleButtonRef.current?.focus({ preventScroll: true })
+    }
+  }, [focusTarget])
 
   return (
     <div className="home-shell mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-6 py-12">
@@ -35,6 +52,7 @@ export function HomePage({ onSelectHana }: Props) {
 
       <div className="relative flex items-start justify-center gap-8">
         <button
+          ref={hanaButtonRef}
           type="button"
           onClick={onSelectHana}
           aria-label="Open Hana's tracker"
@@ -49,32 +67,26 @@ export function HomePage({ onSelectHana }: Props) {
         </button>
 
         <button
+          ref={crambleButtonRef}
           type="button"
-          onClick={() => setShowSoon(true)}
-          aria-label="Cramble's tracker, coming soon"
+          onClick={onSelectCramble}
+          aria-label="Unlock Cramble's tracker"
           className="emblem-btn flex flex-col items-center gap-4 outline-none"
         >
-          <span className="emblem-wrap is-delayed opacity-80">
+          <span className="emblem-wrap is-delayed">
             <span className="emblem emblem-sun">
               <SunMark className="size-20" />
             </span>
           </span>
-          <span className="flex items-center gap-2 text-lg font-medium text-muted">
+          <span className="flex items-center gap-2 text-lg font-medium text-ink">
             Cramble
-            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-faint">
-              Soon
-            </span>
+            <LockKeyhole className="size-3.5 text-faint" aria-hidden="true" />
           </span>
         </button>
       </div>
 
-      <p
-        aria-live="polite"
-        className={`mt-12 h-5 text-center text-sm text-muted transition-opacity duration-300 ${
-          showSoon ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        {showSoon ? "Cramble's garden is coming soon 🌻" : ''}
+      <p className="mt-12 text-center text-sm leading-6 text-muted">
+        Two separate paths, each with its own progress and story.
       </p>
 
       {showPhoto ? (

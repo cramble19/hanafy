@@ -1,221 +1,183 @@
-# Design System — "Calm Garden" (Technical Spec)
+# Design System — Calm Garden (Technical)
 
-Authoritative, token-level source of truth for the app's UI/UX. UI/UX is the
-**highest priority** of this project. The concise, always-on version of these
-rules is the Cursor rule [.cursor/rules/design-system.mdc](../../.cursor/rules/design-system.mdc);
-this document holds the exact values. Plain-language version:
-[../human/design.md](../human/design.md). Visual references:
-[../design/references/](../design/references/).
+Authoritative implementation rules for Hanafy's shared foundation and its two
+profile variants. Tokens and component styling live in
+`src/styles/globals.css`.
 
-> Design tokens now live in `src/styles/globals.css` — that file is canonical for
-> the exact values. Keep this document in sync with it (it holds the rationale and
-> usage rules).
+## Direction
 
-## 0. Direction
+Hanafy should feel calm, warm, personal, and quietly rewarding—never like an
+arcade or productivity dashboard. The shared interaction model stays
+mobile-first; each profile may scope its own light or dark surface palette.
+Identity comes from color, copy, and restrained original motifs, not from
+changing interaction behavior.
 
-"Calm Garden" with a **flowers-and-sunlight** mood: a warm, bright, minimal core
-(think Streaks x Things x a wellness app) with **light, honest gamification**.
-Zen garden, never arcade.
+```text
+Calm Garden foundation
+├─ Hana: Spring Garden (flowers, sunlight, moonlit Garden)
+└─ Cramble: Sunward Archive (archive dusk, brass, Observatory)
+```
 
-The app is **light by default** — a warm sunlit cream canvas with a soft sun-glow,
-never a dark or heavy screen. A dark theme is kept in the tokens but deferred to
-later theming (see the phased plan). Floral, sunny accent colors provide the color;
-the chrome stays warm and quiet.
+Hana's Garden and Cramble's Observatory remain their deepest reward scenes, but
+Cramble's everyday Archive also uses a restrained dark palette.
 
-Principles: reduce to essentials; whitespace is an active element; one primary
-action per screen; one typeface; warm chrome + a single **per-habit** accent;
-feedback-only motion; kindness over punishment.
+## Shared tokens
 
-Hana's Spring page may use a restrained ambient decorative layer: slow drifting
-petals behind the cards. Keep page edges clean; avoid side vines/leaves if they
-compete with the cards. Decorative elements must be `aria-hidden`,
-`pointer-events: none`, visually secondary, and disabled by
-`prefers-reduced-motion`.
+Default tokens on `:root`:
 
-## 1. Color
+```css
+--canvas: #fffaf0;
+--surface: #ffffff;
+--surface-2: #fdf3e3;
+--ink: #2b2620;
+--muted: #7c7264;
+--faint: #a99f8e;
+--border: rgba(90, 65, 25, 0.1);
+--success: #78ab63;
+--warning: #e7a53c;
+--danger: #d76a54;
+--radius-lg: 20px;
+--radius-md: 12px;
+```
 
-Never hardcode colors in components — consume the tokens below (as CSS variables
-/ Tailwind theme tokens). Light is the default theme; dark values are retained for
-later theming.
+`@theme inline` exposes these to Tailwind utilities such as `bg-canvas`,
+`bg-surface`, `text-ink`, `text-muted`, `border-border`, `rounded-card`, and
+`rounded-control`. Prefer scoped CSS variables and these utilities over raw
+colors inside JSX.
 
-### Neutrals
+## Typography and layout
 
-| Token | Light | Dark | Use |
-|-------|-------|------|-----|
-| `--canvas` | `#FFFAF0` | `#0A0A0A` | App background (warm sunlit cream / near-black) |
-| `--surface` | `#FFFFFF` | `#161616` | Cards, sheets |
-| `--surface-2` | `#FDF3E3` | `#1F1F1F` | Subtle warm fills, pressed states |
-| `--ink` | `#2B2620` | `#FAFAF9` | Primary text, icons (warm near-black) |
-| `--muted` | `#7C7264` | `#A1A1A1` | Secondary text, inactive tabs |
-| `--faint` | `#A99F8E` | `#6B6B6B` | Tertiary text, captions |
-| `--border` | `rgba(90,65,25,0.10)` | `rgba(255,255,255,0.10)` | Warm hairline borders/dividers |
+- Use Inter Variable only.
+- Establish hierarchy with size, weight, case, and tracking; no display font.
+- Main tracker width: `max-w-md` with 20px (`px-5`) screen gutters.
+- Use the 4px spacing scale; cards normally have 16–24px padding.
+- Use tabular numbers for rewards, rank/level, and statistics.
+- Keep one primary action per screen and progressive disclosure for details.
+- Cards use approximately 20px corners, controls 12px, and circular icon buttons.
+- Borders are hairlines. Shadows are subtle; do not use heavy elevation.
+- Component/text gradients are prohibited. A restrained ambient canvas glow or
+  illustrative reward-scene gradient is allowed.
 
-> Background: over `--canvas`, the page layers a soft sunlight glow on `body` —
-> `radial-gradient(1100px 520px at 50% -10%, #FFF0C4 0%, transparent 60%)` — for the
-> sunlit feel (light theme only).
+## Shared interaction components
 
-### Semantic (muted, accessible)
+`QuestCard` owns ordinary whole-card completion toggling, period-target
+**Record +1** and **Undo one** controls, the separate Skip control, keyboard
+behavior, reward output, and completion feedback. Counted cards show numeric
+progress and label rewards as available only **at goal**. `QuestSection` owns
+section labeling and cards. Profile copy and motifs enter through props:
 
-| Token | Value | Use |
-|-------|-------|-----|
-| `--success` | `#78AB63` | Completion, positive streak (leaf green) |
-| `--warning` | `#E7A53C` | Caution (sunflower) |
-| `--danger` | `#D76A54` | Destructive (delete, warm coral) |
+- `variant="garden" | "archive"`
+- singular/plural reward label
+- completion verb
 
-### Per-habit accent palette
+Do not fork accessibility or tap behavior to create a visual variant.
 
-Each habit stores its own `color`. The **app chrome stays warm/neutral**; a habit's
-color appears ONLY inside its own surfaces (progress ring, streak flame, filled
-check, habit-detail header). Offer these floral/sunny swatches in the add/edit sheet:
+`HabitMomentumBadge` is shared by both profiles. Emoji are decorative; the
+adjacent label and full `aria-label` explain the state. Combo uses a restrained
+flame motion, disabled under `prefers-reduced-motion`. Negative motivation stays
+small and contextual—never a full red card, ranking, global failure count, or an
+action-surface warning. Garden uses `🥀 Needs care`; Archive uses `🕯️ Rekindle`.
 
-| Name | Hex | Name | Hex |
-|------|-----|------|-----|
-| Sunflower | `#EEA63A` | Rose | `#D98BA0` |
-| Leaf | `#78AB63` | Lavender | `#9E8FD0` |
-| Sky | `#6EA3C4` | Terracotta | `#CB7E5C` |
-| Sage | `#8FB48A` | Peach | `#E8946A` |
+`AddHabitDialog` is also shared. Its full-width trigger is the first item in each
+sticky bottom dock. The native `<dialog>` supplies modal semantics, Escape, and
+focus containment; the component restores opener focus, locks background scroll,
+supports backdrop dismissal, and announces field-specific errors. Keep its
+inputs and actions at least 44px high. It exposes the two shared patterns (once
+per period and several times), configurable days/weeks, and an explicit
+all-or-nothing reward summary. Vary only the Garden/Archive icon, reward word,
+and scoped colors.
 
-### Color rules
+## Hana variant
 
-- One accent visible per surface (the habit's own). Never a second accent.
-- Accent is reserved for interactive / active / progress elements — never large flood fills.
-- Never signal state with color alone (pair with icon, label, or fill state).
-- The primary app CTA / FAB uses `--ink` (warm near-black in light, off-white in dark), not an accent.
+`.hana-spring-shell` uses the shared warm canvas with floral accent colors and a
+restrained spring decorative layer. Completed quests receive a gentle green wash,
+small bloom details, and flower language. The mini Garden preview and sticky
+Garden/Ledger actions connect to the dedicated reward and history pages.
 
-## 2. Typography
+`.hana-ledger-shell` and `.cramble-archive-shell` share the Ledger's structure,
+range controls, target-window strip, activity grid, and accessible status
+language. Hana maps those primitives to cream glass cards, leaf green, lavender,
+and botanical corners; Cramble keeps charcoal, brass, moss, and codex corners.
+Do not fork the scoring or range behavior when changing either theme.
 
-- **One family:** `Inter, ui-sans-serif, system-ui, -apple-system, sans-serif`.
-  Hierarchy comes from weight/size only — never add a second display font.
-- **Tabular numbers** for streaks, XP, counts, and stats: `font-variant-numeric: tabular-nums`.
+Hana's Garden may be dark because it is a reward visualization. Net flowers must
+control the visible planting/fullness, with written values alongside imagery.
 
-| Step | Size | Line height | Typical use |
-|------|------|-------------|-------------|
-| xs | 12px | 1.4 | Captions, eyebrow labels (uppercase, `+0.06em` tracking) |
-| sm | 14px | 1.45 | Secondary text, streak counts |
-| base | 16px | 1.5 | Body (minimum body size) |
-| lg | 18px | 1.4 | Card titles, list items |
-| xl | 20px | 1.3 | Section headers |
-| 2xl | 24px | 1.2 | Screen subtitles |
-| 3xl | 32px | 1.15 | Screen titles (e.g. "Today") |
+## Cramble variant
 
-- Weights: `400` body, `500` labels/medium, `600` headings; `700` used sparingly.
-- Tracking: `-0.02em` on 24px+ headings; `0` on body; `+0.06em` on uppercase eyebrow labels.
+`.cramble-archive-shell` locally overrides the shared variables toward warm
+charcoal, dark archive cards, parchment text, brass, ember, indigo, moss, plum,
+and blue. Motifs may include solar compasses, lanterns, keys, celestial charts,
+floating page corners, geometric sigils, and an original sword/ember forge mark.
 
-## 3. Spacing
+Required boundaries:
 
-4px base scale — use only these steps: **4, 8, 12, 16, 20, 24, 32, 48, 64**.
+- Keep everyday archive pages gently dark, readable, and distinct from the
+  still-deeper Observatory.
+- Keep cards flat and readable; avoid leather textures, ornate frames, or busy
+  medieval decoration.
+- Preserve Inter, `max-w-md`, common spacing, radii, focus rings, and card behavior.
+- Use original fantasy copy and symbols. Never reproduce franchise characters,
+  house crests, sorting rituals, logos, quotes, names, or recognizable props.
+- Chronicle lines should be concise and improvement-oriented, with epic-fantasy
+  imagery and only indirect hope about changed paths; never name a breakup.
+- Completed quests use renown/archive language rather than flower language.
 
-- Card padding: `16-20`. Screen gutters: `20`. Gap between cards: `12-16`.
-- Section vertical gap: `24-32`. Prefer `gap-*` (flex/grid) over ad-hoc margins.
+`.cramble-observatory-shell` is the deepest Cramble surface. Its code-native
+scene may use a dusk sky, mountains, a winding road, overlook, lantern/fire, and
+original figure silhouettes. One traveler remains fixed near the origin while a
+sword-bearing knight advances and scales down with earned journey progress. Both
+figures must remain visible at every endpoint. The illustration is decorative
+and `aria-hidden`; the adjacent percentage, rank, renown, landmark, and
+progressbar remain authoritative.
 
-## 4. Radius
+## Motion
 
-| Token | Value | Use |
-|-------|-------|-----|
-| `--radius-sm` | 8px | Chips, small tags |
-| `--radius-md` | 12px | Buttons, inputs, tab items |
-| `--radius-lg` | 20px | Cards, sheets, stat tiles |
-| `--radius-full` | 9999px | Rings, avatars, checks, XP bar, FAB, pills |
+- Feedback transitions: 120–240ms.
+- Ambient movement, where present, must be slow, faint, and pointer-free.
+- The Cramble forge mark may animate only transform/opacity/color; sparks are
+  faint, noninteractive, and suppressed in reduced-motion mode.
+- The Observatory knight may use only a 120–240ms position/scale transition after
+  real progress changes; never animate an endless walking loop. Reduced motion
+  removes interpolation while preserving the correct final position.
+- No flashing, flickering, endless attention-seeking particles, or layout motion.
+- `prefers-reduced-motion: reduce` must remove nonessential animations and
+  transforms. Functional state changes remain immediate and understandable.
 
-## 5. Elevation & borders
+## Honest gamification
 
-- Definition comes from **hairline borders first** (`--border`), elevation second.
-- Light shadows only (never heavy drops):
-  - `--shadow-card`: `0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)`
-  - `--shadow-float` (FAB, sheets, popovers): `0 8px 24px rgba(0,0,0,0.08)`
-- Gradients: a single subtle **ambient background glow** on the canvas is allowed
-  (the sunlight glow); component and text fills stay flat — no gradient fills.
-- Dark mode: rely on `--surface`/`--surface-2` lightness + border; minimize shadow.
+- A flower, renown point, rank, level, bar, or star must derive from recorded
+  quest completion—not decorative taps.
+- Observatory distance derives only from the current recorded renown total;
+  rank is milestone context and must not be double-counted into movement.
+- A skip is neutral and guilt-free; it earns no reward.
+- Do not use loss aversion, leaderboards, shame copy, or fake urgency.
+- Missing days use return-oriented language.
+- State must never be communicated by color alone; pair it with text, icon,
+  checked state, fill, or shape.
 
-## 6. Motion
+## Accessibility
 
-Motion is mostly **feedback only**. The only decorative exception is restrained
-seasonal ambience on Hana's Spring page, and it must stay slow, subtle, and
-non-interactive.
+- Text contrast at least 4.5:1 for normal text.
+- Interactive targets at least 44×44 CSS pixels.
+- Visible `:focus-visible` treatment on every control.
+- Semantic buttons/forms/headings and accurate accessible names.
+- Password errors should be associated with the input and announced.
+- Decorative layers use `pointer-events: none` and are hidden from assistive tech.
+- Do not place essential information only in a generated visual.
 
-- Durations: fast `120ms`, base `180ms`, slow `240ms`; celebration up to `900ms`.
-- Easing: `cubic-bezier(0.2, 0, 0, 1)` for enter/among UI; spring for check-off / ring-fill.
-- Interactions:
-  - Check off: whole quest card toggles completion; completed cards get a soft
-    green wash, tiny bloom sparkles, and a small `+N flowers planted` feedback pill.
-  - Card press: scale `0.98`.
-  - Flower gain: bar width transitions + short planted-flower copy.
-  - Milestone / goal reached: brief `canvas-confetti` burst (< 900ms).
-- **`prefers-reduced-motion`: always respected** — disable transforms and confetti,
-  keep instant opacity changes. Celebrations are also toggleable in Settings.
+## Implementation workflow
 
-## 7. Iconography
+- Use Tailwind v4 utilities and the existing small React components; the project
+  does not currently use shadcn/ui.
+- Use Lucide icons for interface symbols. Existing code-native marks and CSS
+  scene decoration are allowed.
+- Prefer profile-scoped selectors so a Cramble token cannot leak into Hana.
+- Reuse behavior; vary tokens, motifs, and copy.
+- Update this spec whenever a genuine design-system capability changes.
 
-- `lucide-react`, stroke width `1.75`, sizes `20`/`24`, rounded caps. Consistent set.
-- Habit avatars use **emoji** (personal, colorful, zero assets).
+## References
 
-## 8. Gamification components (honest)
-
-Anchor EVERY element to a real completed action stored in the data model — never
-to taps or logins.
-
-- **Progress ring:** SVG circle; track = `--border`, progress = habit color,
-  rounded linecap. Fills on completion; also renders daily-goal percentage.
-- **Streak:** flame icon + tabular number. Grows subtly. **Never punitive** — no
-  guilt copy; a missed day offers a gentle "streak freeze" (limited) or "start fresh".
-- **Flower bar:** slim (`8px`), `--radius-full`, `--success` fill; labels use
-  flower counts, not XP.
-- **Level display:** keep level visible in progress cards; avoid large circular
-  level badges on the main deployed Hana page.
-- **Badges / achievements:** grid of chips. Locked = outlined + lock + greyscale
-  icon. Unlocked = soft fill + colored icon + title + one-line description.
-  Unlock -> `sonner` toast + short celebration. Reserve for meaningful milestones only.
-- **Heatmap:** weeks x days grid, single hue (`--success` or per-habit color) at
-  4 intensity levels + a Less->Most legend.
-- **Rollout order (restraint):** ship rings + streaks + XP first; add badges +
-  heatmap next. Never surface all mechanics at once. No leaderboards.
-
-## 9. Layout, navigation & screens
-
-- **Sticky Garden action:** Hana's main page may use a soft sticky bottom action
-  that opens the night garden and shows flower/skip context.
-- **Mini garden preview:** a compact SVG night-garden preview can sit near the
-  flower balance card. It should use illustrated flowers and moon shapes, not emoji clutter.
-- **Section dividers:** use tiny stem/petal dividers under section titles instead
-  of heavy rules.
-- **Today (hero):** header (arc eyebrow, "Today" title, date), flower balance,
-  slim flower bar, list of quest cards, and Garden access.
-- **Progress:** current/longest streak stat tiles, heatmap, "This week" bar chart,
-  achievements grid.
-- **Stats pages:** use the "Moonlit Garden Journal" variant: still light and
-  readable, but with a warm cream base, lavender-blue haze, moon-milk cards,
-  sage/lavender accents, tiny low-contrast stars, a crescent/constellation corner,
-  and clear rounded rectangle bars.
-- **Profile / Settings:** level + XP summary; theme (light by default, more later);
-  motion & celebration toggle; local data export/reset; about.
-- **Add / edit habit:** bottom sheet — name, emoji picker, color swatches (palette
-  above), frequency (daily / days-of-week), save/delete.
-- **Empty state:** friendly and memorable — a warm line + primary "Add your first habit".
-
-## 10. Accessibility (required)
-
-- Contrast >= `4.5:1` for text, `>= 3:1` for large text / UI; verify every accent on the canvas.
-- Tap targets `>= 44px`. Visible focus rings (`2px`, offset).
-- Never color-only signaling. Respect `prefers-reduced-motion`.
-- Use `rem` units so Dynamic Type scaling reflows cleanly.
-- Semantic HTML; `aria-label` on all icon-only buttons.
-
-## 11. Implementation notes (Tailwind v4)
-
-- Define tokens as CSS variables in `src/styles/globals.css`; expose to Tailwind
-  via `@theme inline`. Keep the `.dark` override block for later theming.
-- Default theme = **light** (warm sunlit cream). Do NOT auto-switch to system dark;
-  a theme choice will be persisted in the store when theming lands (later phase).
-- Use shadcn/ui primitives and restyle to these tokens; do not hand-roll primitives.
-- Keep components small and composable; keep logic out of them (see `lib/`).
-
-## 12. Reference mockups
-
-The approved Calm Garden mockups (visual reference):
-
-- [../design/references/mockup-today-light.png](../design/references/mockup-today-light.png)
-- [../design/references/mockup-progress-light.png](../design/references/mockup-progress-light.png)
-- [../design/references/mockup-today-dark.png](../design/references/mockup-today-dark.png) (dark reference, retained for future theming)
-
-Note: the current build warms these toward the flowers-and-sunlight palette above
-(sunlit cream canvas + sun-glow). Refresh these mockups when the themed screens are built.
+Legacy approved mockups are stored in `docs/design/references/`. They remain useful
+for Calm Garden/Hana foundations. The implemented Cramble variant in
+`src/styles/globals.css` and the Cramble docs are its current source of truth.

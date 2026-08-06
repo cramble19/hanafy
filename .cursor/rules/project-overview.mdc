@@ -1,29 +1,58 @@
 ---
-description: What this project is and the core principles to always respect
+description: What Hanafy is and the core principles to always respect
 alwaysApply: true
 ---
 
-# Project: Gamified Habit Tracker (offline-first PWA)
+# Project: Hanafy profile-separated habit-game PWA
 
-A minimalist habit tracker that gamifies a healthy lifestyle. The website and the
-installable phone app are ONE codebase: a static site + web app manifest + service
-worker (a PWA).
+Hanafy is one React/Vite PWA with two isolated personal habit experiences:
+Hana's Spring Garden and Cramble's Sunward Archive. Vercel serves the static app
+and a small Postgres sync API.
 
 ## Non-negotiable principles
 
-- Offline-first: the app must work with no network after first load.
-- On-device only: all data persists to `localStorage`; nothing is sent to a server.
-- No backend, no database, no auth, no accounts.
-- Static and free to host. Minimalist UI, few dependencies.
+- Profile isolation: Hana and Cramble use separate catalogs, controllers/caches,
+  DB profile ids, and save queues. A change to one must not mutate the other.
+- DB-first in production: Postgres is authoritative when online; profile-specific
+  localStorage is an offline/cache fallback.
+- Consent-first start: do not persist an unstarted profile. Hana preview remains
+  unsaved; Cramble saves only after the First Oath begins.
+- Offline-capable shell: the installed PWA and website are one codebase.
+- Honest, kindness-first gamification tied only to real completed habits.
+- Minimal dependencies, mobile-first accessibility, and calm profile-specific UI.
 
-## Where the truth lives
+## Security boundary
+
+There is no account authentication. Cramble's static client password is casual
+privacy only; it does not secure the API or local cache. Never represent profile
+partitioning as authorization.
+
+## Sources of truth
 
 - Human overview: `docs/human/overview.md`
-- Technical architecture, stack, data model, gamification: `docs/ai/architecture.md`
+- Technical architecture: `docs/ai/architecture.md`
+- Persistence: `docs/ai/database-sync.md`
+- Design: `docs/ai/design-system.md`
 
-Read `docs/ai/architecture.md` before making structural changes.
+Read the relevant source before structural, persistence, or UI changes.
 
-## Scope guardrails (for now)
+## Scope guardrails
 
-- No cross-device sync, social features, or notifications unless explicitly requested.
-- Keep new dependencies minimal and free/static-host compatible.
+- No social features, notifications, or account system unless requested.
+- Preserve existing profile data shapes unless a tested migration is included.
+- Keep new dependencies minimal and compatible with Vite/Vercel/PWA deployment.
+- Cramble's built-in catalog is exactly four daily habits (First Draught,
+  Training Yard, Provisioner's Plate, Evening Seal) plus Sunday Sunward Tablet;
+  profile-owned custom habits may append to it, but do not add random or
+  long-term built-ins without a new request.
+- Daily-group cadence may be daily, exact weekdays, current `periodTarget`, or
+  legacy `quota`. New custom habits use one configurable model: once per period
+  is target 1; several times per period is target x. Periods use chosen days or
+  weeks, with exactly one week resetting Sunday and all other custom windows
+  anchored to habit creation.
+- Store new counted records in `GameState.habitOccurrences`; allow multiple
+  same-day records. Award a period target once only at the full count. Partial
+  progress has no reward or penalty, supports **Undo one**, and never consumes a
+  skip/pass. Preserve legacy boolean quota history and reward semantics.
+- Custom definitions live inside their owning `GameState.customHabits`; always
+  derive behavior from the merged base-plus-custom catalog.

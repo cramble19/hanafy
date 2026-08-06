@@ -1,42 +1,26 @@
 # Project Documentation
 
-This project keeps **two parallel sets of documentation**. For every feature or
-significant decision, we maintain one document in each track so that both people
-and the AI agent always have the right level of detail.
+Every significant Hanafy feature has two synchronized documentation tracks:
 
-## Tracks
+- `human/` explains what the feature does and why it matters in plain language.
+- `ai/` records the implementation, data model, invariants, trade-offs, and files.
 
-### `human/` — for people
-
-- Plain language, non-technical.
-- Explains *what* something is and *why* it matters to a user.
-- No code and no jargon. A non-developer should be able to read it.
-
-### `ai/` — for the AI agent (and developers)
-
-- Technical and precise.
-- Explains *how* it works: stack, data models, file locations, logic, trade-offs.
-- Contains everything the AI needs to make correct, safe changes.
-
-## The convention
-
-When we implement or change a feature `X`:
-
-1. Update/create `human/X.md` — concise and easy.
-2. Update/create `ai/X.md` — technical and complete.
-3. Keep both in sync with the actual code.
-
-This convention is enforced by the Cursor rule `.cursor/rules/documentation.mdc`.
+When behavior changes, update both tracks in the same change and keep them aligned
+with the code. `.cursor/rules/documentation.mdc` enforces this convention.
 
 ## Current documents
 
 | Topic | Human | AI |
-|-------|-------|----|
+|---|---|---|
 | Project overview / architecture | [human/overview.md](human/overview.md) | [ai/architecture.md](ai/architecture.md) |
-| Design system (look and feel) | [human/design.md](human/design.md) | [ai/design-system.md](ai/design-system.md) |
+| Design system | [human/design.md](human/design.md) | [ai/design-system.md](ai/design-system.md) |
 | Hana flower game | [human/hana-game.md](human/hana-game.md) | [ai/hana-game.md](ai/hana-game.md) |
-| Database sync | [human/database-sync.md](human/database-sync.md) | [ai/database-sync.md](ai/database-sync.md) |
+| Cramble fantasy habit game | [human/cramble-game.md](human/cramble-game.md) | [ai/cramble-game.md](ai/cramble-game.md) |
+| Custom habits | [human/custom-habits.md](human/custom-habits.md) | [ai/custom-habits.md](ai/custom-habits.md) |
+| Profile-aware database sync | [human/database-sync.md](human/database-sync.md) | [ai/database-sync.md](ai/database-sync.md) |
 | Install and deploy | [human/pwa-install-and-deploy.md](human/pwa-install-and-deploy.md) | [ai/pwa-install-and-deploy.md](ai/pwa-install-and-deploy.md) |
 
-Approved visual mockups (the visual source of truth) live in
-[design/references/](design/references/).
+Approved legacy visual references live in
+[design/references/](design/references/). The live tokens and scoped variants in
+`src/styles/globals.css` are authoritative when a newer implemented profile is
+not represented in those images.

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "first-draught",
+    "emoji": "💧",
+    "title": "First Draught",
+    "description": "Drink a full glass of water after waking.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#8bb4c7",
+    "required": true,
+    "minLevel": 1,
+    "schedule": { "kind": "daily" }
+  },
+  {
+    "id": "sunward-tablet",
+    "emoji": "☀️",
+    "title": "Sunward Tablet",
+    "description": "Take your planned vitamin D tablet with a meal.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#d3ad68",
+    "required": true,
+    "minLevel": 1,
+    "schedule": { "kind": "weekly", "daysOfWeek": [0] }
+  },
+  {
+    "id": "training-yard",
+    "emoji": "⚔️",
+    "title": "Training Yard",
+    "description": "Do one physically intensive activity today, at a level that is safe for you.",
+    "group": "daily",
+    "difficulty": "hard",
+    "color": "#93ad82",
+    "required": true,
+    "minLevel": 1,
+    "schedule": { "kind": "daily" }
+  },
+  {
+    "id": "provisioners-plate",
+    "emoji": "🥗",
+    "title": "Provisioner's Plate",
+    "description": "Eat one proper meal with protein and something colorful.",
+    "group": "daily",
+    "difficulty": "medium",
+    "color": "#d3ad68",
+    "required": true,
+    "minLevel": 1,
+    "schedule": { "kind": "daily" }
+  },
+  {
+    "id": "evening-seal",
+    "emoji": "🌙",
+    "title": "Evening Seal",
+    "description": "Brush your teeth before bed.",
+    "group": "daily",
+    "difficulty": "easy",
+    "color": "#c096bb",
+    "required": true,
+    "minLevel": 1,
+    "schedule": { "kind": "daily" }
+  }
+]

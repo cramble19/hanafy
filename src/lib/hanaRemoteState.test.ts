@@ -5,7 +5,9 @@ import {
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveHanaStateToDb,
+  saveProfileStateToDb,
 } from './hanaRemoteState'
+import { crambleQuests } from '@/data/crambleQuests'
 
 describe('Hana remote state helpers', () => {
   it('prefers database state over cache and initial state', () => {
@@ -70,6 +72,30 @@ describe('Hana remote state helpers', () => {
     expect(fetchImpl).toHaveBeenCalledWith('/api/hana-sync?profileId=hana')
   })
 
+  it('rejects a snapshot belonging to the other profile', async () => {
+    const state = createState({ currentDate: '2026-07-14', totalFlowers: 3 })
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          snapshot: {
+            profileId: 'hana',
+            currentDate: '2026-07-14',
+            totalFlowers: 3,
+            state,
+            syncedAt: '2026-07-14T09:00:00.000Z',
+          },
+        }),
+        { status: 200 },
+      ),
+    ) as unknown as typeof fetch
+
+    await expect(loadHanaStateFromDb('cramble', fetchImpl)).resolves.toEqual({
+      ok: false,
+      error: 'Invalid DB snapshot response',
+    })
+  })
+
   it('saves state to the DB endpoint', async () => {
     const state = createState({ currentDate: '2026-07-14', totalFlowers: 3 })
     const fetchImpl = vi.fn(async () =>
@@ -88,6 +114,48 @@ describe('Hana remote state helpers', () => {
         },
       }),
     )
+  })
+
+  it('saves Cramble with the separate profile and quest catalog', async () => {
+    const state = createState({
+      currentDate: '2026-08-06',
+      activeDailyQuests: {
+        '2026-08-06': [
+          'first-draught',
+          'training-yard',
+          'provisioners-plate',
+          'evening-seal',
+        ],
+      },
+    })
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    )
+
+    const result = await saveProfileStateToDb(
+      state,
+      'cramble',
+      crambleQuests,
+      fetchMock as unknown as typeof fetch,
+    )
+
+    expect(result.ok).toBe(true)
+    const request = fetchMock.mock.calls[0]?.[1]
+    const body = JSON.parse(String(request?.body)) as {
+      profileId: string
+      questStatuses: Array<{ profileId: string; questId: string }>
+    }
+    expect(body.profileId).toBe('cramble')
+    expect(body.questStatuses.every((row) => row.profileId === 'cramble')).toBe(
+      true,
+    )
+    expect(body.questStatuses.map((row) => row.questId)).toEqual([
+      'evening-seal',
+      'first-draught',
+      'provisioners-plate',
+      'training-yard',
+    ])
   })
 
   it('does not save before Hana has started the health overhaul', async () => {
@@ -115,15 +183,31 @@ describe('Hana remote state helpers', () => {
       method: 'DELETE',
     })
   })
+
+  it('clears only the requested Cramble profile endpoint', async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    const result = await clearHanaStateFromDb('cramble', fetchImpl)
+
+    expect(result).toEqual({ ok: true })
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/hana-sync?profileId=cramble',
+      { method: 'DELETE' },
+    )
+  })
 })
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
     startDate: '2026-07-14',
     currentDate: '2026-07-14',
+    customHabits: [],
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},
+    habitOccurrences: {},
     longTermWindows: {},
     longTermCompletions: {},
     questSkips: {},

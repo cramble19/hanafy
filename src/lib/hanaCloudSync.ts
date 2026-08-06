@@ -1,7 +1,9 @@
 import type { HanaGameState, Quest } from '@/types'
 import {
   flowersForQuest,
+  getQuestCatalog,
   getLongTermDueDate,
+  getQuestScheduleProgress,
 } from '@/lib/hanaGame'
 
 export type HanaProfileId = 'hana' | 'cramble'
@@ -36,7 +38,7 @@ export type HanaCloudSyncPayload = {
   weedStatuses: HanaWeedSyncRow[]
 }
 
-export function createHanaCloudSyncPayload(
+export function createProfileCloudSyncPayload(
   profileId: HanaProfileId,
   state: HanaGameState,
   quests: Quest[],
@@ -53,12 +55,22 @@ export function createHanaCloudSyncPayload(
   }
 }
 
+export function createHanaCloudSyncPayload(
+  profileId: HanaProfileId,
+  state: HanaGameState,
+  quests: Quest[],
+  syncedAt = new Date().toISOString(),
+): HanaCloudSyncPayload {
+  return createProfileCloudSyncPayload(profileId, state, quests, syncedAt)
+}
+
 function createQuestStatusRows(
   profileId: HanaProfileId,
   state: HanaGameState,
   quests: Quest[],
 ) {
-  const questById = new Map(quests.map((quest) => [quest.id, quest]))
+  const catalog = getQuestCatalog(quests, state)
+  const questById = new Map(catalog.map((quest) => [quest.id, quest]))
   const rows = new Map<string, HanaQuestSyncRow>()
 
   const setDailyRow = (
@@ -67,7 +79,10 @@ function createQuestStatusRows(
     status: HanaQuestSyncStatus,
   ) => {
     const quest = questById.get(questId)
-    const flowersEarned = status === 'completed' && quest ? flowersForQuest(quest) : 0
+    if (!quest) {
+      return
+    }
+    const flowersEarned = status === 'completed' ? flowersForQuest(quest) : 0
     const key = makeRowKey(profileId, 'daily', questId, dateKey)
 
     rows.set(key, {
@@ -89,7 +104,10 @@ function createQuestStatusRows(
     status: HanaQuestSyncStatus,
   ) => {
     const quest = questById.get(questId)
-    const flowersEarned = status === 'completed' && quest ? flowersForQuest(quest) : 0
+    if (!quest) {
+      return
+    }
+    const flowersEarned = status === 'completed' ? flowersForQuest(quest) : 0
     const key = makeRowKey(profileId, 'longTerm', questId, startedAt)
 
     rows.set(key, {
@@ -99,21 +117,107 @@ function createQuestStatusRows(
       periodKey: startedAt,
       dateKey: null,
       windowStart: startedAt,
-      dueDate: quest ? getLongTermDueDate(startedAt, quest) : null,
+      dueDate: getLongTermDueDate(startedAt, quest),
       status,
       flowersEarned,
     })
   }
 
+  const flexiblePeriods = new Map<
+    string,
+    { quest: Quest; representativeDate: string }
+  >()
+  const trackFlexiblePeriod = (dateKey: string, quest: Quest) => {
+    if (quest.createdDate && dateKey < quest.createdDate) {
+      return
+    }
+    const progress = getQuestScheduleProgress(state, quest, dateKey)
+    flexiblePeriods.set(`${quest.id}:${progress.periodStart}`, {
+      quest,
+      representativeDate: dateKey,
+    })
+  }
+
   Object.entries(state.activeDailyQuests ?? {}).forEach(([dateKey, questIds]) => {
-    questIds.forEach((questId) => setDailyRow(dateKey, questId, 'pending'))
+    questIds.forEach((questId) => {
+      const quest = questById.get(questId)
+      if (!quest) {
+        return
+      }
+      if (
+        quest.schedule?.kind === 'quota' ||
+        quest.schedule?.kind === 'periodTarget'
+      ) {
+        trackFlexiblePeriod(dateKey, quest)
+        return
+      }
+      setDailyRow(dateKey, questId, 'pending')
+    })
   })
 
   Object.entries(state.dailyCompletions ?? {}).forEach(([dateKey, completions]) => {
     Object.entries(completions).forEach(([questId, isComplete]) => {
       if (isComplete) {
+        const quest = questById.get(questId)
+        if (!quest) {
+          return
+        }
+        if (quest.schedule?.kind === 'quota') {
+          trackFlexiblePeriod(dateKey, quest)
+          return
+        }
+        if (quest.schedule?.kind === 'periodTarget') {
+          return
+        }
         setDailyRow(dateKey, questId, 'completed')
       }
+    })
+  })
+
+  Object.entries(state.habitOccurrences ?? {}).forEach(
+    ([dateKey, occurrences]) => {
+      Object.entries(occurrences).forEach(([questId, count]) => {
+        if (count <= 0) {
+          return
+        }
+        const quest = questById.get(questId)
+        if (
+          quest?.schedule?.kind === 'periodTarget' &&
+          (!quest.createdDate || dateKey >= quest.createdDate)
+        ) {
+          trackFlexiblePeriod(dateKey, quest)
+        }
+      })
+    },
+  )
+
+  flexiblePeriods.forEach(({ quest, representativeDate }) => {
+    const progress = getQuestScheduleProgress(
+      state,
+      quest,
+      representativeDate,
+    )
+    const key = makeRowKey(
+      profileId,
+      'daily',
+      quest.id,
+      progress.periodStart,
+    )
+    rows.set(key, {
+      profileId,
+      questGroup: 'daily',
+      questId: quest.id,
+      periodKey: progress.periodStart,
+      dateKey: null,
+      windowStart: progress.periodStart,
+      dueDate: progress.periodEnd,
+      status: progress.isComplete ? 'completed' : 'pending',
+      flowersEarned:
+        quest.schedule?.kind === 'periodTarget'
+          ? progress.isComplete
+            ? flowersForQuest(quest)
+            : 0
+          : Math.min(progress.completed, progress.target) * flowersForQuest(quest),
     })
   })
 
@@ -143,6 +247,10 @@ function createQuestStatusRows(
       }
 
       if (parsedSkip.group === 'daily') {
+        const scheduleKind = questById.get(parsedSkip.questId)?.schedule?.kind
+        if (scheduleKind === 'quota' || scheduleKind === 'periodTarget') {
+          return
+        }
         const rowKey = makeRowKey(
           profileId,
           'daily',

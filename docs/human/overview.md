@@ -1,49 +1,59 @@
-# Habit Tracker — Overview
+# Hanafy — Overview
 
 ## What it is
 
-A simple, friendly habit tracker that makes building healthy habits feel like a
-game. You add habits you want to keep (drink water, walk, sleep early), check
-them off each day, and earn flowers, levels, streaks, and badges for staying
-consistent.
+Hanafy is one installable habit app with two separate personal paths:
 
-## Who it's for
+- **Hana's Spring Garden** turns supportive health quests into flowers, levels,
+  and a growing night garden.
+- **Cramble's Sunward Archive** turns healthy habits into fantasy quests,
+  renown, chapters, and a changing fantasy journey in the Lantern Observatory.
 
-Anyone who wants to build healthier routines without a complicated app.
+Both paths use the same calm, mobile-friendly app shell, but their progress,
+quest lists, saved device data, and database records stay separate.
 
-## How you use it
+## How it works
 
-1. Open the app in your browser, or install it on your phone's home screen — it
-   then behaves like a normal app.
-2. Hana presses **Start Health Overhaul** when she is ready to begin.
-3. Tap to check off a habit when you do it.
-4. Watch your streaks grow, earn flowers, level up, and unlock badges.
+1. Choose Hana or Cramble on the home screen.
+2. Hana can explore first or start her Health Overhaul when she is ready.
+3. Cramble enters the static password, `hana`, then begins the First Oath.
+4. Complete or pass the quests due today, or add a personal goal done once or
+   several times in a chosen number of days or weeks.
+5. Tap a custom period goal to record +1; several records can happen on the same
+   day, and **Undo one** corrects a mistaken record.
+6. Flexible habits earn their flower or renown reward only when the full period
+   target is complete. Partial progress has no penalty, and unused days are not
+   treated as individual failures.
+7. Open the Garden or Observatory to see real progress reflected visually.
+8. Open either profile's Ledger to review recent activity.
 
-## Why it feels good (the "game" part)
+## What makes it kind
 
-- **Streaks:** a flame that grows the more days in a row you keep a habit.
-- **Flowers and levels:** every check-off earns flowers; flowers raise your level.
-- **Badges:** small achievements you unlock for milestones (first habit, a full
-  week, a 30-day streak, and so on).
-- **Celebrations:** a little confetti moment when you complete something.
+- Every reward comes from completing a real habit.
+- Counted period goals never subtract points for partial progress.
+- Three weekly skips make difficult days easier to handle.
+- Missing a day is never framed as failure; the next page simply begins.
+- Hana's built-in quests unlock gradually; Cramble starts with five fixed
+  lessons. Either person can add only the personal habits they actually want.
+- Motion is subtle and respects reduced-motion preferences.
 
-## Things that keep it simple
+## Saving and installation
 
-- **Works offline.** No internet needed after the first load.
-- **No account.** Hana does not need to sign in.
-- **Database saved.** Hana's progress is saved in the cloud database when online,
-  so another phone or laptop can show the same garden.
-- **Consent first.** Nothing is saved to the database until Hana presses the start
-  button. She can still explore the app without committing.
-- **Offline fallback.** The app keeps a small local cache for weak-network moments.
-- **Low-cost.** Vercel hosts the app/backend, with a free Postgres option for
-  the database.
-- **One app, everywhere.** The website and the installable phone app are the
-  same thing.
-- **Personal touches.** The home page has a small hidden photo easter egg.
+- The same website can be installed on a phone as a PWA.
+- In production, each person's progress is saved under a separate profile in
+  Postgres and can appear on another device.
+- Each profile also has its own local cache for weak-network or offline moments.
+- Local development stays device-only and does not call the production database.
 
-## What it is NOT (for now)
+## Privacy boundary
 
-- No full account system or multi-user permissions yet.
-- No social feed or sharing.
-- No reminders/notifications yet (possible future addition).
+There is no account system yet. Cramble's password is a friendly entry gate, not
+strong security: it is part of the browser code and does not encrypt local data
+or protect the database endpoint. Hana and Cramble are separated by app state and
+database profile, not by authenticated user accounts.
+
+## Not included yet
+
+- Accounts or server-verified sign-in
+- Social feeds, sharing, or leaderboards
+- Reminders and notifications

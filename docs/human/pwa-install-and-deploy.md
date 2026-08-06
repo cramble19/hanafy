@@ -7,14 +7,15 @@ Hanafy is now set up as an installable web app.
 The app can be opened in a phone browser and added to the home screen like a
 normal app. It has:
 
-- an app name: **Hanafy - Spring Garden**
+- an app name: **Hanafy - Hana & Cramble**
 - app icons
 - a mobile theme color
 - standalone app mode
 - offline app-shell caching
 
-After the database is connected on Vercel, Hana's progress is saved in Postgres
-as the main copy. The phone keeps a small local cache only as a fallback.
+After the database is connected on Vercel, Hana's and Cramble's progress are
+saved as separate Postgres profiles. The phone keeps a separate local cache for
+each path as a fallback.
 
 ## Best hosting choice
 
@@ -35,8 +36,8 @@ Steps:
 4. Make sure Vercel has `DATABASE_URL` or `POSTGRES_URL` in Environment
    Variables.
 5. Redeploy the project.
-6. Open the deployed app and complete/skip one quest. The database tables are
-   created automatically on the first successful sync.
+6. Open the deployed app and start or complete a quest in each path. The shared
+   database tables are created automatically on the first successful sync.
 
 ## Phone install
 

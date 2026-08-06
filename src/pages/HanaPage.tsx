@@ -4,11 +4,14 @@ import {
   ChevronLeft,
   RefreshCw,
   RotateCcw,
+  Plus,
 } from 'lucide-react'
+import { useState } from 'react'
 import { quests } from '@/data/quests'
 import hanaWeeds from '@/data/hanaWeeds.json'
 import springQuotes from '@/data/springQuotes.json'
 import { EveningWeeds } from '@/components/EveningWeeds'
+import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { QuestSection } from '@/components/QuestSection'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import {
@@ -16,12 +19,19 @@ import {
   getLongTermCheckedIds,
   getLongTermQuestStatus,
   getLevelProgress,
+  getQuestCatalog,
+  getQuestScheduleProgress,
   getSkippedIdsForState,
   getSkipProgress,
   getSpringArcProgress,
   getWeedProgress,
   visibleQuestsForState,
 } from '@/lib/hanaGame'
+import type { NewHabitInput } from '@/lib/customHabits'
+import {
+  getHabitMomentumSignal,
+  getHabitRangeStats,
+} from '@/lib/hanaStats'
 import type { GardenWeed, HanaGameState } from '@/types'
 
 const eveningWeeds = hanaWeeds as GardenWeed[]
@@ -46,10 +56,12 @@ type SeasonQuote = {
 type Props = {
   game: HanaGameState
   onToggle: (id: string) => void
+  onUndoOccurrence: (id: string) => void
+  onAddHabit: (input: NewHabitInput) => string | null
   onSkip: (id: string) => void
   onToggleWeed: (id: string) => void
   onOpenGarden: () => void
-  onOpenStats: () => void
+  onOpenLedger: () => void
   onNextDay: () => void
   onReset: () => void
   onSyncCloud: () => void
@@ -69,10 +81,12 @@ type Props = {
 export function HanaPage({
   game,
   onToggle,
+  onUndoOccurrence,
+  onAddHabit,
   onSkip,
   onToggleWeed,
   onOpenGarden,
-  onOpenStats,
+  onOpenLedger,
   onNextDay,
   onReset,
   onSyncCloud,
@@ -80,10 +94,47 @@ export function HanaPage({
   lastCloudSyncAt,
   onBack,
 }: Props) {
+  const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
+  const catalog = getQuestCatalog(quests, game)
   const levelProgress = getLevelProgress(game.totalFlowers)
-  const visibleQuests = visibleQuestsForState(quests, game)
-  const dailyCheckedIds = game.dailyCompletions[game.currentDate] ?? {}
-  const skippedIds = getSkippedIdsForState(quests, game)
+  const visibleQuests = visibleQuestsForState(catalog, game)
+  const momentumById = Object.fromEntries(
+    catalog.map((quest) => {
+      const history = getHabitRangeStats(
+        game,
+        quests,
+        'hana',
+        quest.id,
+        'all',
+      )
+      return [
+        quest.id,
+        history ? getHabitMomentumSignal(history, 'hana') : null,
+      ]
+    }),
+  )
+  const dailyProgressById = Object.fromEntries(
+    visibleQuests.daily.map((quest) => [
+      quest.id,
+      getQuestScheduleProgress(game, quest),
+    ]),
+  )
+  const dailyCheckedIds = visibleQuests.daily.reduce<Record<string, boolean>>(
+    (result, quest) => {
+      result[quest.id] =
+        quest.schedule?.kind === 'periodTarget'
+          ? dailyProgressById[quest.id].isComplete
+          : Boolean(game.dailyCompletions[game.currentDate]?.[quest.id])
+      return result
+    },
+    {},
+  )
+  const periodProgressById = Object.fromEntries(
+    visibleQuests.daily
+      .filter((quest) => quest.schedule?.kind === 'periodTarget')
+      .map((quest) => [quest.id, dailyProgressById[quest.id]]),
+  )
+  const skippedIds = getSkippedIdsForState(catalog, game)
   const skipProgress = getSkipProgress(game)
   const weedCheckedIds = game.eveningWeeds?.[game.currentDate] ?? {}
   const weedProgress = getWeedProgress(game)
@@ -91,6 +142,16 @@ export function HanaPage({
   const springArc = getSpringArcProgress(game)
   const seasonalQuote = getSeasonalQuote(game.currentDate)
   const showDevControls = import.meta.env.DEV
+  const dailyMetaById = visibleQuests.daily.reduce<Record<string, string>>(
+    (result, quest) => {
+      const progress = dailyProgressById[quest.id]
+      if (progress.label || quest.custom) {
+        result[quest.id] = progress.label ?? 'Daily'
+      }
+      return result
+    },
+    {},
+  )
   const longTermMetaById = Object.fromEntries(
     visibleQuests.longTerm.map((quest) => [
       quest.id,
@@ -218,7 +279,11 @@ export function HanaPage({
           checkedIds={dailyCheckedIds}
           skippedIds={skippedIds}
           canSkip={skipProgress.remaining > 0}
+          metaById={dailyMetaById}
+          periodProgressById={periodProgressById}
+          momentumById={momentumById}
           onToggle={onToggle}
+          onUndoOccurrence={onUndoOccurrence}
           onSkip={onSkip}
         />
         <QuestSection
@@ -228,6 +293,7 @@ export function HanaPage({
           skippedIds={skippedIds}
           canSkip={skipProgress.remaining > 0}
           metaById={longTermMetaById}
+          momentumById={momentumById}
           onToggle={onToggle}
           onSkip={onSkip}
         />
@@ -324,6 +390,29 @@ export function HanaPage({
       <div className="sticky-garden-bar">
         <button
           type="button"
+          onClick={() => setIsAddHabitOpen(true)}
+          disabled={!game.startDate}
+          className="habit-add-button"
+          aria-label={
+            game.startDate
+              ? 'Add a habit for Hana'
+              : "Start Hana's Health Overhaul to add habits"
+          }
+        >
+          <span className="habit-add-icon" aria-hidden="true">
+            <Plus className="size-5" />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold">Add habit</span>
+            <span className="block text-xs opacity-75">
+              {game.startDate
+                ? 'Choose its rhythm and period reward'
+                : 'Start the Health Overhaul first'}
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
           onClick={onOpenGarden}
           className="sticky-garden-button"
           aria-label="Open Hana's night garden"
@@ -340,23 +429,32 @@ export function HanaPage({
         </button>
         <button
           type="button"
-          onClick={onOpenStats}
+          onClick={onOpenLedger}
           className="sticky-garden-button sticky-stats-button"
-          aria-label="Open Hana's stats"
+          aria-label="Open Hana's Ledger"
         >
           <span className="sticky-stats-icon" aria-hidden="true">
             <BarChart3 className="size-4" />
           </span>
           <span>
             <span className="block text-sm font-semibold text-ink">
-              View garden stats
+              Open Hana's Ledger
             </span>
             <span className="block text-xs text-muted">
-              See blooms, skips, and soft patterns
+              See every goal window and recorded day
             </span>
           </span>
         </button>
       </div>
+
+      {isAddHabitOpen ? (
+        <AddHabitDialog
+          profile="hana"
+          existingTitles={catalog.map((quest) => quest.title)}
+          onClose={() => setIsAddHabitOpen(false)}
+          onSubmit={onAddHabit}
+        />
+      ) : null}
     </div>
   )
 }

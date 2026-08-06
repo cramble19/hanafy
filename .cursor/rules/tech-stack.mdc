@@ -1,27 +1,49 @@
 ---
-description: Approved tech stack and project layout for the habit tracker
+description: Actual tech stack and project layout for Hanafy
 alwaysApply: true
 ---
 
 # Tech stack
 
-- TypeScript (strict) + React 19 + Vite.
-- Tailwind CSS v4 via `@tailwindcss/vite` (CSS-first `@theme`, not a JS config).
-- shadcn/ui (`new-york`) primitives; `lucide-react` icons; `sonner` toasts.
-- State + persistence: Zustand with the `persist` middleware -> `localStorage` (versioned key).
-- Animation: `motion` (Framer Motion); celebrations: `canvas-confetti`.
-- Dates: `date-fns`. PWA: `vite-plugin-pwa` + `@vite-pwa/assets-generator`.
+- TypeScript (strict), React 19, and Vite 8.
+- Tailwind CSS v4 via `@tailwindcss/vite`, with CSS-first tokens and scoped styles.
+- `lucide-react` for interface icons.
+- React state/refs plus profile-specific `localStorage` caches; no external store.
+- Vitest for unit tests.
+- `vite-plugin-pwa` and `sharp` for the installable app and icons.
+- Vercel API function at `api/hana-sync.ts`.
+- Postgres through `@neondatabase/serverless`; `DATABASE_URL` or `POSTGRES_URL`.
+
+Do not assume shadcn/ui, Zustand, Sonner, Framer Motion, canvas-confetti, or
+date-fns. They are not installed.
 
 ## Layout
 
-- `src/lib/gamification.ts` — pure XP/level/streak/achievement logic (no React/store imports).
-- `src/store/useHabitStore.ts` — Zustand store + persist.
-- `src/components/ui/` — shadcn primitives; feature components alongside.
-- `src/types.ts` — shared types.
+- `src/App.tsx` — home, Hana controller, top-level view state.
+- `src/features/cramble/CrambleExperience.tsx` — isolated Cramble controller.
+- `src/lib/hanaGame.ts` — pure shared cadence/quest/date/reward/state functions.
+- `src/lib/customHabits.ts` — custom-habit validation and definition creation.
+- `src/components/AddHabitDialog.tsx` — shared accessible creation UI.
+- `src/lib/hanaCloudSync.ts` — profile-aware payload creation.
+- `src/lib/hanaRemoteState.ts` — profile-aware remote helpers.
+- `src/data/` — separate Hana and Cramble catalogs.
+- `src/pages/` — screen components.
+- `src/styles/globals.css` — Tailwind entry, tokens, variants, reward scenes.
+- `api/hana-sync.ts` — shared profile-partitioned database endpoint.
 
 ## Rules
 
-- Keep business/gamification logic in `lib/` pure functions, not in components.
-- Do NOT add a backend, server, or database.
-- Prefer zero new dependencies; any addition must be free and static-host compatible.
-- Full details: `docs/ai/architecture.md`.
+- Keep business logic in pure `lib/` functions rather than page components.
+- Keep daily, exact-weekday, `periodTarget`, and legacy-quota calculations in
+  `hanaGame.ts` with boundary tests; do not duplicate cadence math in profile
+  controllers.
+- Keep counted custom records in `habitOccurrences`, separate from legacy
+  boolean `dailyCompletions`. Period targets allow same-day repetition, award
+  once only at the full target, and support one-at-a-time undo.
+- Resolve built-in and persisted custom definitions through `getQuestCatalog()`
+  before planning, reward, sync, or stats work.
+- Preserve separate cache keys, catalogs, and save queues for both profiles.
+- Pass the profile id and quest catalog explicitly at generic sync boundaries.
+- Prefer zero new dependencies; justify and document additions.
+- Keep API changes compatible with Vercel and validate profile ownership.
+- Full details: `docs/ai/architecture.md` and `docs/ai/database-sync.md`.

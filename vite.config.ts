@@ -19,9 +19,9 @@ export default defineConfig({
       ],
       manifest: {
         id: '/',
-        name: 'Hanafy - Spring Garden',
+        name: 'Hanafy - Hana & Cramble',
         short_name: 'Hanafy',
-        description: 'A gentle spring flower game for Hana and Cramble.',
+        description: 'Two gentle habit adventures for Hana and Cramble.',
         theme_color: '#fffaf0',
         background_color: '#fffaf0',
         display: 'standalone',

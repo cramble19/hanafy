@@ -44,6 +44,7 @@ type SyncPayload = {
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Allow', 'GET, POST, DELETE, OPTIONS')
+  res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'OPTIONS') {
     res.status(204).end()
@@ -122,7 +123,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const payload = parsePayload(req.body)
     if (!payload) {
-      res.status(400).json({ error: 'Invalid Hana sync payload' })
+      res.status(400).json({ error: 'Invalid profile sync payload' })
       return
     }
 
@@ -165,7 +166,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
             synced_at
           )
           VALUES (
-            ${row.profileId},
+            ${payload.profileId},
             ${row.questGroup},
             ${row.questId},
             ${row.periodKey},
@@ -199,7 +200,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
             synced_at
           )
           VALUES (
-            ${row.profileId},
+            ${payload.profileId},
             ${row.dateKey},
             ${row.weedId},
             ${row.checked},
@@ -219,8 +220,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       weedRows: payload.weedStatuses.length,
     })
   } catch (error) {
-    console.error('Hana sync failed', error)
-    res.status(500).json({ error: 'Hana sync failed' })
+    console.error('Profile sync failed', error)
+    res.status(500).json({ error: 'Profile sync failed' })
   }
 }
 
@@ -274,6 +275,7 @@ function parsePayload(body: unknown): SyncPayload | null {
   if (value.profileId !== 'hana' && value.profileId !== 'cramble') {
     return null
   }
+  const profileId = value.profileId
 
   if (
     typeof value.syncedAt !== 'string' ||
@@ -287,11 +289,22 @@ function parsePayload(body: unknown): SyncPayload | null {
     return null
   }
 
-  const questStatuses = value.questStatuses.filter(isQuestStatus)
-  const weedStatuses = value.weedStatuses.filter(isWeedStatus)
+  const questStatuses = value.questStatuses.filter((row) =>
+    isQuestStatus(row, profileId),
+  )
+  const weedStatuses = value.weedStatuses.filter((row) =>
+    isWeedStatus(row, profileId),
+  )
+
+  if (
+    questStatuses.length !== value.questStatuses.length ||
+    weedStatuses.length !== value.weedStatuses.length
+  ) {
+    return null
+  }
 
   return {
-    profileId: value.profileId,
+    profileId,
     syncedAt: value.syncedAt,
     currentDate: value.currentDate,
     totalFlowers: value.totalFlowers,
@@ -330,13 +343,16 @@ function formatSyncedAt(value: string | Date) {
   return value instanceof Date ? value.toISOString() : value
 }
 
-function isQuestStatus(value: unknown): value is QuestStatus {
+function isQuestStatus(
+  value: unknown,
+  profileId: SyncPayload['profileId'],
+): value is QuestStatus {
   if (!isRecord(value)) {
     return false
   }
 
   return (
-    typeof value.profileId === 'string' &&
+    value.profileId === profileId &&
     (value.questGroup === 'daily' || value.questGroup === 'longTerm') &&
     typeof value.questId === 'string' &&
     typeof value.periodKey === 'string' &&
@@ -350,13 +366,16 @@ function isQuestStatus(value: unknown): value is QuestStatus {
   )
 }
 
-function isWeedStatus(value: unknown): value is WeedStatus {
+function isWeedStatus(
+  value: unknown,
+  profileId: SyncPayload['profileId'],
+): value is WeedStatus {
   if (!isRecord(value)) {
     return false
   }
 
   return (
-    typeof value.profileId === 'string' &&
+    value.profileId === profileId &&
     typeof value.dateKey === 'string' &&
     typeof value.weedId === 'string' &&
     typeof value.checked === 'boolean'

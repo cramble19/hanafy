@@ -1,5 +1,65 @@
-import { createHanaCloudSyncPayload } from '@/lib/hanaCloudSync'
-import type { HanaGameState, Quest } from '@/types'
+import {
+  createProfileCloudSyncPayload,
+  type HanaProfileId,
+} from '@/lib/hanaCloudSync'
+import {
+  getLongTermDueDate,
+  getQuestCatalog,
+  getQuestScheduleProgress,
+} from '@/lib/hanaGame'
+import type { HanaGameState, Quest, Weekday } from '@/types'
+
+export type HabitStatsRange = 7 | 30 | 90 | 'all'
+export type HabitPeriodStatus = 'completed' | 'skipped' | 'missed' | 'open'
+
+export type HabitPeriodStat = {
+  periodKey: string
+  startDate: string
+  endDate: string
+  completed: number
+  target: number
+  status: HabitPeriodStatus
+}
+
+export type HabitDayStat = {
+  dateKey: string
+  count: number
+  /** The habit could be recorded that day; this is never a miss indicator. */
+  isEligible: boolean
+  isToday: boolean
+}
+
+export type HabitRangeStats = {
+  quest: Quest
+  range: HabitStatsRange
+  rangeStart: string
+  rangeEnd: string
+  activeDays: number
+  completedPeriods: number
+  missedPeriods: number
+  skippedPeriods: number
+  decidedPeriods: number
+  successRate: number
+  totalRecords: number
+  weeklyPace: number
+  currentPeriod: HabitPeriodStat | null
+  nextDueDate: string | null
+  periods: HabitPeriodStat[]
+  days: HabitDayStat[]
+  weekdayRecords: Array<{
+    weekday: number
+    label: string
+    records: number
+  }>
+}
+
+export type HabitMomentumSignal = {
+  kind: 'combo' | 'needsCare'
+  emoji: string
+  label: string
+  ariaLabel: string
+  windowCount: number
+}
 
 export type QuestStat = {
   questId: string
@@ -68,8 +128,17 @@ export type HanaStats = {
 }
 
 export function getHanaStats(state: HanaGameState, quests: Quest[]): HanaStats {
-  const payload = createHanaCloudSyncPayload('hana', state, quests)
-  const questById = new Map(quests.map((quest) => [quest.id, quest]))
+  return getProfileStats(state, quests, 'hana')
+}
+
+export function getProfileStats(
+  state: HanaGameState,
+  quests: Quest[],
+  profileId: HanaProfileId,
+): HanaStats {
+  const catalog = getQuestCatalog(quests, state)
+  const payload = createProfileCloudSyncPayload(profileId, state, catalog)
+  const questById = new Map(catalog.map((quest) => [quest.id, quest]))
   const questStats = new Map<string, QuestStat>()
   const dailyStats = new Map<string, DailyStat>()
   const currentWeekStart = getWeekStartKey(state.currentDate)
@@ -158,8 +227,9 @@ export function getQuestHistory(
   quests: Quest[],
   questId: string,
 ): QuestHistory {
-  const payload = createHanaCloudSyncPayload('hana', state, quests)
-  const quest = quests.find((item) => item.id === questId)
+  const catalog = getQuestCatalog(quests, state)
+  const payload = createProfileCloudSyncPayload('hana', state, catalog)
+  const quest = catalog.find((item) => item.id === questId)
   const days = payload.questStatuses
     .filter((row) => row.questId === questId)
     .map((row) => ({
@@ -192,6 +262,466 @@ export function getQuestHistory(
   }
 }
 
+/**
+ * Builds a truthful per-habit history from the saved schedule and raw records.
+ * Flexible habits are represented once per scoring window, while `days` keeps
+ * the exact occurrence counts used by the activity grid.
+ */
+export function getHabitRangeStats(
+  state: HanaGameState,
+  quests: Quest[],
+  profileId: HanaProfileId,
+  questId: string,
+  range: HabitStatsRange,
+): HabitRangeStats | null {
+  const catalog = getQuestCatalog(quests, state)
+  const quest = catalog.find((item) => item.id === questId)
+  if (!quest) return null
+
+  const activeStart = getQuestActiveStart(state, quest)
+  const historyStart = activeStart ?? state.currentDate
+  const requestedStart =
+    range === 'all' ? historyStart : addDays(state.currentDate, -(range - 1))
+  const rangeStart =
+    requestedStart < historyStart ? historyStart : requestedStart
+  const rangeEnd = state.currentDate
+  const days = buildHabitDays(state, quest, rangeStart, rangeEnd)
+  const allPeriods = activeStart
+    ? quest.group === 'longTerm'
+      ? buildLongTermPeriods(state, catalog, profileId, quest)
+      : buildDailyGroupPeriods(state, quest, activeStart, rangeEnd)
+    : []
+  const periods = allPeriods.filter((period) =>
+    isPeriodInRange(period, rangeStart, rangeEnd),
+  )
+  const currentPeriod =
+    allPeriods.find(
+      (period) =>
+        period.startDate <= state.currentDate &&
+        period.endDate >= state.currentDate,
+    ) ?? null
+  const completedPeriods = periods.filter(
+    ({ status }) => status === 'completed',
+  ).length
+  const missedPeriods = periods.filter(
+    ({ status }) => status === 'missed',
+  ).length
+  const skippedPeriods = periods.filter(
+    ({ status }) => status === 'skipped',
+  ).length
+  const decidedPeriods = completedPeriods + missedPeriods
+  const totalRecords = days.reduce((total, day) => total + day.count, 0)
+  const activeDays = Math.max(1, dateDiffDays(rangeStart, rangeEnd) + 1)
+  const weekdayRecords = WEEKDAY_SHORT_NAMES.map((label, weekday) => ({
+    weekday,
+    label,
+    records: days.reduce(
+      (total, day) =>
+        parseDateKey(day.dateKey).getDay() === weekday
+          ? total + day.count
+          : total,
+      0,
+    ),
+  }))
+
+  return {
+    quest,
+    range,
+    rangeStart,
+    rangeEnd,
+    activeDays,
+    completedPeriods,
+    missedPeriods,
+    skippedPeriods,
+    decidedPeriods,
+    successRate: percent(completedPeriods, decidedPeriods),
+    totalRecords,
+    weeklyPace: Math.round((totalRecords / activeDays) * 70) / 10,
+    currentPeriod,
+    nextDueDate: getNextDueDate(state, quest, currentPeriod),
+    periods,
+    days,
+    weekdayRecords,
+  }
+}
+
+export function formatQuestCadence(quest: Quest) {
+  if (quest.group === 'longTerm') {
+    const days = quest.durationDays ?? 7
+    return `Once every ${days} ${days === 1 ? 'day' : 'days'}`
+  }
+
+  const schedule = quest.schedule ?? { kind: 'daily' as const }
+  if (schedule.kind === 'daily') return 'Once daily'
+  if (schedule.kind === 'weekly') {
+    const names = schedule.daysOfWeek
+      .map((weekday) => WEEKDAY_LONG_NAMES[weekday])
+      .filter(Boolean)
+    if (names.length === 1) return `Every ${names[0]}`
+    if (names.length === 2) return `Every ${names[0]} and ${names[1]}`
+    return `On ${names.slice(0, -1).join(', ')}, and ${names.at(-1)}`
+  }
+
+  const target = schedule.target
+  const countLabel = target === 1 ? 'Once' : `${target} times`
+  if (schedule.periodDays === 1) {
+    return target === 1 ? 'Once daily' : `${target} times daily`
+  }
+  if (schedule.anchor === 'calendarWeek' && schedule.periodDays === 7) {
+    return target === 1
+      ? 'Once each calendar week'
+      : `${target} times each calendar week`
+  }
+  return `${countLabel} every ${schedule.periodDays} days`
+}
+
+/**
+ * Returns a sparse, evidence-based motivation cue. Open windows and passes are
+ * deliberately neutral; a signal appears only after enough resolved windows.
+ */
+export function getHabitMomentumSignal(
+  stats: Pick<HabitRangeStats, 'periods'>,
+  profileId: HanaProfileId,
+): HabitMomentumSignal | null {
+  const resolved = [...stats.periods]
+    .filter(
+      (period) =>
+        period.status === 'completed' || period.status === 'missed',
+    )
+    .sort((first, second) => second.startDate.localeCompare(first.startDate))
+
+  let combo = 0
+  for (const period of resolved) {
+    if (period.status !== 'completed') break
+    combo += 1
+  }
+  if (combo >= 2) {
+    return {
+      kind: 'combo',
+      emoji: '🔥',
+      label: `${combo} combo`,
+      ariaLabel: `On fire: ${combo} consecutive goal windows met. Open and passed windows are neutral.`,
+      windowCount: combo,
+    }
+  }
+
+  const recentFour = resolved.slice(0, 4)
+  if (
+    recentFour.length === 4 &&
+    recentFour[0].status === 'missed' &&
+    recentFour.filter((period) => period.status === 'completed').length === 3
+  ) {
+    return {
+      kind: 'combo',
+      emoji: '🔥',
+      label: 'Strong rhythm',
+      ariaLabel:
+        'Strong rhythm: three of the last four resolved goal windows were met. One unfinished window does not erase that progress.',
+      windowCount: 3,
+    }
+  }
+
+  const latestResolved = resolved.slice(0, 3)
+  if (
+    latestResolved.length === 3 &&
+    latestResolved.every((period) => period.status === 'missed')
+  ) {
+    return {
+      kind: 'needsCare',
+      emoji: profileId === 'hana' ? '🥀' : '🕯️',
+      label: profileId === 'hana' ? 'Needs care' : 'Rekindle',
+      ariaLabel:
+        'Ready to rebuild: the last three resolved goal windows were unfinished. One completed window begins the comeback. Open and passed windows are neutral.',
+      windowCount: 3,
+    }
+  }
+
+  return null
+}
+
+const WEEKDAY_SHORT_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAY_LONG_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+]
+
+function getQuestActiveStart(state: HanaGameState, quest: Quest) {
+  const profileStart = state.startDate ?? state.currentDate
+  const configuredStart =
+    quest.createdDate && quest.createdDate > profileStart
+      ? quest.createdDate
+      : profileStart
+  if ((quest.minLevel ?? 1) <= 1) return configuredStart
+
+  const firstPresentedDate = Object.entries(state.activeDailyQuests ?? {})
+    .filter(([, questIds]) => questIds.includes(quest.id))
+    .map(([dateKey]) => dateKey)
+    .sort()[0]
+  if (!firstPresentedDate) return null
+  return firstPresentedDate > configuredStart
+    ? firstPresentedDate
+    : configuredStart
+}
+
+function buildHabitDays(
+  state: HanaGameState,
+  quest: Quest,
+  startDate: string,
+  endDate: string,
+) {
+  if (startDate > endDate) return []
+
+  return listDateKeys(startDate, endDate).map<HabitDayStat>((dateKey) => ({
+    dateKey,
+    count: getHabitRecordCount(state, quest, dateKey),
+    isEligible: isHabitAvailableOnDate(state, quest, dateKey),
+    isToday: dateKey === state.currentDate,
+  }))
+}
+
+function buildDailyGroupPeriods(
+  state: HanaGameState,
+  quest: Quest,
+  activeStart: string,
+  currentDate: string,
+) {
+  const schedule = quest.schedule ?? { kind: 'daily' as const }
+  if (schedule.kind === 'quota' || schedule.kind === 'periodTarget') {
+    const periods = new Map<string, HabitPeriodStat>()
+    const canDeriveEveryWindow =
+      (quest.minLevel ?? 1) <= 1 && Boolean(quest.required || quest.custom)
+    listDateKeys(activeStart, currentDate)
+      .filter(
+        (dateKey) =>
+          canDeriveEveryWindow ||
+          isHabitAvailableOnDate(state, quest, dateKey) ||
+          getHabitRecordCount(state, quest, dateKey) > 0,
+      )
+      .forEach((dateKey) => {
+        const progress = getQuestScheduleProgress(state, quest, dateKey)
+        if (periods.has(progress.periodStart)) return
+        periods.set(progress.periodStart, {
+          periodKey: progress.periodStart,
+          startDate: progress.periodStart,
+          endDate: progress.periodEnd,
+          completed: progress.completed,
+          target: progress.target,
+          status: progress.isComplete
+            ? 'completed'
+            : progress.periodEnd < currentDate
+              ? 'missed'
+              : 'open',
+        })
+      })
+    return Array.from(periods.values()).sort((first, second) =>
+      first.startDate.localeCompare(second.startDate),
+    )
+  }
+
+  const skippedDates = getSkippedDailyDates(state, quest.id)
+  return listDateKeys(activeStart, currentDate)
+    .filter(
+      (dateKey) =>
+        isHabitAvailableOnDate(state, quest, dateKey) ||
+        getHabitRecordCount(state, quest, dateKey) > 0,
+    )
+    .map<HabitPeriodStat>((dateKey) => {
+      const completed = getHabitRecordCount(state, quest, dateKey)
+      return {
+        periodKey: dateKey,
+        startDate: dateKey,
+        endDate: dateKey,
+        completed,
+        target: 1,
+        status:
+          completed >= 1
+            ? 'completed'
+            : skippedDates.has(dateKey)
+              ? 'skipped'
+              : dateKey < currentDate
+                ? 'missed'
+                : 'open',
+      }
+    })
+}
+
+function buildLongTermPeriods(
+  state: HanaGameState,
+  catalog: Quest[],
+  profileId: HanaProfileId,
+  quest: Quest,
+) {
+  const payload = createProfileCloudSyncPayload(profileId, state, catalog)
+  return payload.questStatuses
+    .filter((row) => row.questId === quest.id)
+    .map<HabitPeriodStat>((row) => {
+      const startDate = row.windowStart ?? row.dateKey ?? row.periodKey
+      const endDate = row.dueDate ?? getLongTermDueDate(startDate, quest)
+      const status = resolveStatus(row, state.currentDate)
+      return {
+        periodKey: row.periodKey,
+        startDate,
+        endDate,
+        completed: status === 'completed' ? 1 : 0,
+        target: 1,
+        status,
+      }
+    })
+    .sort((first, second) => first.startDate.localeCompare(second.startDate))
+}
+
+function getHabitRecordCount(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+) {
+  if (quest.schedule?.kind === 'periodTarget') {
+    return Math.max(0, state.habitOccurrences?.[dateKey]?.[quest.id] ?? 0)
+  }
+  return state.dailyCompletions?.[dateKey]?.[quest.id] ? 1 : 0
+}
+
+function isHabitAvailableOnDate(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+) {
+  if (quest.group !== 'daily') return false
+  if (quest.createdDate && dateKey < quest.createdDate) return false
+
+  const schedule = quest.schedule ?? { kind: 'daily' as const }
+  const wasPresented = Boolean(
+    state.activeDailyQuests?.[dateKey]?.includes(quest.id),
+  )
+  const hasRecord = getHabitRecordCount(state, quest, dateKey) > 0
+  if (
+    ((quest.minLevel ?? 1) > 1 || (!quest.required && !quest.custom)) &&
+    !wasPresented &&
+    !hasRecord
+  ) {
+    return false
+  }
+  if (schedule.kind === 'quota' || schedule.kind === 'periodTarget') {
+    return isDateAvailableInFlexiblePeriod(state, quest, dateKey)
+  }
+  if (schedule.kind === 'weekly') {
+    const weekday = parseDateKey(dateKey).getDay() as Weekday
+    if (!schedule.daysOfWeek.includes(weekday)) {
+      return false
+    }
+  }
+  return true
+}
+
+function isDateAvailableInFlexiblePeriod(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+) {
+  const progress = getQuestScheduleProgress(state, quest, dateKey)
+  if (!progress.isComplete) return true
+
+  let runningTotal = 0
+  for (const candidate of listDateKeys(
+    progress.periodStart,
+    progress.periodEnd < state.currentDate
+      ? progress.periodEnd
+      : state.currentDate,
+  )) {
+    runningTotal += getHabitRecordCount(state, quest, candidate)
+    if (runningTotal >= progress.target) {
+      return dateKey <= candidate
+    }
+  }
+  return true
+}
+
+function getSkippedDailyDates(state: HanaGameState, questId: string) {
+  const prefix = `daily:${questId}:`
+  return new Set(
+    Object.values(state.questSkips ?? {})
+      .flatMap((skips) =>
+        Object.entries(skips)
+          .filter(([key, isSkipped]) => isSkipped && key.startsWith(prefix))
+          .map(([key]) => key.slice(prefix.length)),
+      ),
+  )
+}
+
+function getNextDueDate(
+  state: HanaGameState,
+  quest: Quest,
+  currentPeriod: HabitPeriodStat | null,
+) {
+  const currentDate = state.currentDate
+  if (quest.group !== 'daily') return null
+  const schedule = quest.schedule ?? { kind: 'daily' as const }
+  if (schedule.kind === 'quota' || schedule.kind === 'periodTarget') {
+    if (!currentPeriod) return null
+    return currentPeriod.status === 'completed'
+      ? addDays(currentPeriod.endDate, schedule.periodDays)
+      : currentPeriod.endDate
+  }
+  if (schedule.kind === 'daily') {
+    return currentPeriod?.status === 'completed' ||
+      currentPeriod?.status === 'skipped'
+      ? addDays(currentDate, 1)
+      : currentDate
+  }
+
+  const currentOpportunityClosed =
+    currentPeriod?.status === 'completed' ||
+    currentPeriod?.status === 'skipped'
+  for (
+    let offset = currentOpportunityClosed ? 1 : 0;
+    offset <= 7;
+    offset += 1
+  ) {
+    const candidate = addDays(currentDate, offset)
+    const weekday = parseDateKey(candidate).getDay() as Weekday
+    if (schedule.daysOfWeek.includes(weekday)) {
+      return candidate
+    }
+  }
+  return null
+}
+
+function isPeriodInRange(
+  period: HabitPeriodStat,
+  rangeStart: string,
+  rangeEnd: string,
+) {
+  const containsRangeEnd =
+    period.startDate <= rangeEnd && period.endDate >= rangeEnd
+  return (
+    containsRangeEnd ||
+    (period.endDate >= rangeStart && period.endDate <= rangeEnd)
+  )
+}
+
+function listDateKeys(startDate: string, endDate: string) {
+  const dates: string[] = []
+  let dateKey = startDate
+  while (dateKey <= endDate) {
+    dates.push(dateKey)
+    dateKey = addDays(dateKey, 1)
+  }
+  return dates
+}
+
+function dateDiffDays(fromDateKey: string, toDateKey: string) {
+  const millisecondsPerDay = 24 * 60 * 60 * 1000
+  return Math.round(
+    (parseDateKey(toDateKey).getTime() - parseDateKey(fromDateKey).getTime()) /
+      millisecondsPerDay,
+  )
+}
+
 export function getWeedHistory(
   state: HanaGameState,
   weedId: string,
@@ -220,7 +750,7 @@ export function getCalendarWindow(currentDateKey: string, daysToShow = 35) {
 }
 
 function resolveStatus(
-  row: ReturnType<typeof createHanaCloudSyncPayload>['questStatuses'][number],
+  row: ReturnType<typeof createProfileCloudSyncPayload>['questStatuses'][number],
   currentDate: string,
 ): 'completed' | 'skipped' | 'missed' | 'open' {
   if (row.status === 'completed' || row.status === 'skipped') {
@@ -228,7 +758,10 @@ function resolveStatus(
   }
 
   if (row.questGroup === 'daily') {
-    return row.dateKey && row.dateKey < currentDate ? 'missed' : 'open'
+    if (row.dateKey) {
+      return row.dateKey < currentDate ? 'missed' : 'open'
+    }
+    return row.dueDate && row.dueDate < currentDate ? 'missed' : 'open'
   }
 
   return row.dueDate && row.dueDate < currentDate ? 'missed' : 'open'

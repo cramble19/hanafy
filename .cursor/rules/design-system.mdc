@@ -1,47 +1,70 @@
 ---
-description: Non-negotiable UI/UX design laws (Calm Garden - flowers & sunlight). Full token spec in docs/ai/design-system.md
+description: Non-negotiable Calm Garden UI/UX laws and profile variants
 alwaysApply: true
 ---
 
-# Design laws — "Calm Garden" (UI/UX is the top priority)
+# Design laws — Calm Garden
 
-Authoritative token spec: `docs/ai/design-system.md` (read it before building or
-changing any UI). Token values live in `src/styles/globals.css`. Visual source of
-truth: `docs/design/references/`.
+Read `docs/ai/design-system.md` before changing UI. Tokens and scoped variants
+live in `src/styles/globals.css`.
 
-## Non-negotiables
+## Shared foundation
 
-- Minimal first: reduce to essentials, whitespace is a feature, one primary action per screen.
-- One typeface (Inter); hierarchy via weight/size only — never add a second display font.
-- Theme = "flowers & sunlight", LIGHT by default: a warm sunlit cream canvas (with a
-  soft ambient sun-glow) + warm near-black ink + ONE accent, and the accent is the
-  PER-HABIT color. App chrome stays warm and quiet; a habit's color appears only inside
-  its own card/ring/streak/check. The FAB/primary CTA uses ink, not an accent.
-- Borders are hairlines; elevation is subtle. No heavy drop shadows; no gradient fills
-  on components or text (one subtle ambient background glow on the canvas is allowed).
-- Corners: cards ~20px, controls 12px, circular for rings/avatars/checks/FAB.
-- Spacing on a 4px scale (8/12/16/20/24/32); 16-20px card padding and screen gutters.
-- Use tabular numbers for streaks, XP, and stats.
-- Light by default; a dark theme is deferred to later theming. Never hardcode colors —
-  consume the design tokens (CSS vars / Tailwind theme).
+- Minimal first: whitespace is functional; one primary action per screen.
+- Use Inter only. Build hierarchy with size, weight, case, and tracking.
+- Calm profile-scoped canvas, quiet surfaces, hairline borders, subtle elevation.
+- No component/text gradient fills or heavy shadows. A restrained ambient canvas
+  glow and illustrative reward-scene gradients are allowed.
+- Cards approximately 20px, controls 12px, circular icon buttons/checks.
+- Use the 4px spacing scale, 16–24px card padding, and 20px mobile gutters.
+- Use tabular numbers for rewards, rank/level, and statistics.
+- Prefer tokens/scoped variables over hardcoded JSX colors.
 
-## Motion
+## Profile variants
 
-- Feedback only: 120-240ms; spring on check-off and ring-fill. Celebrations (confetti) < 900ms and optional.
-- ALWAYS respect `prefers-reduced-motion`.
+- Hana: Spring Garden — cream, sunlight, flowers, gentle bloom feedback.
+- Cramble: Sunward Archive — warm charcoal, parchment text, brass, ember,
+  indigo, moss, plum, celestial archive motifs, and renown language.
+- Hana's normal screens stay light. Cramble's Archive stays gently dark and the
+  Observatory is its deepest surface.
+- Fantasy visuals must be original; do not copy franchise names, quotes,
+  characters, crests, logos, or recognizable props.
+- Cramble Chronicle copy is concise, improvement-oriented, epic-fantasy, and
+  only indirectly hopeful about changed paths; never name a breakup.
+- Reuse shared interaction behavior; vary scoped tokens, motifs, and copy.
 
-## Honest gamification (never an arcade)
+## Motion and gamification
 
-- Anchor every element (XP, streak, badge) to a REAL completed action in the data model, not taps.
-- NEVER punish a missed day and never use guilt copy — offer a gentle streak-freeze or "start fresh".
-- Reserve badges for meaningful milestones; introduce mechanics sparingly (rings + streaks + XP first). No leaderboards.
-- Never signal state with color alone — pair with an icon, label, or fill.
+- Feedback only at 120–240ms; ambient motion must be slow and subtle.
+- Cramble's sword/ember decoration is pointer-free and `aria-hidden`; remove its
+  sparks and animation for reduced motion.
+- The Observatory uses an original two-traveler road scene. Keep the origin
+  traveler visible and derive the knight's distance only from current earned
+  renown; rank is milestone copy, not a second progress input.
+- The scene is noninteractive and reward-free. Keep both figures visible, pair
+  it with written progress, and remove position interpolation for reduced motion.
+- Always respect `prefers-reduced-motion`.
+- Rewards derive from real completed quests, never decorative taps.
+- No guilt, leaderboards, fake urgency, or punishment for missed days.
+- Do not communicate state with color alone.
 
-## Accessibility (required)
+## Accessibility
 
-- Contrast >= 4.5:1; tap targets >= 44px; visible focus rings; `rem` units; semantic HTML + aria-labels on icon buttons.
+- Normal-text contrast at least 4.5:1.
+- Tap targets at least 44px.
+- Visible focus rings, semantic controls, correct labels, and announced errors.
+- Decorative layers are pointer-free and hidden from assistive technology.
+- Keep Add habit as a full-width first action in each bottom dock. Use the shared
+  native dialog, field-specific announced errors, and profile-scoped copy/colors.
+- The shared form exposes **Once per period** and **Several times**, plus
+  configurable day/week controls and a live all-or-nothing reward summary.
+- A counted period card uses **Record +1**, visible numeric progress, **+N at
+  goal**, and **Undo one** for current-day records. Never imply that partial
+  progress earned points or deserves a penalty.
 
 ## Workflow
 
-- Use Tailwind v4 tokens + shadcn/ui primitives (restyle, don't hand-roll). Keep components small and composable.
-- Any UI change must stay consistent with `docs/ai/design-system.md`; update that spec if the design genuinely evolves.
+- Use existing Tailwind v4 utilities, CSS tokens, React components, and Lucide
+  icons. The project does not use shadcn/ui.
+- Keep components small and profile styles scoped.
+- Update the human and AI design docs when the visual system genuinely evolves.

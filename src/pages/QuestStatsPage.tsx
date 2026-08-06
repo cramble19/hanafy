@@ -1,6 +1,13 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { HabitMomentumBadge } from '@/components/HabitMomentumBadge'
 import { quests } from '@/data/quests'
-import { getQuestHistory } from '@/lib/hanaStats'
+import { getQuestCatalog } from '@/lib/hanaGame'
+import {
+  getHabitMomentumSignal,
+  getHabitRangeStats,
+  getQuestHistory,
+  type HabitMomentumSignal,
+} from '@/lib/hanaStats'
 import type { HanaGameState, Quest } from '@/types'
 
 type Props = {
@@ -10,10 +17,21 @@ type Props = {
 }
 
 export function QuestStatsPage({ game, onBack, onOpenQuest }: Props) {
-  const rows = quests.map((quest) => ({
-    quest,
-    history: getQuestHistory(game, quests, quest.id),
-  }))
+  const catalog = getQuestCatalog(quests, game)
+  const rows = catalog.map((quest) => {
+    const analytics = getHabitRangeStats(
+      game,
+      quests,
+      'hana',
+      quest.id,
+      'all',
+    )
+    return {
+      quest,
+      history: getQuestHistory(game, catalog, quest.id),
+      momentum: analytics ? getHabitMomentumSignal(analytics, 'hana') : null,
+    }
+  })
 
   return (
     <div className="stats-page-shell mx-auto min-h-full w-full max-w-md px-5 pb-10 pt-6">
@@ -27,11 +45,13 @@ export function QuestStatsPage({ game, onBack, onOpenQuest }: Props) {
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted">
           Tap any quest to see done days, skipped days, and its full rhythm.
+          {' '}🔥 celebrates momentum; 🥀 appears only after three unfinished
+          windows need some care.
         </p>
       </header>
 
       <section className="space-y-3">
-        {rows.map(({ quest, history }) => (
+        {rows.map(({ quest, history, momentum }) => (
           <QuestRow
             key={quest.id}
             quest={quest}
@@ -39,6 +59,7 @@ export function QuestStatsPage({ game, onBack, onOpenQuest }: Props) {
             skipped={history.stat.skipped}
             shown={history.stat.shown}
             completionRate={history.stat.completionRate}
+            momentum={momentum}
             onClick={() => onOpenQuest(quest.id)}
           />
         ))}
@@ -53,6 +74,7 @@ function QuestRow({
   skipped,
   shown,
   completionRate,
+  momentum,
   onClick,
 }: {
   quest: Quest
@@ -60,6 +82,7 @@ function QuestRow({
   skipped: number
   shown: number
   completionRate: number
+  momentum: HabitMomentumSignal | null
   onClick: () => void
 }) {
   return (
@@ -77,8 +100,15 @@ function QuestRow({
           {quest.emoji}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-semibold text-ink">
-            {quest.title}
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 truncate text-base font-semibold text-ink">
+              {quest.title}
+            </span>
+            <HabitMomentumBadge
+              signal={momentum}
+              profile="hana"
+              compact
+            />
           </span>
           <span className="mt-0.5 block text-xs text-muted">
             {completed} done · {skipped} skipped · {shown} shown

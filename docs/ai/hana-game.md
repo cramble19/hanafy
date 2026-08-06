@@ -2,6 +2,11 @@
 
 Technical source of truth for Hana's flower-based game loop.
 
+Hana is isolated from Cramble by the `hana` database profile, `hana-game/v1`
+cache, `quests` catalog, and the controller/save queue in `src/App.tsx`. Shared
+helpers may be profile-aware, but Hana calls must continue to use Hana's catalog
+and profile explicitly or through the compatibility wrappers.
+
 ## Files
 
 - `src/data/hanaTasks.json` — editable task catalog. Add/remove tasks here.
@@ -9,6 +14,7 @@ Technical source of truth for Hana's flower-based game loop.
 - `src/data/springQuotes.json` — editable Spring quote / April-inspired note catalog.
 - `src/data/quests.ts` — typed loader for the JSON catalog.
 - `src/lib/hanaGame.ts` — pure game/date/rotation/level helpers.
+- `src/lib/customHabits.ts` — validates and creates user-defined habits.
 - `src/lib/hanaCloudSync.ts` — converts local Hana state into database sync rows.
 - `src/lib/hanaStats.ts` — derives user-facing stats from the same normalized rows.
 - `src/App.tsx` — owns Hana's current game state and persistence.
@@ -16,12 +22,12 @@ Technical source of truth for Hana's flower-based game loop.
 - `src/pages/HanaStartPage.tsx` — start-date gate before Hana's tracker.
 - `src/pages/HanaPage.tsx` — renders the game UI, task sections, dev controls.
 - `src/pages/GardenPage.tsx` — renders the dedicated night-garden reward page.
-- `src/pages/StatsPage.tsx` — renders Hana's garden-journal stats view.
-- `src/pages/QuestStatsPage.tsx` — lists every quest with total done/skipped/shown counts.
-- `src/pages/QuestDetailPage.tsx` — shows one quest's totals and calendar trail.
-- `src/pages/WeedStatsPage.tsx` — lists every Evening Weed with total checks.
-- `src/pages/WeedDetailPage.tsx` — shows one weed's total checks and calendar trail.
+- `src/pages/StatsPage.tsx` — supplies Hana's catalog/profile to the shared Ledger.
+- `src/pages/CrambleLedgerPage.tsx` — contains the shared period-aware Ledger page plus Cramble's wrapper.
+- `src/pages/QuestDetailPage.tsx` — supplies Hana's catalog/profile to the shared record detail.
+- `src/pages/CrambleQuestDetailPage.tsx` — contains the shared record-detail analytics plus Cramble's wrapper.
 - `src/components/QuestCard.tsx` and `src/components/QuestSection.tsx` — task UI.
+- `src/components/AddHabitDialog.tsx` — shared custom-habit form.
 
 ## Task schema
 
@@ -37,6 +43,9 @@ type Quest = {
   required?: boolean
   minLevel?: number
   durationDays?: number
+  schedule?: QuestSchedule
+  custom?: boolean
+  createdDate?: string
 }
 ```
 
@@ -58,6 +67,9 @@ hard = 3 flowers
 ```
 
 Reward values live in `FLOWERS_BY_DIFFICULTY` in `src/lib/hanaGame.ts`.
+Ordinary daily, exact-weekday, and long-term completions earn that value when
+checked. A new custom `periodTarget` earns it once only after every required
+occurrence in the period is recorded; partial progress earns zero.
 
 ## Arc 1: Spring season
 
@@ -126,11 +138,13 @@ count.
 and richer as Spring approaches 100% while keeping the flower count tied to
 `game.totalFlowers`.
 
-## Stats page
+## Ledger
 
-`StatsPage` is reachable from the sticky action area on `HanaPage`, below the
-night-garden action. It should feel like a soft garden journal, not an analytics
-dashboard.
+`StatsPage` is the thin Hana wrapper for the shared period-aware Ledger. It is
+reachable from the sticky action area on `HanaPage`, below the night-garden
+action. The same information architecture powers Cramble, while profile props
+keep the catalogs, saved histories, copy, momentum cue, and visual themes
+separate.
 
 `getHanaStats(state, quests)` derives stats from `createHanaCloudSyncPayload()`
 so the UI matches the same normalized rows that are synced to Postgres.
@@ -141,20 +155,42 @@ Status interpretation:
 - `skipped` stays skipped.
 - pending daily rows before `currentDate` become `missed`.
 - pending daily rows on `currentDate` stay `open`.
+- pending flexible-period rows stay open through their inclusive `dueDate` and
+  become missed only after the whole period ends.
 - pending long-term rows become `missed` only after `dueDate`.
 
-The page shows:
+The page has one `Archive index` / `Quest records` list. The former All Quests
+and Evening Weeds navigation cards are no longer part of the Ledger. Evening
+Weeds remain an end-of-day reflection on Hana's tracker and are not mixed into
+scheduled habit analytics, because a weed observation has no target window or
+missed state.
 
-- overall completion rhythm
-- current-week day petals
-- a link to all quest rows and quest-specific detail pages
-- a link to all weed rows and weed-specific detail pages
-- quest detail calendars where green = completed, gold = skipped, pink = missed
-- weed detail calendars where green = checked
+Every built-in and custom Hana habit comes from `getQuestCatalog(quests, game)`.
+Each row shows cadence, the six most recent scoring windows, a 30-day target
+rate, and a momentum cue. Locked catalog quests show their unlock level instead
+of a misleading `0%`.
 
-`getQuestHistory(state, quests, questId)` and `getWeedHistory(state, weedId)` live
-in `src/lib/hanaStats.ts`. `getCalendarWindow(currentDate)` returns the recent
-35-day window used by detail calendars.
+Opening a quest uses `getHabitRangeStats(..., 'hana', ..., range)` and the same
+detail engine as Cramble. It provides:
+
+- current-window progress and next due date
+- selectable 7/30/90/All ranges
+- targets met, exact record count, and weekly pace
+- one token per complete scoring window
+- a daily occurrence grid where repeated same-day records show their count
+- neutral non-due days and non-punitive insight copy
+
+Legacy long-term quests predate exact completion timestamps. Their goal-window
+history remains accurate, but the detail page explicitly omits a fabricated
+daily heatmap and explains that the exact completion day was not stored.
+
+`getHabitMomentumSignal()` ignores open and skipped windows. Two trailing met
+windows produce a `🔥 N combo` badge. If one unfinished window follows three met
+windows, the badge remains `🔥 Strong rhythm`. Only three trailing unfinished
+windows produce Hana's `🥀 Needs care`; new and mixed histories remain neutral.
+The positive flame may also appear on an actionable quest card. The negative
+cue is restricted to Ledger rows and detail headers so it does not shame someone
+while they are trying to complete today's action.
 
 Copy must remain non-guilting. Use language like "needs love", "soft signals",
 and "gentler try" instead of failure/punishment wording.
@@ -199,6 +235,16 @@ count by `selectDailyQuestIds()`. It appears daily once unlocked but does not
 push out health anchors like hydration, sunlight, or iron.
 
 This gives a little daily variety while keeping the current day stable.
+
+User-created habits are stored in `GameState.customHabits` and appended through
+`getQuestCatalog(quests, state)`. They are required daily-group entries, so they
+are never removed by the optional daily-card limit. The creation UI supports
+two configurable patterns: once in a chosen number of days/weeks, or `x` times
+in a chosen number of days/weeks. A one-week choice uses the Sunday-based
+calendar week; every other custom period is anchored to the habit's creation
+date. New definitions use `schedule.kind = 'periodTarget'`. See
+[Custom Habits](custom-habits.md) for validation, cadence, reset, and persistence
+rules.
 
 Dates are stored as local `YYYY-MM-DD` keys, not UTC ISO slices, to avoid
 off-by-one behavior around local midnight.
@@ -248,9 +294,11 @@ and make the user feel successful instead of guilty.
 type HanaGameState = {
   startDate: string | null
   currentDate: string // YYYY-MM-DD
+  customHabits: CustomHabitQuest[]
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>
+  habitOccurrences: Record<string, Record<string, number>>
   longTermWindows: Record<string, string>
   longTermCompletions: Record<string, Record<string, boolean>>
   questSkips: Record<string, Record<string, boolean>>
@@ -264,7 +312,12 @@ day the button was pressed. While it is `null`, the app may show preview/explore
 state, but that state must not be saved to Postgres.
 
 `dailyCompletions[dateKey][questId]` stores whether a daily task was completed
-on a specific day.
+on a specific day. It remains the source for built-ins and legacy custom
+schedules.
+
+`habitOccurrences[dateKey][questId]` stores the number of records made that day
+for a custom `periodTarget`. It supports multiple same-day records such as two
+brushings per day without changing legacy boolean history.
 
 `longTermWindows[questId]` stores the active start date for each long-term quest.
 
@@ -279,7 +332,8 @@ Sunday via `getSkipWeekKey(currentDate)`. Skip event keys include the period:
 
 Hana has `WEEKLY_SKIP_LIMIT = 3`. Skipped quests count as resolved in the UI, give
 0 flowers, and can be undone. Skips reset automatically because a new Sunday week
-key starts a fresh skip bucket.
+key starts a fresh skip bucket. Flexible `quota` and `periodTarget` habits cannot
+consume skips because their outcome is evaluated across the whole period.
 
 `eveningWeeds[dateKey][weedId]` stores voluntary end-of-day reflections.
 Every 3 checked weeds wilt 1 flower from the net flower balance. The penalty is
@@ -293,13 +347,19 @@ Current weed ids in `src/data/hanaWeeds.json`:
 - `hydration-drought`
 - `phone-in-bed-ivy`
 
-Checking a task toggles its period bucket and then recomputes `totalFlowers` from
-all completions. This prevents stale flower totals after migrations or task
-catalog edits.
+Checking an ordinary task toggles its boolean period bucket. Tapping a
+`periodTarget` records one occurrence until the target is complete; **Undo one**
+subtracts one current-day occurrence. Every mutation recomputes `totalFlowers`
+from normalized history. A period target contributes exactly one difficulty
+reward only when its count reaches the target, and undoing below the target
+removes that reward. Partial progress has no penalty. This recomputation prevents
+stale totals after migrations or catalog edits.
 
 In production, Hana state is loaded from Postgres through `/api/hana-sync`.
-Postgres is the source of truth. `localStorage` under `hana-game/v1` is only a
-fallback cache for offline or failed-network moments.
+Postgres is the source of truth. `localStorage` under `hana-game/v1` is the
+profile cache, while `hana-game/pending-v1` durably marks the newest unsaved
+snapshot so offline changes, including new habit definitions, upload before an
+older database snapshot is accepted.
 
 Before `startDate` exists, Home -> Hana shows `HanaStartPage`. The setup page can:
 
@@ -314,7 +374,10 @@ clears the profile snapshot and analytics rows before the first committed start.
 Saved state is normalized on load from both DB snapshots and local cache. The
 previous single `completions[date][quest]` shape and the later
 `weeklyCompletions` shape are migrated into daily/long-term buckets so older
-progress does not crash the app.
+progress does not crash the app. Snapshots that predate custom occurrence counts
+default `habitOccurrences` to `{}`. Valid legacy `daily` and `quota` custom
+habits retain their boolean completion and per-occurrence capped-reward behavior;
+they are not silently reinterpreted as all-or-nothing period targets.
 
 The database sync stores:
 
@@ -330,7 +393,9 @@ The Hana page has local-only temporary controls, rendered behind
 `import.meta.env.DEV`:
 
 - **Next day:** increments `currentDate` by one day to test daily reset and long-term deadlines.
-- **Reset:** clears `localStorage` and resets Hana's flowers/completions.
+- **Reset:** clears boolean completions, occurrence counts, skips, weeds, and
+  flowers while preserving custom habit definitions and the current simulated
+  date.
 
 They are hidden from production/Vercel builds but remain available during
 `npm run dev`.

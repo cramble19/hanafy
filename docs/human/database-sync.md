@@ -1,61 +1,68 @@
 # Database Sync
 
-Hanafy now uses the cloud database as the main saved copy of Hana's progress.
-This means Hana can open the app from another phone or laptop and still see the
-same garden.
+In the deployed app, Postgres is the main saved copy of both Hana's and
+Cramble's progress. The two paths use separate profiles, so changing a Cramble
+quest does not change Hana's garden, and vice versa.
 
-The database only starts after Hana presses **Start Health Overhaul**. Before
-that, the app may be explored, but preview progress is not saved to the database.
+## Separate records
+
+- Hana uses the `hana` database profile and the device cache `hana-game/v1`.
+- Cramble uses the `cramble` database profile and the device cache
+  `cramble-game/v1`.
+- Both profiles keep their newest unsaved snapshot under separate pending keys
+  so an offline edit can be retried after leaving or reopening the screen.
+- Each path has its own start date, quest catalog, current plan, completions,
+  skips, reward balance, and background save queue.
+- Habit timing is stored with dated progress. Ordinary habits keep a done/not
+  done record; flexible custom goals keep the number of times recorded each day,
+  including several records on one day.
+- A flexible day/week target is summarized as one whole period. Partial progress
+  earns no partial reward and has no penalty, and unused days are not mislabeled
+  as separate failures.
+- Hana also saves Evening Weeds. Cramble does not use them in the first chapter.
+
+## When saving begins
+
+Hana is not written to the database until **Start Health Overhaul** is pressed.
+Her Explore mode remains temporary.
+
+Cramble is not written until the password gate is passed and **Begin the First
+Oath** is pressed. Starting either profile clears only that profile's old rows,
+then saves a fresh record for today.
 
 ## What gets saved
 
-The app saves:
+The app saves the active date and due quest plan, custom habit definitions,
+completed and skipped quests, counted custom-habit records, flexible period
+progress, compatibility long-term windows, weekly skip history, the reward
+balance, and the full state needed to restore the experience. Hana's weed checks
+are also stored. Older saved flexible habits keep their original history and
+reward behavior.
 
-- the day Hana pressed the start button
-- which daily quests were shown for a day
-- which quests were completed
-- which quests were skipped
-- long-term quest windows and deadlines
-- Evening Weed checks
-- Hana's current flower balance
+## Sync behavior
 
-This makes future statistics possible, such as weekly graphs, completion rate,
-skip patterns, flower history, and which habits are becoming consistent.
+Quest taps update the screen and local cache immediately, then save quietly in
+the background when a connection is available. Rapid changes are serialized so
+an older request cannot finish after and replace the newest one. Opening,
+focusing, reconnecting, changing day, or pressing Refresh can reconcile the
+profile with the database.
 
-## What stays simple
+When online, the database is authoritative unless that profile has a marked
+unsaved snapshot. That snapshot is uploaded first, before an older database copy
+can be shown. If a successful lookup finds no record for that profile, only that
+profile's device cache is cleared and its start page is shown. When offline or a
+request fails, the separate local cache can be used temporarily.
 
-There is still no login. For now, the only saved profile is **Hana**. Cramble can
-be added later with the same structure.
+Local development deliberately disables cloud sync and keeps both profiles on
+the current device.
 
-The app still keeps a small saved cache on the device. That cache is only for
-offline fallback. When the app is online, the database is the source of truth.
-If the online database has no Hana state, the app clears the local cache and shows
-the Start Health Overhaul screen instead of restoring old device progress.
+## Password and security
 
-## When sync happens
+Cramble's static password, `hana`, is only a casual client-side entry gate. It
+does not secure the API, hide the password from the built JavaScript, or encrypt
+the local cache. The database endpoint also has no account authentication yet.
+Use a server-validated session system before treating this as private or sharing
+the deployment publicly.
 
-The deployed app talks to the database:
-
-- when Hana presses the start button, clearing old preview/legacy data first
-- when Hana opens or resumes the app
-- before showing Hana's current saved garden on a new device
-- when a quest, skip, or weed changes
-- when the app comes back online
-- when the **Refresh** button is tapped on Hana's page
-
-Quest, skip, and weed taps should still feel instant. The app updates the screen
-right away, then quietly saves the newest version to the database in the
-background.
-
-Refresh is careful with unsaved local changes. If a background save is still
-queued or previously failed, Refresh retries saving that newest local garden
-first. Only when there are no pending local changes does it pull the latest
-database copy.
-
-If the phone and database disagree while online, the database wins. The local
-cache is updated from the database.
-
-## Where it runs
-
-Vercel hosts the small backend endpoint. The database is a Postgres database
-connected to the Vercel project, such as Neon Postgres.
+Vercel hosts the small API endpoint. The database is a connected Postgres
+database such as Neon.

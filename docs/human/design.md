@@ -1,45 +1,52 @@
 # What the app looks and feels like
 
-Our app follows a style we call **"Calm Garden"** with a **flowers-and-sunlight**
-mood: warm, bright, and calm, with a little moment of joy when you succeed.
+Hanafy has one shared style called **Calm Garden**: warm, spacious, personal,
+and quietly rewarding. Hana and Cramble then receive distinct visual worlds.
 
-## The feeling
+## Shared foundations
 
-- **Light and sunny.** A warm cream background with a soft sunlight glow — never a
-  dark or heavy screen.
-- **Calm, not busy.** Lots of breathing room, few things on screen, one clear
-  thing to do at a time.
-- **Floral and personal.** Each habit has its own soft, flower-like color that
-  shows up in its ring and its checkmark. The rest of the app stays quiet and warm.
-- **A little delight.** A quick, optional celebration when you complete something
-  or reach a streak.
-- **Spring details.** Hana's Spring page can have slow, faint petals behind the
-  cards, but the edges should stay clean and the page should never feel busy.
-- **Soft game feedback.** Completed quests get a gentle green wash, tiny bloom
-  sparkles, and a small flower-planted message.
-- **Garden close by.** Hana's page can show a small illustrated night-garden
-  preview and a soft bottom Garden button.
-- **Moonlit stats.** Stats pages can feel like a lighter cousin of the night
-  garden: cream page, lavender-blue haze, moon-milk cards, tiny stars, and clear
-  rounded bars.
+- Calm profile-specific pages, soft cards, hairline borders, and generous
+  breathing room
+- Inter as the single typeface, with clear hierarchy rather than decorative fonts
+- One obvious action at a time and large, comfortable tap targets
+- Gentle completion feedback tied to real actions
+- Clear icons and words so color is never the only way to understand state
+- Short animations that disappear when reduced motion is preferred
+- A large Add habit action at the top of each bottom dock, opening a compact
+  form that keeps the same behavior but adopts the profile's colors and language
 
-## What you see
+## Hana — Spring Garden
 
-- **Today:** your habits as soft cards, each with a colored ring and an emoji. Tap
-  to check one off.
-- **Progress:** your current and longest streaks, a calendar "heatmap" of your
-  activity, and the badges you have earned.
-- **A simple menu** at the bottom: Today, Progress, Profile.
+Hana's world uses cream, sunlight, flower colors, and pale spring haze. Completed
+quests bloom softly and earn flowers. Her dedicated Garden is a moonlit reward
+space where the current flower balance becomes a visible planted garden.
 
-## Our kindness-first promise (how the "game" part works)
+## Cramble — The Sunward Archive
 
-- We celebrate real effort, never fake points.
-- We **never punish you for missing a day** — you can freeze a streak or simply
-  start fresh, with no guilt.
-- The app is light by default, and animations can be turned off. (Other themes,
-  like a twilight mode, may come later.)
+Cramble's everyday pages feel like an original fantasy academy archive at dusk:
+warm charcoal surfaces, pale parchment text, brass, ember, indigo, moss, and
+plum. Solar compasses, lanterns, keys, stars, and geometric sigils provide the
+fantasy mood while the layout and interaction patterns stay consistent with
+Hana's pages. A small sword-and-flame mark adds slow ambient movement and becomes
+static for reduced-motion users.
 
-## See it
+The **Lantern Observatory** is Cramble's deepest night space. It shows an
+original mountain road with two travelers near the first fire. As earned
+progress rises, the knight follows the road toward a brighter ridge while the
+other traveler remains at the overlook. Both stay visible, and a written journey
+percentage always explains the scene. The Ledger presents recent activity as a
+calm archive rather than a competitive scoreboard.
 
-The exact look is in the mockups here: [../design/references/](../design/references/).
-The detailed technical version is in [../ai/design-system.md](../ai/design-system.md).
+The theme is inspired by the feeling of epic fantasy, but it does not copy
+characters, crests, quotes, logos, or other recognizable material from existing
+books, films, or games.
+
+## Reward-space exception
+
+Hana's tracker and Ledger stay light while her Garden becomes moonlit. Cramble's
+tracker and Ledger stay gently dark, while the Observatory moves one step deeper
+to make earned progress feel special. Both Ledgers share the same information
+layout without sharing their visual identity.
+
+The detailed implementation rules are in
+[../ai/design-system.md](../ai/design-system.md).

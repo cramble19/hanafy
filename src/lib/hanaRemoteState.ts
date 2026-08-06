@@ -1,10 +1,10 @@
-import { quests } from '@/data/quests'
+import { quests as hanaQuests } from '@/data/quests'
 import {
-  createHanaCloudSyncPayload,
+  createProfileCloudSyncPayload,
   type HanaProfileId,
 } from '@/lib/hanaCloudSync'
 import { hasHanaStarted } from '@/lib/hanaGame'
-import type { HanaGameState } from '@/types'
+import type { HanaGameState, Quest } from '@/types'
 
 type FetchLike = typeof fetch
 
@@ -39,7 +39,7 @@ export async function loadHanaStateFromDb(
     }
 
     const body = (await response.json()) as unknown
-    const snapshot = parseSnapshotResponse(body)
+    const snapshot = parseSnapshotResponse(body, profileId)
     if (snapshot === undefined) {
       return { ok: false, error: 'Invalid DB snapshot response' }
     }
@@ -58,11 +58,26 @@ export async function saveHanaStateToDb(
   profileId: HanaProfileId = 'hana',
   fetchImpl: FetchLike = fetch,
 ): Promise<SaveHanaStateResult> {
+  return saveProfileStateToDb(state, profileId, hanaQuests, fetchImpl)
+}
+
+export async function saveProfileStateToDb(
+  state: HanaGameState,
+  profileId: HanaProfileId,
+  questCatalog: Quest[],
+  fetchImpl: FetchLike = fetch,
+): Promise<SaveHanaStateResult> {
   if (!hasHanaStarted(state)) {
-    return { ok: false, error: 'Cannot save Hana before health overhaul is started' }
+    return {
+      ok: false,
+      error:
+        profileId === 'hana'
+          ? 'Cannot save Hana before health overhaul is started'
+          : 'Cannot save Cramble before the chronicle is started',
+    }
   }
 
-  const payload = createHanaCloudSyncPayload(profileId, state, quests)
+  const payload = createProfileCloudSyncPayload(profileId, state, questCatalog)
 
   try {
     const response = await fetchImpl('/api/hana-sync', {
@@ -128,7 +143,10 @@ export function chooseDbFirstState({
   return { state: initialState, source: 'initial' }
 }
 
-function parseSnapshotResponse(value: unknown): RemoteHanaSnapshot | null | undefined {
+function parseSnapshotResponse(
+  value: unknown,
+  expectedProfileId: HanaProfileId,
+): RemoteHanaSnapshot | null | undefined {
   if (!isRecord(value) || value.ok !== true) {
     return undefined
   }
@@ -143,7 +161,7 @@ function parseSnapshotResponse(value: unknown): RemoteHanaSnapshot | null | unde
 
   const snapshot = value.snapshot
   if (
-    (snapshot.profileId !== 'hana' && snapshot.profileId !== 'cramble') ||
+    snapshot.profileId !== expectedProfileId ||
     typeof snapshot.currentDate !== 'string' ||
     typeof snapshot.totalFlowers !== 'number' ||
     typeof snapshot.syncedAt !== 'string' ||
@@ -153,7 +171,7 @@ function parseSnapshotResponse(value: unknown): RemoteHanaSnapshot | null | unde
   }
 
   return {
-    profileId: snapshot.profileId,
+    profileId: expectedProfileId,
     currentDate: snapshot.currentDate,
     totalFlowers: snapshot.totalFlowers,
     state: snapshot.state,
