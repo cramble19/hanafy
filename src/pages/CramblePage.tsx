@@ -13,6 +13,7 @@ import {
 import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { BackfillDialog } from '@/components/BackfillDialog'
+import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestSection } from '@/components/QuestSection'
 import {
@@ -40,7 +41,6 @@ import {
   isHabitArchivedOnDate,
   type PauseInput,
 } from '@/lib/habitLifecycle'
-import { downloadProfileCsv } from '@/lib/habitExport'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import {
   displayDate,
@@ -132,6 +132,7 @@ export function CramblePage({
   const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const levelProgress = getLevelProgress(game.totalFlowers)
@@ -299,7 +300,7 @@ export function CramblePage({
         isPaused={Boolean(activeProfilePause)}
         onPause={() => setIsPauseTrackingOpen(true)}
         onBackfill={() => setIsBackfillOpen(true)}
-        onExport={() => downloadProfileCsv(game, crambleQuests, 'cramble')}
+        onExport={() => setIsExportOpen(true)}
       />
 
       {!activeProfilePause ? (
@@ -497,7 +498,7 @@ export function CramblePage({
         </section>
       ) : null}
 
-      <div className="cramble-action-bar">
+      <nav className="cramble-action-bar" aria-label="Cramble actions">
         <button
           type="button"
           onClick={() => setIsAddHabitOpen(true)}
@@ -507,9 +508,9 @@ export function CramblePage({
           <span className="habit-add-icon" aria-hidden="true">
             <Plus className="size-5" />
           </span>
-          <span>
-            <span className="block text-sm font-semibold">Add habit</span>
-            <span className="block text-xs opacity-75">
+          <span className="cramble-action-copy">
+            <span className="cramble-action-label">Add habit</span>
+            <span className="cramble-action-detail">
               Choose its rhythm and period reward
             </span>
           </span>
@@ -518,15 +519,14 @@ export function CramblePage({
           type="button"
           onClick={onOpenObservatory}
           className="cramble-action-button"
+          aria-label={`Open the Observatory. ${journey.percent}% of the Sunward Road crossed`}
         >
           <span className="cramble-action-icon" aria-hidden="true">
             <Star className="size-4" />
           </span>
-          <span>
-            <span className="block text-sm font-semibold text-ink">
-              Open the Observatory
-            </span>
-            <span className="block text-xs text-muted">
+          <span className="cramble-action-copy">
+            <span className="cramble-action-label">Observatory</span>
+            <span className="cramble-action-detail">
               {journey.percent}% of the Sunward Road crossed
             </span>
           </span>
@@ -535,20 +535,19 @@ export function CramblePage({
           type="button"
           onClick={onOpenLedger}
           className="cramble-action-button"
+          aria-label="View the Ledger and read the rhythm of recent chapters"
         >
           <span className="cramble-action-icon" aria-hidden="true">
             <BarChart3 className="size-4" />
           </span>
-          <span>
-            <span className="block text-sm font-semibold text-ink">
-              View the Ledger
-            </span>
-            <span className="block text-xs text-muted">
+          <span className="cramble-action-copy">
+            <span className="cramble-action-label">Ledger</span>
+            <span className="cramble-action-detail">
               Read the rhythm of recent chapters
             </span>
           </span>
         </button>
-      </div>
+      </nav>
 
       {isAddHabitOpen ? (
         <AddHabitDialog
@@ -612,6 +611,14 @@ export function CramblePage({
           onClose={() => setIsBackfillOpen(false)}
           onRecord={onBackfill}
           onUndo={onUndoBackfill}
+        />
+      ) : null}
+      {isExportOpen ? (
+        <ExportDataDialog
+          profile="cramble"
+          game={game}
+          baseQuests={crambleQuests}
+          onClose={() => setIsExportOpen(false)}
         />
       ) : null}
     </div>

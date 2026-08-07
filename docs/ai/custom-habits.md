@@ -25,7 +25,11 @@ Technical source of truth for user-created habits shared by Hana and Cramble.
   limits.
 - `src/components/PauseTrackingDialog.tsx`, `BackfillDialog.tsx`, and
   `TodayHabitControls.tsx` expose recovery controls shared by both themes.
-- `src/lib/habitExport.ts` creates a profile-isolated, formula-safe CSV report.
+- `src/components/ExportDataDialog.tsx` chooses between a themed HTML Chronicle,
+  a formula-safe CSV report, and a versioned JSON backup.
+- `src/lib/habitExport.ts` creates the profile-isolated CSV and self-describing
+  JSON backup; `src/lib/habitChronicle.ts` creates the escaped, self-contained,
+  print-friendly HTML report.
 - `src/lib/logicalDay.ts` owns the fixed local 04:00 tracking-day boundary and
   resolves after-midnight reminder instants.
 - `src/hooks/useHabitReminders.ts` delivers best-effort in-app/browser reminders
@@ -230,6 +234,22 @@ occurrence is retried with its definition. Isolation comes from the owning
 controller/state plus profile-specific cache, pending key, database profile id,
 base catalog, and save queue. Generic merge, sync, and stats helpers must always
 receive the correct base catalog and profile.
+
+Postgres stores one canonical `state jsonb` snapshot row per profile, not one
+global JSON document. SQL quest/weed status tables are derived projections. The
+versioned JSON export uses a `hanafy-profile-backup` envelope containing profile
+identity, export time, 04:00/time-zone metadata, source schema/database revision,
+the resolved effective catalog, and the profile state. `syncRevision` is copied
+only to source metadata and omitted from the portable state so a later importer
+cannot replay an old optimistic-lock revision. Deleted built-in tombstones remain
+in the backup so they do not silently reappear after a future restore. The
+current app creates backups but does not import them yet.
+
+The HTML Chronicle includes aggregate and per-habit schedule-aware history for
+active, paused, and archived attempted habits. It omits private pause reasons and
+notes, escapes all user-authored content, contains no remote assets or scripts,
+and can be printed to PDF. Open, skipped, and paused windows remain visibly
+neutral rather than being counted as failures.
 
 `resetProfileProgress()` clears `habitOccurrences`, boolean completions, skips,
 weeds, and rewards while preserving `startDate`, `currentDate`, and copied custom

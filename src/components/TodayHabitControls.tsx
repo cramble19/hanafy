@@ -109,7 +109,7 @@ export function TodayUtilityActions({
         <CalendarClock className="size-4" aria-hidden="true" /> Recent day
       </button>
       <button type="button" onClick={onExport} className="today-utility-button">
-        <Download className="size-4" aria-hidden="true" /> Export CSV
+        <Download className="size-4" aria-hidden="true" /> Export data
       </button>
     </div>
   )

@@ -114,10 +114,25 @@ times from midnight through 3:59 AM belong to the tracking day that began the
 previous calendar date. Reliable closed-app delivery requires authenticated Web
 Push infrastructure.
 
-**Export CSV** downloads a profile-isolated report containing habit definitions,
-period outcomes, exact occurrence dates, lifecycle state, reminders, profile and
-habit pause intervals, and one audit row for every backfill add or undo—even
-when the final count returns to zero. Each row identifies the 04:00 local
-tracking-day boundary. It works from the local
-normalized snapshot even when offline. CSV is a portable report, while Postgres
-remains the deployed app's live saved copy.
+**Export data** keeps Hana and Cramble separate and offers three formats:
+
+- **Progress report (.html)** is the recommended, beautiful Chronicle. It opens
+  offline in any browser, explains the 4:00 AM tracking day, summarizes progress,
+  and shows each habit's full goal-window history. Use the browser's Print action
+  to save it as a PDF. Private pause reasons and notes are not printed.
+- **Spreadsheet (.csv)** contains detailed habit, period, occurrence, pause, and
+  correction rows for Excel or Google Sheets. User-entered text is protected
+  against accidental spreadsheet formulas.
+- **Complete backup (.json)** stores the whole profile snapshot plus the resolved
+  habit definitions and format/version metadata. This is the best preservation
+  format, although the app does not yet provide a one-click import screen.
+
+Exports are created locally from the normalized profile and still work offline.
+The CSV and JSON files may contain personal pause reasons or notes, so keep them
+private. Postgres remains the deployed app's live saved copy.
+
+The database does not use one shared JSON for both people. It stores one current
+JSONB snapshot row for Hana and a separate current row for Cramble. Each snapshot
+contains that profile's custom habits, settings, lifecycle, reminders, pauses,
+correction audit, dated records, and rewards. Built-in definitions originate in
+the app code, which is why the JSON export also embeds the resolved catalog.

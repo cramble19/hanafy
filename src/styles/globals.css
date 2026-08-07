@@ -1639,31 +1639,42 @@ select.add-habit-input {
   z-index: 30;
   bottom: max(0.8rem, env(safe-area-inset-bottom));
   display: grid;
-  width: 100%;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-  margin-top: 2rem;
+  width: min(100%, 24rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 1.4rem auto 0;
   border: 1px solid var(--border);
-  border-radius: 1.25rem;
-  padding: 0.65rem;
+  border-radius: 1.15rem;
+  padding: 0.35rem;
   background: rgba(37, 36, 44, 0.94);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(18px);
 }
 
+.cramble-action-bar .habit-add-button,
 .cramble-action-button {
   display: flex;
   min-width: 0;
-  min-height: 4rem;
+  min-height: 3.55rem;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
   border: 1px solid var(--border);
-  border-radius: 0.9rem;
-  padding: 0.6rem 0.7rem;
-  text-align: left;
+  border-radius: 0.85rem;
+  padding: 0.35rem 0.25rem;
+  text-align: center;
   background: var(--surface);
   outline: none;
   transition: transform 180ms ease, background 180ms ease;
+}
+
+.cramble-action-bar .habit-add-button {
+  grid-column: auto;
+  width: auto;
+  color: #171820;
+  background: var(--cramble-brass);
+  box-shadow: none;
 }
 
 .cramble-action-button:active {
@@ -1677,13 +1688,43 @@ select.add-habit-input {
 
 .cramble-action-icon {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   flex-shrink: 0;
   place-items: center;
   border-radius: 9999px;
   color: var(--cramble-brass);
   background: rgba(214, 166, 83, 0.12);
+}
+
+.cramble-action-bar .habit-add-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.cramble-action-copy {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cramble-action-label {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cramble-action-bar .habit-add-button .cramble-action-label {
+  color: #171820;
+}
+
+.cramble-action-detail {
+  display: none;
 }
 
 .cramble-week-bars {
@@ -2692,7 +2733,6 @@ select.add-habit-input {
   .cramble-journey-stage {
     height: 25rem;
   }
-  .cramble-action-bar,
   .sticky-garden-bar {
     grid-template-columns: 1fr;
   }

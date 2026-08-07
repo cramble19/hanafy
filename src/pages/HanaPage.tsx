@@ -13,6 +13,7 @@ import springQuotes from '@/data/springQuotes.json'
 import { EveningWeeds } from '@/components/EveningWeeds'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { BackfillDialog } from '@/components/BackfillDialog'
+import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestSection } from '@/components/QuestSection'
 import {
@@ -47,7 +48,6 @@ import {
   isHabitArchivedOnDate,
   type PauseInput,
 } from '@/lib/habitLifecycle'
-import { downloadProfileCsv } from '@/lib/habitExport'
 import {
   getHabitMomentumSignal,
   getHabitRangeStats,
@@ -140,6 +140,7 @@ export function HanaPage({
   const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
   const catalog = getQuestCatalog(quests, game)
   const levelProgress = getLevelProgress(game.totalFlowers)
   const visibleQuests = visibleQuestsForState(catalog, game)
@@ -289,7 +290,7 @@ export function HanaPage({
         isPaused={Boolean(activeProfilePause)}
         onPause={() => setIsPauseTrackingOpen(true)}
         onBackfill={() => setIsBackfillOpen(true)}
-        onExport={() => downloadProfileCsv(game, quests, 'hana')}
+        onExport={() => setIsExportOpen(true)}
       />
 
       {!activeProfilePause ? (
@@ -600,6 +601,14 @@ export function HanaPage({
           onClose={() => setIsBackfillOpen(false)}
           onRecord={onBackfill}
           onUndo={onUndoBackfill}
+        />
+      ) : null}
+      {isExportOpen ? (
+        <ExportDataDialog
+          profile="hana"
+          game={game}
+          baseQuests={quests}
+          onClose={() => setIsExportOpen(false)}
         />
       ) : null}
     </div>

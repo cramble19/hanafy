@@ -1,5 +1,9 @@
 import type { HanaProfileId } from '@/lib/hanaCloudSync'
-import { flowersForQuest, getQuestCatalog } from '@/lib/hanaGame'
+import {
+  flowersForQuest,
+  getQuestCatalog,
+  recomputeTotalFlowers,
+} from '@/lib/hanaGame'
 import { formatQuestCadence, getHabitRangeStats } from '@/lib/hanaStats'
 import {
   getActiveHabitPause,
@@ -36,6 +40,110 @@ const HEADERS = [
 ] as const
 
 type CsvRow = Record<(typeof HEADERS)[number], string | number | boolean>
+
+export const PROFILE_BACKUP_FORMAT = 'hanafy-profile-backup' as const
+export const PROFILE_BACKUP_FORMAT_VERSION = 1 as const
+
+export type ProfileBackup = {
+  format: typeof PROFILE_BACKUP_FORMAT
+  formatVersion: typeof PROFILE_BACKUP_FORMAT_VERSION
+  exportedAt: string
+  profile: {
+    id: HanaProfileId
+    name: string
+    rewardUnit: 'flowers' | 'renown'
+  }
+  trackingClock: {
+    dayStartsAt: string
+    timeZone: string
+  }
+  source: {
+    stateSchemaVersion: number
+    databaseRevision: number | null
+    logicalDate: string
+    storedPoints: number
+    recomputedPoints: number
+  }
+  catalog: {
+    habits: Array<Quest & {
+      lifecycle: 'active' | 'paused' | 'archived'
+      archivedAt: string | null
+    }>
+  }
+  state: Omit<HanaGameState, 'syncRevision'>
+}
+
+type ProfileBackupOptions = {
+  exportedAt?: string
+  timeZone?: string
+}
+
+/**
+ * Builds a self-describing, profile-scoped backup. Source-defined habits are
+ * embedded alongside the saved state so the history remains understandable if
+ * the app's built-in catalog changes later. The server's optimistic-lock
+ * revision is metadata, never importable state.
+ */
+export function buildProfileBackup(
+  state: HanaGameState,
+  baseQuests: Quest[],
+  profileId: HanaProfileId,
+  options: ProfileBackupOptions = {},
+): ProfileBackup {
+  const catalog = getQuestCatalog(baseQuests, state)
+  const profilePause = getActiveProfilePause(state)
+  const { syncRevision, ...portableState } = state
+
+  return {
+    format: PROFILE_BACKUP_FORMAT,
+    formatVersion: PROFILE_BACKUP_FORMAT_VERSION,
+    exportedAt: options.exportedAt ?? new Date().toISOString(),
+    profile: {
+      id: profileId,
+      name: profileId === 'hana' ? 'Hana' : 'Cramble',
+      rewardUnit: profileId === 'hana' ? 'flowers' : 'renown',
+    },
+    trackingClock: {
+      dayStartsAt: `${String(LOGICAL_DAY_START_HOUR).padStart(2, '0')}:00`,
+      timeZone: options.timeZone ?? getLocalTimeZone(),
+    },
+    source: {
+      stateSchemaVersion: state.schemaVersion ?? 2,
+      databaseRevision: syncRevision ?? null,
+      logicalDate: state.currentDate,
+      storedPoints: state.totalFlowers,
+      recomputedPoints: recomputeTotalFlowers(state, baseQuests),
+    },
+    catalog: {
+      habits: catalog.map((quest) => {
+        const settings = getHabitSettings(state, quest.id)
+        return {
+          ...quest,
+          lifecycle: isHabitArchivedOnDate(state, quest.id)
+            ? 'archived'
+            : profilePause || getActiveHabitPause(state, quest.id)
+              ? 'paused'
+              : 'active',
+          archivedAt: settings.archivedAt,
+        }
+      }),
+    },
+    state: portableState,
+  }
+}
+
+export function buildProfileJson(
+  state: HanaGameState,
+  baseQuests: Quest[],
+  profileId: HanaProfileId,
+  options: ProfileBackupOptions = {},
+) {
+  return JSON.stringify(
+    buildProfileBackup(state, baseQuests, profileId, options),
+    null,
+    2,
+  )
+}
 
 export function buildProfileCsv(
   state: HanaGameState,
@@ -213,11 +321,35 @@ export function downloadProfileCsv(
   profileId: HanaProfileId,
 ) {
   const csv = buildProfileCsv(state, baseQuests, profileId)
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+  downloadTextFile(
+    `\uFEFF${csv}`,
+    'text/csv;charset=utf-8',
+    `${profileId}-habits-${state.currentDate}.csv`,
+  )
+}
+
+export function downloadProfileJson(
+  state: HanaGameState,
+  baseQuests: Quest[],
+  profileId: HanaProfileId,
+) {
+  downloadTextFile(
+    buildProfileJson(state, baseQuests, profileId),
+    'application/json;charset=utf-8',
+    `${profileId}-backup-${state.currentDate}.json`,
+  )
+}
+
+export function downloadTextFile(
+  contents: string,
+  mimeType: string,
+  filename: string,
+) {
+  const blob = new Blob([contents], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${profileId}-habits-${state.currentDate}.csv`
+  link.download = filename
   document.body.append(link)
   link.click()
   link.remove()
@@ -230,6 +362,14 @@ function emptyRow(): CsvRow {
 
 function formatTrackingDayStart() {
   return `${String(LOGICAL_DAY_START_HOUR).padStart(2, '0')}:00 local`
+}
+
+function getLocalTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local'
+  } catch {
+    return 'local'
+  }
 }
 
 function csvCell(value: string | number | boolean) {

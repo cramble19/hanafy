@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { buildProfileCsv } from './habitExport'
+import {
+  buildProfileBackup,
+  buildProfileCsv,
+  buildProfileJson,
+} from './habitExport'
 import { createCustomHabitQuest, type NewHabitInput } from './customHabits'
 import { createStartedHanaState } from './hanaGame'
-import { startHabitPause, updateHabitPreferences } from './habitLifecycle'
+import {
+  startHabitPause,
+  updateHabitPreferences,
+  updateHabitWording,
+} from './habitLifecycle'
 import type { Quest } from '@/types'
 
 describe('CSV habit export', () => {
@@ -146,5 +154,72 @@ describe('CSV habit export', () => {
     expect(auditRows[0]).toContain('"1"')
     expect(auditRows[1]).toContain('"undone"')
     expect(auditRows[1]).toContain('"-1"')
+  })
+})
+
+describe('JSON profile backup', () => {
+  it('embeds the effective habit catalog and keeps server revision out of restorable state', () => {
+    const builtIn: Quest = {
+      id: 'water',
+      emoji: '💧',
+      title: 'Drink water',
+      description: 'Have water after waking.',
+      group: 'daily',
+      difficulty: 'easy',
+      color: '#6f8465',
+      required: true,
+      schedule: { kind: 'daily' },
+    }
+    const wordedState = updateHabitWording(
+      {
+        ...createStartedHanaState('2026-08-05'),
+        currentDate: '2026-08-07',
+        syncRevision: 17,
+        totalFlowers: 9,
+        deletedHabitIds: ['retired-built-in'],
+      },
+      builtIn.id,
+      { title: 'First glass', description: 'Drink one glass after waking.' },
+    )
+    const state = updateHabitPreferences(
+      wordedState,
+      builtIn.id,
+      { cue: 'After getting out of bed', reminderTime: '08:00' },
+    )
+
+    const backup = buildProfileBackup(state, [builtIn], 'cramble', {
+      exportedAt: '2026-08-07T12:00:00.000Z',
+      timeZone: 'Asia/Calcutta',
+    })
+
+    expect(backup.format).toBe('hanafy-profile-backup')
+    expect(backup.formatVersion).toBe(1)
+    expect(backup.profile).toEqual({
+      id: 'cramble',
+      name: 'Cramble',
+      rewardUnit: 'renown',
+    })
+    expect(backup.trackingClock).toEqual({
+      dayStartsAt: '04:00',
+      timeZone: 'Asia/Calcutta',
+    })
+    expect(backup.source.databaseRevision).toBe(17)
+    expect(backup.source.logicalDate).toBe('2026-08-07')
+    expect(backup.catalog.habits[0]).toMatchObject({
+      id: 'water',
+      title: 'First glass',
+      description: 'Drink one glass after waking.',
+      lifecycle: 'active',
+    })
+    expect('syncRevision' in backup.state).toBe(false)
+    expect(backup.state.deletedHabitIds).toEqual(['retired-built-in'])
+
+    const parsed = JSON.parse(
+      buildProfileJson(state, [builtIn], 'cramble', {
+        exportedAt: '2026-08-07T12:00:00.000Z',
+        timeZone: 'Asia/Calcutta',
+      }),
+    ) as typeof backup
+    expect(parsed).toEqual(backup)
   })
 })
