@@ -1,10 +1,8 @@
 import {
-  BarChart3,
   CalendarDays,
   ChevronLeft,
   RefreshCw,
   RotateCcw,
-  Plus,
 } from 'lucide-react'
 import { useState } from 'react'
 import { quests } from '@/data/quests'
@@ -24,6 +22,8 @@ import {
 } from '@/components/TodayHabitControls'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { GardenBlossomIcon } from '@/components/icons/GardenBlossomIcon'
+import { HanaAddHabitIcon } from '@/components/icons/HanaAddHabitIcon'
+import { HanaLedgerIcon } from '@/components/icons/HanaLedgerIcon'
 import {
   displayDate,
   getLongTermCheckedIds,
@@ -239,7 +239,7 @@ export function HanaPage({
           <ChevronLeft className="size-5" />
         </button>
         <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
-          <FlowerMark className="size-4" />
+          <FlowerMark className="size-5" />
           Hana
         </span>
       </div>
@@ -495,9 +495,7 @@ export function HanaPage({
               : "Start Hana's Health Overhaul to add habits"
           }
         >
-          <span className="habit-add-icon" aria-hidden="true">
-            <Plus className="size-5" />
-          </span>
+          <HanaAddHabitIcon className="size-8 shrink-0" />
           <span className="profile-action-copy">
             <span className="profile-action-label">Add habit</span>
             <span className="profile-action-detail">
@@ -527,9 +525,7 @@ export function HanaPage({
           className="profile-action-button sticky-stats-button"
           aria-label="Open Hana's Ledger"
         >
-          <span className="sticky-stats-icon" aria-hidden="true">
-            <BarChart3 className="size-4" />
-          </span>
+          <HanaLedgerIcon className="size-8 shrink-0" />
           <span className="profile-action-copy">
             <span className="profile-action-label">Ledger</span>
             <span className="profile-action-detail">
