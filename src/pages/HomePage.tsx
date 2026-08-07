@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { LockKeyhole } from 'lucide-react'
+import { ChevronRight, LockKeyhole } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
 import { TogetherMark } from '@/components/icons/TogetherMark'
@@ -96,7 +96,7 @@ export function HomePage({
         ref={togetherButtonRef}
         type="button"
         onClick={onSelectTogether}
-        aria-label="Unlock combined stats for Hana and Cramble"
+        aria-label="Open combined stats for Hana and Cramble"
         className="home-together-card mt-10 flex w-full items-center gap-4 rounded-[26px] border border-border bg-surface/90 px-5 py-4 text-left outline-none"
       >
         <TogetherMark className="home-together-mark shrink-0" />
@@ -106,7 +106,7 @@ export function HomePage({
             See your shared rhythm
           </span>
         </span>
-        <LockKeyhole className="size-4 shrink-0 text-faint" aria-hidden="true" />
+        <ChevronRight className="size-5 shrink-0 text-faint" aria-hidden="true" />
       </button>
 
       <p className="mt-10 text-center text-sm leading-6 text-muted">

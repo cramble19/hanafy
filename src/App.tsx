@@ -82,7 +82,6 @@ type CloudSyncStatus =
   | 'disabled'
   | 'preview'
 type HomeFocusTarget = 'hana' | 'cramble' | 'together' | null
-type CrambleGateDestination = 'cramble' | 'together'
 
 const HANA_PENDING_STORAGE_KEY = 'hana-game/pending-v1'
 const HANA_CONFLICT_BACKUP_KEY = 'hana-game/conflict-backup-v1'
@@ -91,8 +90,6 @@ export default function App() {
   const [view, setView] = useState<View>('home')
   const [homeFocusTarget, setHomeFocusTarget] =
     useState<HomeFocusTarget>(null)
-  const [crambleGateDestination, setCrambleGateDestination] =
-    useState<CrambleGateDestination>('cramble')
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [isExploringHana, setIsExploringHana] = useState(false)
   const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
@@ -1018,7 +1015,7 @@ export default function App() {
     return (
       <CrambleGatePage
         onBack={() => setView('home')}
-        onUnlock={() => setView(crambleGateDestination)}
+        onUnlock={() => setView('cramble')}
       />
     )
   }
@@ -1048,13 +1045,11 @@ export default function App() {
       }}
       onSelectCramble={() => {
         setHomeFocusTarget('cramble')
-        setCrambleGateDestination('cramble')
         setView('crambleGate')
       }}
       onSelectTogether={() => {
         setHomeFocusTarget('together')
-        setCrambleGateDestination('together')
-        setView('crambleGate')
+        setView('together')
       }}
     />
   )
