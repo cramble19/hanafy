@@ -49,3 +49,18 @@ After deployment:
 
 If the app is opened from the home screen, it should feel more like a small phone
 app than a normal browser tab.
+
+## Getting new versions
+
+When a new Hanafy version has downloaded, the installed app shows a small
+**New version ready** message. Tap **Update now** and Hanafy reloads once with
+the latest changes. Tap **Later** if a form is unfinished; the existing screen
+keeps working and the update will be ready when the app is reopened.
+
+There is no need to refresh repeatedly. Hanafy checks when it opens, returns to
+the foreground, reconnects to the internet, and periodically while it stays
+open. Saved habits remain in the phone cache and database when the app shell is
+updated.
+
+The first release that adds this update system may need one final manual reload
+or a full close and reopen. Future releases should use the one-tap message.

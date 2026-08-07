@@ -4019,3 +4019,175 @@ select.add-habit-input {
     transition: none;
   }
 }
+
+/* One-tap installed-app updates, shared across Hana and Cramble. */
+.pwa-update-layer {
+  position: fixed;
+  top: max(0.75rem, calc(env(safe-area-inset-top) + 0.5rem));
+  left: 50%;
+  z-index: 90;
+  width: min(calc(100vw - 1.5rem), 24rem);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.pwa-update-toast {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(111, 85, 46, 0.2);
+  border-radius: 1.35rem;
+  background: rgba(255, 253, 249, 0.96);
+  padding: 0.9rem;
+  color: var(--ink);
+  box-shadow:
+    0 22px 50px -26px rgba(67, 54, 34, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+  animation: pwa-update-arrive 220ms ease-out both;
+}
+
+.pwa-update-toast::before,
+.pwa-update-toast::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0.22rem;
+  content: '';
+  opacity: 0.58;
+}
+
+.pwa-update-toast::before {
+  left: 0;
+  background: #dfa0b0;
+}
+
+.pwa-update-toast::after {
+  right: 0;
+  background: #e3ad4e;
+}
+
+.pwa-update-mark {
+  width: 4.7rem;
+  height: 2.85rem;
+  margin-top: -0.2rem;
+  transform: scale(0.82);
+  transform-origin: left top;
+}
+
+.pwa-update-title {
+  color: #294630;
+  font-size: 0.9rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.pwa-update-copy {
+  margin-top: 0.2rem;
+  color: #625b51;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.pwa-update-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pwa-update-later,
+.pwa-update-now {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  outline: none;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.pwa-update-later {
+  border: 1px solid rgba(111, 85, 46, 0.24);
+  background: #faf4ea;
+  color: #625b51;
+}
+
+.pwa-update-now {
+  gap: 0.4rem;
+  border: 1px solid #647553;
+  background: linear-gradient(135deg, #687956, #536546);
+  color: #fffdf7;
+  box-shadow: 0 10px 20px -14px rgba(64, 78, 50, 0.8);
+}
+
+.pwa-update-later:active,
+.pwa-update-now:active {
+  transform: scale(0.96);
+}
+
+.pwa-update-later:focus-visible,
+.pwa-update-now:focus-visible {
+  box-shadow: 0 0 0 3px rgba(70, 83, 57, 0.22);
+}
+
+.pwa-update-success-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid rgba(112, 142, 87, 0.36);
+  border-radius: 999px;
+  background: rgba(196, 220, 174, 0.35);
+  color: #587445;
+}
+
+.pwa-update-toast[data-state='updated'] {
+  width: min(100%, 20rem);
+  margin-inline: auto;
+}
+
+@keyframes pwa-update-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-0.65rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 360px) {
+  .pwa-update-toast {
+    padding: 0.8rem;
+  }
+
+  .pwa-update-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pwa-update-later,
+  .pwa-update-now {
+    padding-inline: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-update-toast,
+  .pwa-update-later,
+  .pwa-update-now {
+    animation: none;
+    transition: none;
+  }
+}

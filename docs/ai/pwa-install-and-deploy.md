@@ -11,6 +11,9 @@ This project is configured as an installable Vite PWA.
 - Production builds read/write Hana and Cramble as separate Postgres profiles.
 - Browser `localStorage` uses separate profile caches as offline fallback.
 - PWA install and offline app shell are handled by `vite-plugin-pwa`.
+- `PwaUpdatePrompt` owns service-worker registration and update UX. It checks
+  on registration, foreground, reconnect, and an hourly interval, then offers
+  one user-controlled reload when a deployed version is ready.
 
 ## Key files
 
@@ -24,6 +27,10 @@ This project is configured as an installable Vite PWA.
 - `public/apple-touch-icon.png` is the iOS home-screen icon.
 - `scripts/generate-pwa-icons.mjs` regenerates PNG icons from the SVG source.
 - `api/hana-sync.ts` is the serverless database-sync endpoint.
+- `src/components/PwaUpdatePrompt.tsx` handles update detection and the global
+  one-tap update prompt.
+- `vercel.json` forces HTML, the manifest, and `sw.js` to revalidate while
+  keeping hashed `/assets/*` immutable.
 
 ## Scripts
 
@@ -66,6 +73,28 @@ globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
 The database sync endpoint is not cached. GET, POST, and DELETE requests to
 `/api/hana-sync` always go to the network, and responses use
 `Cache-Control: no-store`.
+
+## Installed-app updates
+
+The service worker remains in `autoUpdate` mode with `skipWaiting` and
+`clientsClaim`, but registration is performed inside the app so the current
+React screen can react to the worker lifecycle. A newly activated worker shows
+`New version ready`; **Update now** reloads once, while **Later** keeps the
+current screen and offers the update again after the same installed app returns
+from the background.
+
+Update checks are throttled to avoid requesting `sw.js` on every focus event.
+They run after registration, after reconnecting, when the app becomes visible,
+and hourly while it remains open. Background check failures stay silent because
+profile sync already owns connectivity messages.
+
+Habit mutations are written to the local profile and pending-save caches before
+the cloud request, so replacing the static app shell does not erase progress.
+Unsubmitted form text is not persisted, which is why the reload is never forced.
+
+The first deployment containing this manager may still require one real reload
+or close/reopen for users who are running the older bundle. Releases after that
+use the one-tap flow.
 
 ## Deployment
 
