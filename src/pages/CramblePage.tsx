@@ -288,6 +288,19 @@ export function CramblePage({
         </p>
       </header>
 
+      <section className="cramble-codex-card relative z-10 mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-faint">
+            From the archive
+          </p>
+          <ForgeMark />
+        </div>
+        <blockquote className="mt-2 text-sm leading-6 text-ink">
+          “{line.text}”
+        </blockquote>
+        <p className="mt-2 text-xs font-medium text-muted">The Sunward Archive</p>
+      </section>
+
       <TodayProgressCard
         profile="cramble"
         complete={todayComplete}
@@ -296,13 +309,6 @@ export function CramblePage({
       {activeProfilePause ? (
         <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
       ) : null}
-      <TodayUtilityActions
-        isPaused={Boolean(activeProfilePause)}
-        onPause={() => setIsPauseTrackingOpen(true)}
-        onBackfill={() => setIsBackfillOpen(true)}
-        onExport={() => setIsExportOpen(true)}
-      />
-
       {!activeProfilePause ? (
         <main className="relative z-10 mt-6 space-y-8">
           <QuestSection
@@ -355,19 +361,6 @@ export function CramblePage({
         onResume={onResumeHabit}
         onManage={setManagedHabitId}
       />
-
-      <section className="cramble-codex-card relative z-10 mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-faint">
-            From the archive
-          </p>
-          <ForgeMark />
-        </div>
-        <blockquote className="mt-2 text-sm leading-6 text-ink">
-          “{line.text}”
-        </blockquote>
-        <p className="mt-2 text-xs font-medium text-muted">The Sunward Archive</p>
-      </section>
 
       <section className="cramble-codex-card relative z-10 mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
@@ -498,7 +491,17 @@ export function CramblePage({
         </section>
       ) : null}
 
-      <nav className="cramble-action-bar" aria-label="Cramble actions">
+      <TodayUtilityActions
+        isPaused={Boolean(activeProfilePause)}
+        onPause={() => setIsPauseTrackingOpen(true)}
+        onBackfill={() => setIsBackfillOpen(true)}
+        onExport={() => setIsExportOpen(true)}
+      />
+
+      <nav
+        className="profile-action-bar profile-action-bar-cramble"
+        aria-label="Cramble actions"
+      >
         <button
           type="button"
           onClick={() => setIsAddHabitOpen(true)}
@@ -508,9 +511,9 @@ export function CramblePage({
           <span className="habit-add-icon" aria-hidden="true">
             <Plus className="size-5" />
           </span>
-          <span className="cramble-action-copy">
-            <span className="cramble-action-label">Add habit</span>
-            <span className="cramble-action-detail">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Add habit</span>
+            <span className="profile-action-detail">
               Choose its rhythm and period reward
             </span>
           </span>
@@ -518,15 +521,15 @@ export function CramblePage({
         <button
           type="button"
           onClick={onOpenObservatory}
-          className="cramble-action-button"
+          className="profile-action-button"
           aria-label={`Open the Observatory. ${journey.percent}% of the Sunward Road crossed`}
         >
           <span className="cramble-action-icon" aria-hidden="true">
             <Star className="size-4" />
           </span>
-          <span className="cramble-action-copy">
-            <span className="cramble-action-label">Observatory</span>
-            <span className="cramble-action-detail">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Observatory</span>
+            <span className="profile-action-detail">
               {journey.percent}% of the Sunward Road crossed
             </span>
           </span>
@@ -534,15 +537,15 @@ export function CramblePage({
         <button
           type="button"
           onClick={onOpenLedger}
-          className="cramble-action-button"
+          className="profile-action-button"
           aria-label="View the Ledger and read the rhythm of recent chapters"
         >
           <span className="cramble-action-icon" aria-hidden="true">
             <BarChart3 className="size-4" />
           </span>
-          <span className="cramble-action-copy">
-            <span className="cramble-action-label">Ledger</span>
-            <span className="cramble-action-detail">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Ledger</span>
+            <span className="profile-action-detail">
               Read the rhythm of recent chapters
             </span>
           </span>

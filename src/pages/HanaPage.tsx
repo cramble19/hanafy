@@ -226,7 +226,7 @@ export function HanaPage({
   }
 
   return (
-    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-40 pt-6">
+    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-8 pt-6">
       <SpringDecor />
       <div className="mb-6 flex items-center gap-3">
         <button
@@ -278,6 +278,23 @@ export function HanaPage({
         <p className="mt-3 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
       </header>
 
+      <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
+            {getQuoteLabel(seasonalQuote)}
+          </p>
+          <span className="text-sm" aria-hidden="true">
+            {getQuoteIcon(seasonalQuote)}
+          </span>
+        </div>
+        <blockquote className="mt-2 text-sm leading-6 text-ink">
+          "{seasonalQuote.text}"
+        </blockquote>
+        <p className="mt-2 text-xs font-medium text-muted">
+          {seasonalQuote.source}
+        </p>
+      </section>
+
       <TodayProgressCard
         profile="hana"
         complete={todayComplete}
@@ -286,13 +303,6 @@ export function HanaPage({
       {activeProfilePause ? (
         <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
       ) : null}
-      <TodayUtilityActions
-        isPaused={Boolean(activeProfilePause)}
-        onPause={() => setIsPauseTrackingOpen(true)}
-        onBackfill={() => setIsBackfillOpen(true)}
-        onExport={() => setIsExportOpen(true)}
-      />
-
       {!activeProfilePause ? (
         <main className="mt-6 space-y-8">
           <QuestSection
@@ -331,23 +341,6 @@ export function HanaPage({
         onResume={onResumeHabit}
         onManage={setManagedHabitId}
       />
-
-      <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
-            {getQuoteLabel(seasonalQuote)}
-          </p>
-          <span className="text-sm" aria-hidden="true">
-            {getQuoteIcon(seasonalQuote)}
-          </span>
-        </div>
-        <blockquote className="mt-2 text-sm leading-6 text-ink">
-          "{seasonalQuote.text}"
-        </blockquote>
-        <p className="mt-2 text-xs font-medium text-muted">
-          {seasonalQuote.source}
-        </p>
-      </section>
 
       <section className="mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
@@ -479,7 +472,17 @@ export function HanaPage({
         </section>
       ) : null}
 
-      <div className="sticky-garden-bar">
+      <TodayUtilityActions
+        isPaused={Boolean(activeProfilePause)}
+        onPause={() => setIsPauseTrackingOpen(true)}
+        onBackfill={() => setIsBackfillOpen(true)}
+        onExport={() => setIsExportOpen(true)}
+      />
+
+      <nav
+        className="profile-action-bar profile-action-bar-hana"
+        aria-label="Hana actions"
+      >
         <button
           type="button"
           onClick={() => setIsAddHabitOpen(true)}
@@ -494,9 +497,9 @@ export function HanaPage({
           <span className="habit-add-icon" aria-hidden="true">
             <Plus className="size-5" />
           </span>
-          <span>
-            <span className="block text-sm font-semibold">Add habit</span>
-            <span className="block text-xs opacity-75">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Add habit</span>
+            <span className="profile-action-detail">
               {game.startDate
                 ? 'Choose its rhythm and period reward'
                 : 'Start the Health Overhaul first'}
@@ -506,15 +509,13 @@ export function HanaPage({
         <button
           type="button"
           onClick={onOpenGarden}
-          className="sticky-garden-button"
-          aria-label="Open Hana's night garden"
+          className="profile-action-button"
+          aria-label={`Open Hana's night garden. ${game.totalFlowers} flowers planted and ${skipProgress.remaining} skips left`}
         >
           <span className="sticky-garden-moon" aria-hidden="true" />
-          <span>
-            <span className="block text-sm font-semibold text-ink">
-              Open night garden
-            </span>
-            <span className="block text-xs text-muted">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Garden</span>
+            <span className="profile-action-detail">
               {game.totalFlowers} flowers planted · {skipProgress.remaining} skips left
             </span>
           </span>
@@ -522,22 +523,20 @@ export function HanaPage({
         <button
           type="button"
           onClick={onOpenLedger}
-          className="sticky-garden-button sticky-stats-button"
+          className="profile-action-button sticky-stats-button"
           aria-label="Open Hana's Ledger"
         >
           <span className="sticky-stats-icon" aria-hidden="true">
             <BarChart3 className="size-4" />
           </span>
-          <span>
-            <span className="block text-sm font-semibold text-ink">
-              Open Hana's Ledger
-            </span>
-            <span className="block text-xs text-muted">
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Ledger</span>
+            <span className="profile-action-detail">
               See every goal window and recorded day
             </span>
           </span>
         </button>
-      </div>
+      </nav>
 
       {isAddHabitOpen ? (
         <AddHabitDialog

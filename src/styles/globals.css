@@ -142,7 +142,8 @@ body {
 .hana-spring-shell {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 .hana-spring-shell > :not(.spring-decor-layer) {
   position: relative;
@@ -433,46 +434,73 @@ body {
   animation: mini-bloom 520ms cubic-bezier(0.2, 0, 0, 1) backwards;
 }
 
-.sticky-garden-bar {
+.profile-action-bar {
   position: sticky;
   bottom: max(0.8rem, env(safe-area-inset-bottom));
-  z-index: 10;
+  z-index: 30;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
-  margin-top: 1.4rem;
+  width: min(100%, 24rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.65rem auto 0;
+  border: 1px solid var(--border);
+  border-radius: 1.15rem;
+  padding: 0.35rem;
+  box-shadow: 0 14px 36px rgba(43, 38, 32, 0.22);
+  backdrop-filter: blur(18px);
 }
-.sticky-garden-button {
+
+.profile-action-bar-hana {
+  border-color: rgba(90, 65, 25, 0.12);
+  background: rgba(255, 250, 243, 0.92);
+}
+
+.profile-action-bar .habit-add-button,
+.profile-action-button {
   display: flex;
   min-width: 0;
-  width: 100%;
+  min-height: 3.55rem;
   align-items: center;
-  gap: 0.85rem;
-  border: 1px solid rgba(90, 65, 25, 0.12);
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.78);
-  padding: 0.72rem 0.9rem;
-  text-align: left;
-  box-shadow:
-    0 16px 50px -28px rgba(43, 38, 32, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(14px);
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.35rem 0.25rem;
+  text-align: center;
+  background: var(--surface);
+  outline: none;
   transition:
     transform 180ms cubic-bezier(0.2, 0, 0, 1),
     box-shadow 180ms;
 }
-.sticky-garden-button:active {
+
+.profile-action-bar .habit-add-button {
+  grid-column: auto;
+  width: auto;
+  border-radius: 0.85rem;
+  box-shadow: none;
+}
+
+.profile-action-bar-hana .profile-action-button {
+  border-color: rgba(90, 65, 25, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.profile-action-button:active {
   transform: scale(0.98);
 }
-.sticky-garden-button:focus-visible {
+
+.profile-action-button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--ink) 35%, transparent);
   outline-offset: 3px;
 }
+
 .sticky-garden-moon {
   position: relative;
   display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 1.75rem;
+  height: 1.75rem;
   flex-shrink: 0;
   place-items: center;
   border-radius: 9999px;
@@ -481,8 +509,8 @@ body {
 }
 .sticky-garden-moon::before {
   content: "";
-  width: 0.82rem;
-  height: 0.82rem;
+  width: 0.68rem;
+  height: 0.68rem;
   border-radius: 9999px;
   background: #fff4bf;
   box-shadow: 0 0 12px rgba(255, 244, 191, 0.64);
@@ -492,8 +520,8 @@ body {
 }
 .sticky-stats-icon {
   display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 1.75rem;
+  height: 1.75rem;
   flex-shrink: 0;
   place-items: center;
   border-radius: 9999px;
@@ -567,8 +595,7 @@ body {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus, var(--ink)) 28%, transparent);
 }
 
-.sticky-garden-button > span:last-child,
-.cramble-action-button > span:last-child,
+.profile-action-button > span:last-child,
 .habit-add-button > span:last-child {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1634,54 +1661,17 @@ select.add-habit-input {
   background: var(--surface);
 }
 
-.cramble-action-bar {
-  position: sticky;
-  z-index: 30;
-  bottom: max(0.8rem, env(safe-area-inset-bottom));
-  display: grid;
-  width: min(100%, 24rem);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
-  margin: 1.4rem auto 0;
-  border: 1px solid var(--border);
-  border-radius: 1.15rem;
-  padding: 0.35rem;
+.profile-action-bar-cramble {
   background: rgba(37, 36, 44, 0.94);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(18px);
 }
 
-.cramble-action-bar .habit-add-button,
-.cramble-action-button {
-  display: flex;
-  min-width: 0;
-  min-height: 3.55rem;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 0.2rem;
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  padding: 0.35rem 0.25rem;
-  text-align: center;
-  background: var(--surface);
-  outline: none;
-  transition: transform 180ms ease, background 180ms ease;
-}
-
-.cramble-action-bar .habit-add-button {
-  grid-column: auto;
-  width: auto;
+.profile-action-bar-cramble .habit-add-button {
   color: #171820;
   background: var(--cramble-brass);
-  box-shadow: none;
 }
 
-.cramble-action-button:active {
-  transform: scale(0.98);
-}
-
-.cramble-action-button:focus-visible {
+.profile-action-bar-cramble .profile-action-button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -1697,18 +1687,18 @@ select.add-habit-input {
   background: rgba(214, 166, 83, 0.12);
 }
 
-.cramble-action-bar .habit-add-icon {
+.profile-action-bar .habit-add-icon {
   width: 1.75rem;
   height: 1.75rem;
 }
 
-.cramble-action-copy {
+.profile-action-copy {
   display: block;
   min-width: 0;
   max-width: 100%;
 }
 
-.cramble-action-label {
+.profile-action-label {
   display: block;
   overflow: hidden;
   color: var(--ink);
@@ -1719,11 +1709,15 @@ select.add-habit-input {
   white-space: nowrap;
 }
 
-.cramble-action-bar .habit-add-button .cramble-action-label {
+.profile-action-bar-cramble .habit-add-button .profile-action-label {
   color: #171820;
 }
 
-.cramble-action-detail {
+.profile-action-bar-hana .habit-add-button .profile-action-label {
+  color: #fffdf7;
+}
+
+.profile-action-detail {
   display: none;
 }
 
@@ -2733,9 +2727,6 @@ select.add-habit-input {
   .cramble-journey-stage {
     height: 25rem;
   }
-  .sticky-garden-bar {
-    grid-template-columns: 1fr;
-  }
   .add-habit-pattern-grid {
     grid-template-columns: 1fr;
   }
@@ -3210,7 +3201,7 @@ select.add-habit-input {
   .cramble-forge-spark {
     opacity: 0;
   }
-  .cramble-action-button,
+  .profile-action-button,
   .habit-add-button,
   .add-habit-pattern,
   .add-habit-schedule-option,
