@@ -1,11 +1,21 @@
 import type {
+  HabitBackfillEvent,
+  HabitSettings,
   CustomHabitQuest,
   Difficulty,
   HanaGameState,
   Quest,
   QuestSchedule,
+  PauseReason,
+  TrackingPause,
   Weekday,
 } from '@/types'
+import {
+  GAME_STATE_SCHEMA_VERSION,
+  isHabitTrackableOnDate,
+  MAX_BACKFILL_DAYS,
+} from '@/lib/habitLifecycle'
+import { getLogicalDayKey } from '@/lib/logicalDay'
 
 export const FLOWERS_BY_DIFFICULTY: Record<Difficulty, number> = {
   easy: 1,
@@ -51,7 +61,7 @@ export type QuestScheduleProgress = {
 }
 
 export function todayKey(date = new Date()) {
-  return formatDateKey(date)
+  return getLogicalDayKey(date)
 }
 
 export function formatDateKey(date: Date) {
@@ -77,9 +87,16 @@ export function displayDate(dateKey: string) {
 
 export function createInitialHanaState(): HanaGameState {
   return {
+    schemaVersion: GAME_STATE_SCHEMA_VERSION,
     startDate: null,
     currentDate: todayKey(),
     customHabits: [],
+    deletedHabitIds: [],
+    historyEpoch: 'initial',
+    syncRevision: 0,
+    habitSettings: {},
+    trackingPauses: [],
+    backfillAudit: [],
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},
@@ -111,6 +128,10 @@ export function resetProfileProgress(
       startDate: state.startDate,
       currentDate: state.currentDate,
       customHabits: [...(state.customHabits ?? [])],
+      deletedHabitIds: [...(state.deletedHabitIds ?? [])],
+      historyEpoch: createEventId('history'),
+      syncRevision: state.syncRevision ?? 0,
+      habitSettings: { ...(state.habitSettings ?? {}) },
     },
     quests,
     options,
@@ -124,17 +145,24 @@ export function hasHanaStarted(state: HanaGameState | null | undefined) {
 export function getQuestCatalog(baseQuests: Quest[], state: HanaGameState) {
   const catalog: Quest[] = []
   const seenIds = new Set<string>()
+  const deletedIds = new Set(state.deletedHabitIds ?? [])
 
   baseQuests.forEach((quest) => {
-    if (!seenIds.has(quest.id)) {
+    if (!deletedIds.has(quest.id) && !seenIds.has(quest.id)) {
       seenIds.add(quest.id)
-      catalog.push(quest)
+      const settings = state.habitSettings?.[quest.id]
+      catalog.push({
+        ...quest,
+        title: settings?.titleOverride || quest.title,
+        description: settings?.descriptionOverride || quest.description,
+      })
     }
   })
   const customHabits = state.customHabits ?? []
   customHabits.forEach((quest) => {
     if (
       quest.custom === true &&
+      !deletedIds.has(quest.id) &&
       !seenIds.has(quest.id) &&
       hasValidCustomHabitSchedule(quest)
     ) {
@@ -150,6 +178,9 @@ export function toggleQuestCompletion(
   state: HanaGameState,
   quest: Quest,
 ): HanaGameState {
+  if (!isHabitTrackableOnDate(state, quest.id, state.currentDate)) {
+    return state
+  }
   if (quest.group === 'longTerm') {
     const startedAt = state.longTermWindows[quest.id] ?? state.currentDate
     const questCompletions = state.longTermCompletions[quest.id] ?? {}
@@ -227,6 +258,142 @@ export function undoQuestCompletion(
   }
 }
 
+/** Record a habit on a recent performed date without moving the profile clock. */
+export function recordQuestCompletionForDate(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+): { state: HanaGameState; error: string | null } {
+  const error = getBackfillValidationError(state, quest, dateKey)
+  if (error) return { state, error }
+  if (
+    quest.schedule?.kind !== 'periodTarget' &&
+    state.dailyCompletions?.[dateKey]?.[quest.id]
+  ) {
+    return { state, error: 'This habit is already recorded for that day.' }
+  }
+  if (getQuestScheduleProgress(state, quest, dateKey).isComplete) {
+    return { state, error: 'This goal is already complete for that period.' }
+  }
+
+  const stateOnDate = { ...state, currentDate: dateKey }
+  const nextOnDate = toggleQuestCompletion(stateOnDate, quest)
+  if (nextOnDate === stateOnDate) {
+    return { state, error: 'This goal is already complete for that period.' }
+  }
+
+  const auditEvent: HabitBackfillEvent = {
+    id: createEventId('backfill'),
+    habitId: quest.id,
+    performedDate: dateKey,
+    recordedAt: new Date().toISOString(),
+    delta: 1,
+  }
+  return {
+    state: {
+      ...nextOnDate,
+      currentDate: state.currentDate,
+      backfillAudit: [...(state.backfillAudit ?? []), auditEvent],
+    },
+    error: null,
+  }
+}
+
+/** Remove one recent record while keeping an immutable correction audit. */
+export function undoQuestCompletionForDate(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+): { state: HanaGameState; error: string | null } {
+  const error = getBackfillValidationError(state, quest, dateKey)
+  if (error) return { state, error }
+
+  let nextState: HanaGameState
+  if (quest.schedule?.kind === 'periodTarget') {
+    const occurrences = state.habitOccurrences?.[dateKey] ?? {}
+    const count = occurrences[quest.id] ?? 0
+    if (count <= 0) return { state, error: 'There is no record to undo on that day.' }
+    nextState = {
+      ...state,
+      habitOccurrences: {
+        ...(state.habitOccurrences ?? {}),
+        [dateKey]: {
+          ...occurrences,
+          [quest.id]: count - 1,
+        },
+      },
+    }
+  } else {
+    const completions = state.dailyCompletions?.[dateKey] ?? {}
+    if (!completions[quest.id]) {
+      return { state, error: 'There is no record to undo on that day.' }
+    }
+    nextState = {
+      ...state,
+      dailyCompletions: {
+        ...state.dailyCompletions,
+        [dateKey]: {
+          ...completions,
+          [quest.id]: false,
+        },
+      },
+    }
+  }
+
+  const auditEvent: HabitBackfillEvent = {
+    id: createEventId('backfill'),
+    habitId: quest.id,
+    performedDate: dateKey,
+    recordedAt: new Date().toISOString(),
+    delta: -1,
+  }
+  return {
+    state: {
+      ...nextState,
+      backfillAudit: [...(state.backfillAudit ?? []), auditEvent],
+    },
+    error: null,
+  }
+}
+
+export function getBackfillValidationError(
+  state: HanaGameState,
+  quest: Quest,
+  dateKey: string,
+) {
+  if (!isDateKey(dateKey)) return 'Choose a valid date.'
+  if (quest.group !== 'daily') return 'Only dated habits can be corrected here.'
+  if (dateKey >= state.currentDate) return 'Choose one of the previous three days.'
+  if (dateDiffDays(dateKey, state.currentDate) > MAX_BACKFILL_DAYS) {
+    return `Corrections are available for the previous ${MAX_BACKFILL_DAYS} days.`
+  }
+  if (state.startDate && dateKey < state.startDate) {
+    return 'That date is before this tracker began.'
+  }
+  if (quest.createdDate && dateKey < quest.createdDate) {
+    return 'That date is before this habit was created.'
+  }
+  if (!isHabitTrackableOnDate(state, quest.id, dateKey)) {
+    return 'This habit was paused or archived on that date.'
+  }
+  if (!isQuestScheduledForDate(state, quest, dateKey)) {
+    return 'This habit was not due on that date.'
+  }
+  const skipKey = `daily:${quest.id}:${dateKey}`
+  if (
+    Object.values(state.questSkips ?? {}).some(
+      (skips) => skips[skipKey] === true,
+    )
+  ) {
+    return 'Undo the pass for that day before recording it.'
+  }
+  const wasPresented = state.activeDailyQuests?.[dateKey]?.includes(quest.id)
+  if ((quest.minLevel ?? 1) > 1 && !wasPresented) {
+    return 'This habit had not unlocked on that date.'
+  }
+  return null
+}
+
 export function getCompletionsForQuestGroup(
   state: HanaGameState,
   group: Quest['group'],
@@ -254,7 +421,7 @@ export function syncActiveQuestPlan(
   )
   const nextDailyIds = fillIds(validExistingDailyIds, dailyIds, dailyIds.length)
 
-  const longTermIds = selectLongTermQuestIds(catalog, level)
+  const longTermIds = selectLongTermQuestIds(catalog, state, level)
   const expiredLongTermIds = options.rotateExpiredLongTerm
     ? activeLongTermQuestIds.filter((questId) => {
         const quest = catalog.find((item) => item.id === questId)
@@ -434,8 +601,8 @@ export function recomputeTotalFlowers(state: HanaGameState, quests: Quest[]) {
     }
   })
 
-  Object.values(state.longTermCompletions).forEach((completions) => {
-    Object.entries(completions).forEach(([questId, isComplete]) => {
+  Object.entries(state.longTermCompletions).forEach(([questId, completions]) => {
+    Object.values(completions).forEach((isComplete) => {
       const quest = questById.get(questId)
       if (isComplete && quest) {
         earnedFlowers += flowersForQuest(quest)
@@ -721,6 +888,7 @@ export function isQuestScheduledForDate(
 ) {
   return (
     (!quest.createdDate || quest.createdDate <= dateKey) &&
+    isHabitTrackableOnDate(state, quest.id, dateKey) &&
     hasValidQuestSchedule(quest) &&
     getQuestScheduleProgress(state, quest, dateKey).isScheduledToday
   )
@@ -855,10 +1023,17 @@ function selectDailyQuestIds(
   ]
 }
 
-function selectLongTermQuestIds(quests: Quest[], level: number) {
+function selectLongTermQuestIds(
+  quests: Quest[],
+  state: HanaGameState,
+  level: number,
+) {
   return quests
     .filter(
-      (quest) => quest.group === 'longTerm' && (quest.minLevel ?? 1) <= level,
+      (quest) =>
+        quest.group === 'longTerm' &&
+        (quest.minLevel ?? 1) <= level &&
+        isHabitTrackableOnDate(state, quest.id, state.currentDate),
     )
     .map((quest) => quest.id)
 }
@@ -1061,17 +1236,27 @@ function normalizeHanaState(
     return createInitialHanaState()
   }
 
-  const currentDate =
-    typeof value.currentDate === 'string' ? value.currentDate : todayKey()
+  const currentDate = isDateKey(value.currentDate) ? value.currentDate : todayKey()
   const startDate =
     typeof value.startDate === 'string' && value.startDate.length > 0
       ? value.startDate
       : null
 
   const migratedState: HanaGameState = {
+    schemaVersion: GAME_STATE_SCHEMA_VERSION,
     startDate,
     currentDate,
     customHabits: readCustomHabits(value.customHabits, quests),
+    deletedHabitIds: readStringArray(value.deletedHabitIds).slice(-500),
+    historyEpoch: readTrimmedString(value.historyEpoch, 120) ?? 'legacy',
+    syncRevision:
+      Number.isInteger(value.syncRevision) &&
+      (value.syncRevision as number) >= 0
+        ? (value.syncRevision as number)
+        : 0,
+    habitSettings: readHabitSettings(value.habitSettings),
+    trackingPauses: readTrackingPauses(value.trackingPauses),
+    backfillAudit: readBackfillAudit(value.backfillAudit),
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),
     activeLongTermQuestIds: readStringArray(value.activeLongTermQuestIds),
     dailyCompletions: readCompletionRecord(value.dailyCompletions),
@@ -1383,6 +1568,106 @@ function readStringArray(value: unknown) {
   }
 
   return value.filter((item): item is string => typeof item === 'string')
+}
+
+function readHabitSettings(value: unknown) {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<Record<string, HabitSettings>>(
+    (result, [habitId, item]) => {
+      if (!habitId || habitId.length > 120 || !isRecord(item)) return result
+      const cue = typeof item.cue === 'string' ? item.cue.trim().slice(0, 100) : ''
+      const reminderValue = isRecord(item.reminder) ? item.reminder : {}
+      const time =
+        typeof reminderValue.time === 'string' &&
+        /^([01]\d|2[0-3]):[0-5]\d$/.test(reminderValue.time)
+          ? reminderValue.time
+          : null
+      result[habitId] = {
+        titleOverride: readTrimmedString(item.titleOverride, 80) ?? undefined,
+        descriptionOverride:
+          readTrimmedString(item.descriptionOverride, 280) ?? undefined,
+        cue,
+        reminder: {
+          enabled: reminderValue.enabled === true && Boolean(time),
+          time,
+        },
+        archivedAt: isDateKey(item.archivedAt) ? item.archivedAt : null,
+        pauses: readTrackingPauses(item.pauses),
+      }
+      return result
+    },
+    {},
+  )
+}
+
+function readTrackingPauses(value: unknown): TrackingPause[] {
+  if (!Array.isArray(value)) return []
+  return value.slice(-500).reduce<TrackingPause[]>((result, item) => {
+    if (!isRecord(item)) return result
+    const id = readTrimmedString(item.id, 120)
+    const startDate = isDateKey(item.startDate) ? item.startDate : null
+    const endDate = item.endDate === null || isDateKey(item.endDate)
+      ? item.endDate
+      : null
+    const reason = readPauseReason(item.reason)
+    const recordedAt = readIsoInstant(item.recordedAt)
+    if (!id || !startDate || !reason || !recordedAt) return result
+    if (endDate && endDate < startDate) return result
+    const note = typeof item.note === 'string'
+      ? item.note.trim().slice(0, 120) || undefined
+      : undefined
+    result.push({ id, startDate, endDate, reason, note, recordedAt })
+    return result
+  }, [])
+}
+
+function readBackfillAudit(value: unknown): HabitBackfillEvent[] {
+  if (!Array.isArray(value)) return []
+  return value.slice(-5000).reduce<HabitBackfillEvent[]>((result, item) => {
+    if (!isRecord(item)) return result
+    const id = readTrimmedString(item.id, 120)
+    const habitId = readTrimmedString(item.habitId, 120)
+    const performedDate = isDateKey(item.performedDate)
+      ? item.performedDate
+      : null
+    const recordedAt = readIsoInstant(item.recordedAt)
+    if (
+      id &&
+      habitId &&
+      performedDate &&
+      recordedAt &&
+      (item.delta === 1 || item.delta === -1)
+    ) {
+      result.push({ id, habitId, performedDate, recordedAt, delta: item.delta })
+    }
+    return result
+  }, [])
+}
+
+function readPauseReason(value: unknown): PauseReason | null {
+  return value === 'rest' ||
+    value === 'illness' ||
+    value === 'period' ||
+    value === 'vacation' ||
+    value === 'travel' ||
+    value === 'overwhelmed' ||
+    value === 'scheduleChange' ||
+    value === 'other'
+    ? value
+    : null
+}
+
+function readIsoInstant(value: unknown) {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value))
+    ? value
+    : null
+}
+
+function createEventId(prefix: string) {
+  const randomId = globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `${prefix}-${randomId}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

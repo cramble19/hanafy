@@ -23,6 +23,10 @@ import {
   type HabitStatsRange,
 } from '@/lib/hanaStats'
 import type { HanaGameState, Quest } from '@/types'
+import {
+  isHabitArchivedOnDate,
+  isHabitPausedOnDate,
+} from '@/lib/habitLifecycle'
 
 type Props = {
   game: HanaGameState
@@ -90,6 +94,13 @@ export function HabitQuestDetailPage({
   const momentum = allTimeStats
     ? getHabitMomentumSignal(allTimeStats, profileId)
     : null
+  const lifecycleStatus = quest
+    ? isHabitArchivedOnDate(game, quest.id)
+      ? 'archived'
+      : isHabitPausedOnDate(game, quest.id)
+        ? 'paused'
+        : 'active'
+    : 'active'
 
   useEffect(() => {
     setRange(defaultRange)
@@ -165,6 +176,9 @@ export function HabitQuestDetailPage({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-faint">
               {cadence}
+              {lifecycleStatus === 'active'
+                ? ''
+                : ` / ${lifecycleStatus === 'paused' ? 'Paused' : 'Archived'}`}
             </p>
             <h1
               ref={headingRef}
@@ -186,6 +200,7 @@ export function HabitQuestDetailPage({
       <CurrentPeriodCard
         period={stats.currentPeriod}
         nextDueDate={stats.nextDueDate}
+        lifecycleStatus={lifecycleStatus}
       />
 
       <section
@@ -416,9 +431,11 @@ function DetailTopBar({ onBack }: { onBack: () => void }) {
 function CurrentPeriodCard({
   period,
   nextDueDate,
+  lifecycleStatus,
 }: {
   period: HabitPeriodStat | null
   nextDueDate: string | null
+  lifecycleStatus: 'active' | 'paused' | 'archived'
 }) {
   if (!period) {
     return (
@@ -432,7 +449,11 @@ function CurrentPeriodCard({
               Between windows
             </p>
             <h2 className="mt-1 text-base font-semibold text-ink">
-              {nextDueDate
+              {lifecycleStatus === 'paused'
+                ? 'Paused - no due date or backlog'
+                : lifecycleStatus === 'archived'
+                  ? 'Archived - history only'
+                  : nextDueDate
                 ? `Next due ${formatDate(nextDueDate, { weekday: 'long', month: 'short', day: 'numeric' })}`
                 : 'No open window today'}
             </h2>
@@ -453,6 +474,8 @@ function CurrentPeriodCard({
       ? 'The full target is met.'
       : period.status === 'skipped'
         ? 'This window was passed without penalty.'
+        : period.status === 'paused'
+          ? 'Tracking was paused. This window is neutral and creates no debt.'
         : `${remaining} ${remaining === 1 ? 'record' : 'records'} still available in this window.`
 
   return (
@@ -586,6 +609,7 @@ function ActivityDay({ day }: { day: HabitDayStat }) {
       className="ledger-activity-day"
       data-level={Math.min(3, day.count)}
       data-eligible={day.isEligible}
+      data-paused={day.isPaused}
       data-today={day.isToday}
     >
       <span className="ledger-activity-day-number">{dayNumber}</span>
@@ -616,6 +640,9 @@ function ActivityLegend() {
       <span role="listitem">
         <i data-kind="not-due" aria-hidden="true" /> Not scheduled
       </span>
+      <span role="listitem">
+        <i data-kind="paused" aria-hidden="true" /> Paused
+      </span>
     </div>
   )
 }
@@ -638,6 +665,7 @@ function getDefaultRange(quest: Quest | undefined): HabitStatsRange {
 function getPeriodStatusLabel(status: HabitPeriodStatus) {
   if (status === 'completed') return 'Met'
   if (status === 'skipped') return 'Passed'
+  if (status === 'paused') return 'Paused'
   if (status === 'missed') return 'Unfinished'
   return 'In progress'
 }
@@ -645,6 +673,7 @@ function getPeriodStatusLabel(status: HabitPeriodStatus) {
 function getPeriodStatusSymbol(status: HabitPeriodStatus) {
   if (status === 'completed') return '✓'
   if (status === 'skipped') return '◇'
+  if (status === 'paused') return 'Ⅱ'
   if (status === 'missed') return '—'
   return '◐'
 }
@@ -659,8 +688,11 @@ function getPeriodSummary(stats: HabitRangeStats) {
   const passSummary = stats.skippedPeriods
     ? `${stats.skippedPeriods} ${stats.skippedPeriods === 1 ? 'window was' : 'windows were'} passed.`
     : ''
+  const pauseSummary = stats.pausedPeriods
+    ? `${stats.pausedPeriods} ${stats.pausedPeriods === 1 ? 'window was' : 'windows were'} neutral while tracking was paused.`
+    : ''
 
-  return `Period rhythm, oldest to newest. ${closedSummary} ${openSummary} ${passSummary}`.trim()
+  return `Period rhythm, oldest to newest. ${closedSummary} ${openSummary} ${passSummary} ${pauseSummary}`.trim()
 }
 
 function getActivitySummary(stats: HabitRangeStats) {

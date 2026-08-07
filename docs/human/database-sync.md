@@ -16,6 +16,9 @@ quest does not change Hana's garden, and vice versa.
 - Habit timing is stored with dated progress. Ordinary habits keep a done/not
   done record; flexible custom goals keep the number of times recorded each day,
   including several records on one day.
+- The saved active date follows the shared local tracking day: 4:00 AM through
+  3:59 AM the next calendar day. The API stores this key rather than calculating
+  a separate server-side date.
 - A flexible day/week target is summarized as one whole period. Partial progress
   earns no partial reward and has no penalty, and unused days are not mislabeled
   as separate failures.
@@ -27,8 +30,9 @@ Hana is not written to the database until **Start Health Overhaul** is pressed.
 Her Explore mode remains temporary.
 
 Cramble is not written until the password gate is passed and **Begin the First
-Oath** is pressed. Starting either profile clears only that profile's old rows,
-then saves a fresh record for today.
+Oath** is pressed. Starting or resetting either profile replaces that profile
+with one revision-checked transaction; it never clears the durable copy before
+the replacement has succeeded.
 
 ## What gets saved
 
@@ -36,16 +40,25 @@ The app saves the active date and due quest plan, custom habit definitions,
 completed and skipped quests, counted custom-habit records, flexible period
 progress, compatibility long-term windows, weekly skip history, the reward
 balance, and the full state needed to restore the experience. Hana's weed checks
-are also stored. Older saved flexible habits keep their original history and
-reward behavior.
+are also stored. Habit cues, reminder intent, archive state, individual pause
+intervals, profile-wide pause intervals and their reason, and backfill audit
+timestamps live in the same profile snapshot. Older snapshots are normalized to
+safe active/default lifecycle values without losing their original history.
+
+Snapshot and analytics changes commit in one database transaction. Permanent
+habit deletion carries a tombstone that removes the matching derived rows. A
+full progress reset changes a history epoch, which retires older projections
+inside that same transaction without exposing an empty or partly reset profile.
 
 ## Sync behavior
 
 Quest taps update the screen and local cache immediately, then save quietly in
-the background when a connection is available. Rapid changes are serialized so
-an older request cannot finish after and replace the newest one. Opening,
-focusing, reconnecting, changing day, or pressing Refresh can reconcile the
-profile with the database.
+the background when a connection is available. Every offline/pending snapshot
+keeps the exact database revision it was based on. The server accepts it only if
+that revision is still current, so a stale tab cannot resurrect deleted data.
+On a conflict, Sync first downloads a CSV, keeps a JSON recovery copy, and asks
+before loading the newer database version. Opening, focusing, reconnecting,
+changing day, or pressing Refresh can reconcile the profile with the database.
 
 When online, the database is authoritative unless that profile has a marked
 unsaved snapshot. That snapshot is uploaded first, before an older database copy

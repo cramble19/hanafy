@@ -10,10 +10,16 @@ import {
   parseStoredHanaState,
   recomputeTotalFlowers,
   syncStateToDate,
+  todayKey,
   visibleQuestsForState,
 } from './hanaGame'
 
 describe('Hana game date sync', () => {
+  it('uses 4:00 AM as the shared Today boundary', () => {
+    expect(todayKey(new Date(2026, 7, 7, 3, 59, 59, 999))).toBe('2026-08-06')
+    expect(todayKey(new Date(2026, 7, 7, 4, 0, 0, 0))).toBe('2026-08-07')
+  })
+
   it('moves an old installed PWA state to the real current date', () => {
     const storedState = JSON.stringify(
       createSavedState({
@@ -180,6 +186,23 @@ describe('Hana game date sync', () => {
         '2026-08-04': { [quest.id]: true },
         '2026-08-05': { [quest.id]: true },
         '2026-08-06': { [quest.id]: true },
+      },
+    })
+
+    expect(recomputeTotalFlowers(state, [quest])).toBe(3)
+  })
+
+  it('recomputes rewards from completed long-term windows', () => {
+    const quest: Quest = {
+      ...createDailyQuest('long-term-reward'),
+      group: 'longTerm',
+      difficulty: 'hard',
+      durationDays: 7,
+    }
+    const state = createSavedState({
+      longTermWindows: { [quest.id]: '2026-08-02' },
+      longTermCompletions: {
+        [quest.id]: { '2026-08-02': true },
       },
     })
 

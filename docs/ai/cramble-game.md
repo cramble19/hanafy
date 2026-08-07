@@ -124,7 +124,7 @@ type QuestSchedule =
   | { kind: 'quota'; target: number; periodDays: number; anchor: 'questStart' }
 ```
 
-- `daily` is eligible every local calendar day.
+- `daily` is eligible every local tracking day (04:00 through 03:59).
 - `weekly` is eligible only on listed local weekdays (`0` is Sunday).
 - `periodTarget/calendarWeek` is the current custom one-week model. It counts
   records in a Sunday-to-Saturday window and pays out once at the full target.

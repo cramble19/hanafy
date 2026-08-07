@@ -17,6 +17,8 @@ type Props = {
   skippedLabel?: string
   periodProgressById?: Record<string, PeriodGoalProgress>
   momentumById?: Record<string, HabitMomentumSignal | null>
+  cueById?: Record<string, string>
+  onManage?: (id: string) => void
   onToggle: (id: string) => void
   onUndoOccurrence?: (id: string) => void
   onSkip: (id: string) => void
@@ -37,6 +39,8 @@ export function QuestSection({
   skippedLabel = 'Skipped',
   periodProgressById = {},
   momentumById = {},
+  cueById = {},
+  onManage,
   onToggle,
   onUndoOccurrence,
   onSkip,
@@ -75,6 +79,8 @@ export function QuestSection({
             skippedLabel={skippedLabel}
             periodProgress={periodProgressById[quest.id]}
             momentum={momentumById[quest.id]}
+            cue={cueById[quest.id]}
+            onManage={onManage}
             onToggle={onToggle}
             onUndoOccurrence={onUndoOccurrence}
             onSkip={onSkip}

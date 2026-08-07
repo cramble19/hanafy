@@ -54,9 +54,10 @@ src/
     crambleTasks.json, crambleQuests.ts, crambleChronicles.json
   lib/
     customHabits.ts               # custom input validation and quest creation
+    logicalDay.ts                 # shared local 04:00 tracking-day clock
     hanaGame.ts                   # shared pure date/quest/reward engine
     hanaCloudSync.ts              # profile-aware payload generation
-    hanaRemoteState.ts            # profile-aware GET/POST/DELETE helpers
+    hanaRemoteState.ts            # profile-aware GET/POST helpers
     hanaStats.ts                  # shared profile, period-window, and Ledger stats
     crambleGame.ts                # Cramble gate/cache/chapter rules
   pages/                          # profile-specific screen components

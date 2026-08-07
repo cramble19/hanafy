@@ -1,13 +1,22 @@
 import type { HanaGameState, Quest } from '@/types'
 import {
+  addDays,
   flowersForQuest,
   getQuestCatalog,
   getLongTermDueDate,
   getQuestScheduleProgress,
 } from '@/lib/hanaGame'
+import {
+  isHabitArchivedOnDate,
+  isHabitPausedOnDate,
+} from '@/lib/habitLifecycle'
 
 export type HanaProfileId = 'hana' | 'cramble'
-export type HanaQuestSyncStatus = 'pending' | 'completed' | 'skipped'
+export type HanaQuestSyncStatus =
+  | 'pending'
+  | 'completed'
+  | 'skipped'
+  | 'paused'
 
 export type HanaQuestSyncRow = {
   profileId: HanaProfileId
@@ -30,6 +39,7 @@ export type HanaWeedSyncRow = {
 
 export type HanaCloudSyncPayload = {
   profileId: HanaProfileId
+  writeToken: string
   syncedAt: string
   currentDate: string
   totalFlowers: number
@@ -46,6 +56,7 @@ export function createProfileCloudSyncPayload(
 ): HanaCloudSyncPayload {
   return {
     profileId,
+    writeToken: createSyncToken(),
     syncedAt,
     currentDate: state.currentDate,
     totalFlowers: state.totalFlowers,
@@ -53,6 +64,12 @@ export function createProfileCloudSyncPayload(
     questStatuses: createQuestStatusRows(profileId, state, quests),
     weedStatuses: createWeedStatusRows(profileId, state),
   }
+}
+
+function createSyncToken() {
+  const randomId = globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `sync-${randomId}`
 }
 
 export function createHanaCloudSyncPayload(
@@ -82,7 +99,14 @@ function createQuestStatusRows(
     if (!quest) {
       return
     }
-    const flowersEarned = status === 'completed' ? flowersForQuest(quest) : 0
+    const resolvedStatus =
+      status === 'pending' &&
+      (isHabitPausedOnDate(state, questId, dateKey) ||
+        isHabitArchivedOnDate(state, questId, dateKey))
+        ? 'paused'
+        : status
+    const flowersEarned =
+      resolvedStatus === 'completed' ? flowersForQuest(quest) : 0
     const key = makeRowKey(profileId, 'daily', questId, dateKey)
 
     rows.set(key, {
@@ -93,7 +117,7 @@ function createQuestStatusRows(
       dateKey,
       windowStart: null,
       dueDate: null,
-      status,
+      status: resolvedStatus,
       flowersEarned,
     })
   }
@@ -107,7 +131,14 @@ function createQuestStatusRows(
     if (!quest) {
       return
     }
-    const flowersEarned = status === 'completed' ? flowersForQuest(quest) : 0
+    const dueDate = getLongTermDueDate(startedAt, quest)
+    const resolvedStatus =
+      status === 'pending' &&
+      isWindowNeutral(state, questId, startedAt, dueDate)
+        ? 'paused'
+        : status
+    const flowersEarned =
+      resolvedStatus === 'completed' ? flowersForQuest(quest) : 0
     const key = makeRowKey(profileId, 'longTerm', questId, startedAt)
 
     rows.set(key, {
@@ -117,8 +148,8 @@ function createQuestStatusRows(
       periodKey: startedAt,
       dateKey: null,
       windowStart: startedAt,
-      dueDate: getLongTermDueDate(startedAt, quest),
-      status,
+      dueDate,
+      status: resolvedStatus,
       flowersEarned,
     })
   }
@@ -211,7 +242,16 @@ function createQuestStatusRows(
       dateKey: null,
       windowStart: progress.periodStart,
       dueDate: progress.periodEnd,
-      status: progress.isComplete ? 'completed' : 'pending',
+      status: progress.isComplete
+        ? 'completed'
+        : isWindowNeutral(
+            state,
+            quest.id,
+            progress.periodStart,
+            progress.periodEnd,
+          )
+          ? 'paused'
+          : 'pending',
       flowersEarned:
         quest.schedule?.kind === 'periodTarget'
           ? progress.isComplete
@@ -286,6 +326,27 @@ function createQuestStatusRows(
   })
 
   return Array.from(rows.values()).sort(sortQuestRows)
+}
+
+function isWindowNeutral(
+  state: HanaGameState,
+  questId: string,
+  startDate: string,
+  endDate: string,
+) {
+  for (
+    let dateKey = startDate;
+    dateKey <= endDate;
+    dateKey = addDays(dateKey, 1)
+  ) {
+    if (
+      isHabitPausedOnDate(state, questId, dateKey) ||
+      isHabitArchivedOnDate(state, questId, dateKey)
+    ) {
+      return true
+    }
+  }
+  return false
 }
 
 function createWeedStatusRows(profileId: HanaProfileId, state: HanaGameState) {

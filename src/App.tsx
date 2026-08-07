@@ -4,6 +4,8 @@ import { quests } from '@/data/quests'
 import {
   createCustomHabitQuest,
   getNewHabitValidationError,
+  hasSameHabitScoringRules,
+  updateCustomHabitQuest,
   type NewHabitInput,
 } from '@/lib/customHabits'
 import {
@@ -17,16 +19,31 @@ import {
   hasHanaStarted,
   parseStoredHanaState,
   recomputeTotalFlowers,
+  recordQuestCompletionForDate,
   resetProfileProgress,
   STORAGE_KEY,
   syncActiveQuestPlan,
   syncStateToDate,
   todayKey,
   toggleQuestCompletion,
+  undoQuestCompletionForDate,
   undoQuestCompletion,
 } from '@/lib/hanaGame'
 import {
-  clearHanaStateFromDb,
+  archiveHabit,
+  deleteHabitPermanently,
+  getActiveProfilePause,
+  hasHabitHistory,
+  restoreHabit,
+  resumeHabitTracking,
+  resumeProfileTracking,
+  startHabitPause,
+  startProfilePause,
+  updateHabitPreferences,
+  updateHabitWording,
+  type PauseInput,
+} from '@/lib/habitLifecycle'
+import {
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveHanaStateToDb,
@@ -40,6 +57,8 @@ import { QuestDetailPage } from '@/pages/QuestDetailPage'
 import { CrambleGatePage } from '@/pages/CrambleGatePage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import type { HanaGameState } from '@/types'
+import { useHabitReminders } from '@/hooks/useHabitReminders'
+import { downloadProfileCsv } from '@/lib/habitExport'
 
 type View =
   | 'home'
@@ -57,11 +76,13 @@ type CloudSyncStatus =
   | 'synced'
   | 'error'
   | 'offline'
+  | 'conflict'
   | 'disabled'
   | 'preview'
 type HomeFocusTarget = 'hana' | 'cramble' | null
 
 const HANA_PENDING_STORAGE_KEY = 'hana-game/pending-v1'
+const HANA_CONFLICT_BACKUP_KEY = 'hana-game/conflict-backup-v1'
 
 export default function App() {
   const [view, setView] = useState<View>('home')
@@ -70,10 +91,11 @@ export default function App() {
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [isExploringHana, setIsExploringHana] = useState(false)
   const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
+  useHabitReminders('hana', hanaGame, quests)
   const hanaGameRef = useRef<HanaGameState | null>(null)
-  const clearedUnstartedDbRef = useRef(false)
   const pendingDbSaveRef = useRef<HanaGameState | null>(null)
   const isDbSaveInFlightRef = useRef(false)
+  const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
   const hydrationSequenceRef = useRef(0)
   const localMutationRevisionRef = useRef(0)
@@ -153,15 +175,37 @@ export default function App() {
 
           if (!saveResult.ok) {
             pendingDbSaveRef.current ??= stateToSave
-            setCloudSyncStatus('error')
+            syncConflictRef.current = Boolean(saveResult.conflict)
+            setCloudSyncStatus(saveResult.conflict ? 'conflict' : 'error')
             return
           }
 
           clearPendingHanaCacheIfSaved(stateToSave)
+          const baseRevision = stateToSave.syncRevision ?? 0
+          const pending = pendingDbSaveRef.current as HanaGameState | null
+          if (pending && (pending.syncRevision ?? 0) === baseRevision) {
+            const revisedPending = {
+              ...pending,
+              syncRevision: saveResult.revision,
+            }
+            pendingDbSaveRef.current = revisedPending
+            cachePendingHanaGame(revisedPending)
+          }
+          const latest = hanaGameRef.current
+          if (latest && (latest.syncRevision ?? 0) === baseRevision) {
+            const revisedLatest = {
+              ...latest,
+              syncRevision: saveResult.revision,
+            }
+            hanaGameRef.current = revisedLatest
+            setHanaGame(revisedLatest)
+            cacheHanaGame(revisedLatest)
+          }
           setLastCloudSyncAt(saveResult.syncedAt)
         }
 
         setCloudSyncStatus('synced')
+        syncConflictRef.current = false
       } finally {
         isDbSaveInFlightRef.current = false
       }
@@ -172,7 +216,11 @@ export default function App() {
     })
     saveLoopPromiseRef.current = savePromise
     return savePromise
-  }, [clearPendingHanaCacheIfSaved])
+  }, [
+    cacheHanaGame,
+    cachePendingHanaGame,
+    clearPendingHanaCacheIfSaved,
+  ])
 
   const hydrateFromDb = useCallback(
     async (silent = false) => {
@@ -282,10 +330,13 @@ export default function App() {
         return true
       }
 
-      const databaseState = parseStoredHanaState(
-        JSON.stringify(remote.snapshot.state),
-        quests,
-      )
+      const databaseState = {
+        ...parseStoredHanaState(
+          JSON.stringify(remote.snapshot.state),
+          quests,
+        ),
+        syncRevision: remote.snapshot.revision ?? 0,
+      }
       const chosen = chooseDbFirstState({
         databaseState,
         cachedState: readCachedHanaGame(),
@@ -294,18 +345,13 @@ export default function App() {
       const stateForToday = syncStateToDate(chosen.state, quests)
 
       if (!hasHanaStarted(stateForToday)) {
-        setHanaGame(initialState)
+        const unstartedState = {
+          ...initialState,
+          syncRevision: remote.snapshot.revision ?? 0,
+        }
+        setHanaGame(unstartedState)
         clearHanaCache()
         clearPendingHanaCache()
-        if (!clearedUnstartedDbRef.current) {
-          clearedUnstartedDbRef.current = true
-          setCloudSyncStatus('syncing')
-          const clearResult = await clearHanaStateFromDb('hana')
-          if (!clearResult.ok) {
-            setCloudSyncStatus('error')
-            return false
-          }
-        }
         setCloudSyncStatus('idle')
         return true
       }
@@ -323,6 +369,7 @@ export default function App() {
 
       setLastCloudSyncAt(remote.snapshot.syncedAt)
       setCloudSyncStatus('synced')
+      syncConflictRef.current = false
       return true
     },
     [
@@ -376,6 +423,24 @@ export default function App() {
   )
 
   const refreshHanaFromDb = useCallback(async () => {
+    if (syncConflictRef.current) {
+      const localState = hanaGameRef.current
+      const shouldLoadDatabase = window.confirm(
+        'This profile changed on another device. Load the database copy now? Your current local copy will be downloaded as CSV and kept as a JSON recovery backup first.',
+      )
+      if (!shouldLoadDatabase) return false
+      if (localState) {
+        downloadProfileCsv(localState, quests, 'hana')
+        window.localStorage.setItem(
+          HANA_CONFLICT_BACKUP_KEY,
+          JSON.stringify(localState),
+        )
+      }
+      pendingDbSaveRef.current = null
+      clearPendingHanaCache()
+      syncConflictRef.current = false
+      return hydrateFromDb(false)
+    }
     if (pendingDbSaveRef.current || isDbSaveInFlightRef.current) {
       setCloudSyncStatus('syncing')
       await flushQueuedDbSave()
@@ -385,17 +450,13 @@ export default function App() {
     }
 
     return hydrateFromDb(false)
-  }, [flushQueuedDbSave, hydrateFromDb])
+  }, [clearPendingHanaCache, flushQueuedDbSave, hydrateFromDb])
 
   useEffect(() => {
     void hydrateFromDb()
   }, [hydrateFromDb])
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      return undefined
-    }
-
     const syncToToday = () => {
       const previousState = hanaGameRef.current
       if (!previousState || !hasHanaStarted(previousState)) {
@@ -403,6 +464,9 @@ export default function App() {
       }
 
       const currentDate = todayKey()
+      if (import.meta.env.DEV && previousState.currentDate > currentDate) {
+        return
+      }
       if (previousState.currentDate !== currentDate) {
         void commitHanaState(syncStateToDate(previousState, quests, currentDate), true)
       }
@@ -516,6 +580,7 @@ export default function App() {
     if (!previousState) {
       return
     }
+    if (getActiveProfilePause(previousState)) return
 
     const eveningWeeds = previousState.eveningWeeds ?? {}
     const currentWeeds = eveningWeeds[previousState.currentDate] ?? {}
@@ -594,9 +659,132 @@ export default function App() {
       previousState.currentDate,
       existingTitles,
     )
-    void commitHanaState({
+    const withHabit: HanaGameState = {
       ...previousState,
       customHabits: [...previousState.customHabits, customHabit],
+    }
+    void commitHanaState(
+      updateHabitPreferences(withHabit, customHabit.id, {
+        cue: input.cue ?? '',
+        reminderTime: input.reminderTime ?? null,
+      }),
+    )
+    return null
+  }
+
+  const editHanaHabit = (habitId: string, input: NewHabitInput) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return 'Hana’s tracker is not ready.'
+    const catalog = getQuestCatalog(quests, previousState)
+    const habit = previousState.customHabits.find((item) => item.id === habitId)
+    const existingTitles = catalog
+      .filter((quest) => quest.id !== habitId)
+      .map((quest) => quest.title)
+    const validationError = getNewHabitValidationError(input, existingTitles)
+    if (validationError) return validationError
+    if (!habit) {
+      if (!catalog.some((quest) => quest.id === habitId)) {
+        return 'That habit is unavailable.'
+      }
+      const withWording = updateHabitWording(previousState, habitId, input)
+      void commitHanaState(
+        updateHabitPreferences(withWording, habitId, {
+          cue: input.cue ?? '',
+          reminderTime: input.reminderTime ?? null,
+        }),
+      )
+      return null
+    }
+    if (
+      hasHabitHistory(previousState, habitId) &&
+      !hasSameHabitScoringRules(habit, input)
+    ) {
+      return 'Frequency and effort cannot change after tracking begins. Archive this habit and add its new rhythm instead.'
+    }
+
+    const updatedHabit = updateCustomHabitQuest(habit, input, existingTitles)
+    const withDefinition: HanaGameState = {
+      ...previousState,
+      customHabits: previousState.customHabits.map((item) =>
+        item.id === habitId ? updatedHabit : item,
+      ),
+    }
+    void commitHanaState(
+      updateHabitPreferences(withDefinition, habitId, {
+        cue: input.cue ?? '',
+        reminderTime: input.reminderTime ?? null,
+      }),
+    )
+    return null
+  }
+
+  const pauseHanaHabit = (habitId: string, input: PauseInput) => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(startHabitPause(previousState, habitId, input))
+  }
+
+  const resumeHanaHabit = (habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(resumeHabitTracking(previousState, habitId))
+  }
+
+  const archiveHanaHabit = (habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(archiveHabit(previousState, habitId))
+  }
+
+  const restoreHanaHabit = (habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(restoreHabit(previousState, habitId))
+  }
+
+  const deleteHanaHabit = (habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const purged = deleteHabitPermanently(previousState, habitId)
+    const catalog = getQuestCatalog(quests, purged)
+    void commitHanaState({
+      ...purged,
+      totalFlowers: recomputeTotalFlowers(purged, catalog),
+    })
+  }
+
+  const pauseAllHana = (input: PauseInput) => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(startProfilePause(previousState, input))
+  }
+
+  const resumeAllHana = () => {
+    const previousState = hanaGameRef.current
+    if (previousState) void commitHanaState(resumeProfileTracking(previousState))
+  }
+
+  const backfillHana = (dateKey: string, habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return 'Hana’s tracker is not ready.'
+    const catalog = getQuestCatalog(quests, previousState)
+    const quest = catalog.find((item) => item.id === habitId)
+    if (!quest) return 'That habit is unavailable.'
+    const result = recordQuestCompletionForDate(previousState, quest, dateKey)
+    if (result.error) return result.error
+    void commitHanaState({
+      ...result.state,
+      totalFlowers: recomputeTotalFlowers(result.state, catalog),
+    })
+    return null
+  }
+
+  const undoBackfillHana = (dateKey: string, habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return "Hana's tracker is not ready."
+    const catalog = getQuestCatalog(quests, previousState)
+    const quest = catalog.find((item) => item.id === habitId)
+    if (!quest) return 'That habit is unavailable.'
+    const result = undoQuestCompletionForDate(previousState, quest, dateKey)
+    if (result.error) return result.error
+    void commitHanaState({
+      ...result.state,
+      totalFlowers: recomputeTotalFlowers(result.state, catalog),
     })
     return null
   }
@@ -626,15 +814,19 @@ export default function App() {
   }
 
   const startHanaToday = async () => {
-    const startedState = syncStateToDate(createStartedHanaState(todayKey()), quests)
+    const startDate = todayKey()
+    const startedState = {
+      ...syncStateToDate(createStartedHanaState(startDate), quests, startDate),
+      syncRevision: hanaGameRef.current?.syncRevision ?? 0,
+    }
 
     setIsExploringHana(false)
-    clearHanaCache()
-    clearPendingHanaCache()
-    pendingDbSaveRef.current = null
 
     if (import.meta.env.DEV) {
       localMutationRevisionRef.current += 1
+      clearHanaCache()
+      clearPendingHanaCache()
+      pendingDbSaveRef.current = null
       setHanaGame(startedState)
       cacheHanaGame(startedState)
       setCloudSyncStatus('disabled')
@@ -648,24 +840,26 @@ export default function App() {
     }
 
     setCloudSyncStatus('syncing')
-    const clearResult = await clearHanaStateFromDb('hana')
-    if (!clearResult.ok) {
-      setCloudSyncStatus('error')
-      return
-    }
-
     const saveResult = await saveHanaStateToDb(startedState, 'hana')
     if (!saveResult.ok) {
-      setCloudSyncStatus('error')
+      setCloudSyncStatus(saveResult.conflict ? 'conflict' : 'error')
       return
     }
 
     localMutationRevisionRef.current += 1
-    setHanaGame(startedState)
-    cacheHanaGame(startedState)
+    const syncedStartedState = {
+      ...startedState,
+      syncRevision: saveResult.revision,
+    }
+    hanaGameRef.current = syncedStartedState
+    setHanaGame(syncedStartedState)
+    clearHanaCache()
     clearPendingHanaCache()
+    pendingDbSaveRef.current = null
+    cacheHanaGame(syncedStartedState)
     setLastCloudSyncAt(saveResult.syncedAt)
     setCloudSyncStatus('synced')
+    syncConflictRef.current = false
     setView('hana')
   }
 
@@ -690,6 +884,16 @@ export default function App() {
           onToggle={toggleHana}
           onUndoOccurrence={undoHanaOccurrence}
           onAddHabit={addHanaHabit}
+          onEditHabit={editHanaHabit}
+          onPauseHabit={pauseHanaHabit}
+          onResumeHabit={resumeHanaHabit}
+          onArchiveHabit={archiveHanaHabit}
+          onRestoreHabit={restoreHanaHabit}
+          onDeleteHabit={deleteHanaHabit}
+          onPauseTracking={pauseAllHana}
+          onResumeTracking={resumeAllHana}
+          onBackfill={backfillHana}
+          onUndoBackfill={undoBackfillHana}
           onSkip={toggleSkip}
           onToggleWeed={toggleWeed}
           onOpenGarden={() => setView('garden')}
@@ -739,6 +943,16 @@ export default function App() {
         onToggle={toggleHana}
         onUndoOccurrence={undoHanaOccurrence}
         onAddHabit={addHanaHabit}
+        onEditHabit={editHanaHabit}
+        onPauseHabit={pauseHanaHabit}
+        onResumeHabit={resumeHanaHabit}
+        onArchiveHabit={archiveHanaHabit}
+        onRestoreHabit={restoreHanaHabit}
+        onDeleteHabit={deleteHanaHabit}
+        onPauseTracking={pauseAllHana}
+        onResumeTracking={resumeAllHana}
+        onBackfill={backfillHana}
+        onUndoBackfill={undoBackfillHana}
         onSkip={toggleSkip}
         onToggleWeed={toggleWeed}
         onOpenGarden={() => setView('garden')}
@@ -771,6 +985,8 @@ export default function App() {
       <StatsPage
         game={hanaGame}
         onBack={() => setView('hana')}
+        onRestoreHabit={restoreHanaHabit}
+        onDeleteHabit={deleteHanaHabit}
         onOpenQuest={(questId) => {
           setSelectedQuestId(questId)
           setView('questDetail')

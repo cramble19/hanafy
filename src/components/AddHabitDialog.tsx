@@ -1,5 +1,15 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
-import { Plus, Sprout, Sword, X } from 'lucide-react'
+import {
+  Archive,
+  Bell,
+  Pause,
+  Plus,
+  Save,
+  Sprout,
+  Sword,
+  Trash2,
+  X,
+} from 'lucide-react'
 import {
   CUSTOM_HABIT_LIMITS,
   formatHabitCadence,
@@ -19,6 +29,16 @@ type Props = {
   existingTitles: string[]
   onClose: () => void
   onSubmit: (input: NewHabitInput) => string | null
+  mode?: 'create' | 'edit'
+  initialValue?: NewHabitInput
+  rulesLocked?: boolean
+  contentLocked?: boolean
+  lifecycleStatus?: 'active' | 'paused' | 'archived'
+  onRequestPause?: () => void
+  onResume?: () => void
+  onArchive?: () => void
+  onRestore?: () => void
+  onDelete?: () => void
 }
 
 type ErrorField = 'title' | 'description' | 'period' | 'target' | 'form'
@@ -37,6 +57,16 @@ export function AddHabitDialog({
   existingTitles,
   onClose,
   onSubmit,
+  mode = 'create',
+  initialValue,
+  rulesLocked = false,
+  contentLocked = false,
+  lifecycleStatus = 'active',
+  onRequestPause,
+  onResume,
+  onArchive,
+  onRestore,
+  onDelete,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -48,17 +78,34 @@ export function AddHabitDialog({
   const errorId = useId()
   const periodHelpId = useId()
   const targetHelpId = useId()
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [title, setTitle] = useState(initialValue?.title ?? '')
+  const [description, setDescription] = useState(initialValue?.description ?? '')
   const [frequency, setFrequency] =
-    useState<HabitFrequency>('oncePerPeriod')
-  const [target, setTarget] = useState('2')
+    useState<HabitFrequency>(initialValue?.frequency ?? 'oncePerPeriod')
+  const [target, setTarget] = useState(String(initialValue?.target ?? 2))
   const [periodPreset, setPeriodPreset] =
-    useState<HabitPeriodPreset>('daily')
-  const [customDays, setCustomDays] = useState('3')
-  const [difficulty, setDifficulty] = useState<Difficulty>('easy')
+    useState<HabitPeriodPreset>(() => getInitialPeriodPreset(initialValue))
+  const [customDays, setCustomDays] = useState(
+    String(
+      initialValue?.periodUnit === 'weeks'
+        ? (initialValue.periodLength ?? 1) * 7
+        : initialValue?.periodLength ?? 3,
+    ),
+  )
+  const [difficulty, setDifficulty] = useState<Difficulty>(
+    initialValue?.difficulty ?? 'easy',
+  )
+  const [cue, setCue] = useState(initialValue?.cue ?? '')
+  const [reminderEnabled, setReminderEnabled] = useState(
+    Boolean(initialValue?.reminderTime),
+  )
+  const [reminderTime, setReminderTime] = useState(
+    initialValue?.reminderTime ?? '20:00',
+  )
   const [error, setError] = useState<string | null>(null)
   const [errorField, setErrorField] = useState<ErrorField | null>(null)
+  const notificationAvailability =
+    'Notification' in window ? Notification.permission : 'unsupported'
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -98,7 +145,7 @@ export function AddHabitDialog({
     onClose()
   }
 
-  const submitHabit = (event: FormEvent<HTMLFormElement>) => {
+  const submitHabit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const input: NewHabitInput = {
       title,
@@ -108,6 +155,8 @@ export function AddHabitDialog({
       periodLength,
       periodUnit,
       difficulty,
+      cue,
+      reminderTime: reminderEnabled ? reminderTime : null,
     }
     const validationError = getNewHabitValidationError(input, existingTitles)
     if (validationError) {
@@ -119,6 +168,18 @@ export function AddHabitDialog({
       if (field === 'period') periodInputRef.current?.focus()
       if (field === 'target') targetInputRef.current?.focus()
       return
+    }
+
+    if (
+      input.reminderTime &&
+      'Notification' in window &&
+      Notification.permission === 'default'
+    ) {
+      try {
+        await Notification.requestPermission()
+      } catch {
+        // The habit still saves; the permission state is explained in the UI.
+      }
     }
 
     const submitError = onSubmit(input)
@@ -182,10 +243,16 @@ export function AddHabitDialog({
             </span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">
-                {profile === 'hana' ? 'New garden quest' : 'New archive lesson'}
+                {mode === 'edit'
+                  ? profile === 'hana'
+                    ? 'Tend this quest'
+                    : 'Revise this lesson'
+                  : profile === 'hana'
+                    ? 'New garden quest'
+                    : 'New archive lesson'}
               </p>
               <h2 id={titleId} className="mt-0.5 text-2xl font-semibold text-ink">
-                Add a habit
+                {mode === 'edit' ? 'Manage habit' : 'Add a habit'}
               </h2>
             </div>
           </div>
@@ -200,8 +267,9 @@ export function AddHabitDialog({
         </div>
 
         <p id={descriptionId} className="mt-3 text-sm leading-6 text-muted">
-          Set a clear action and a flexible period. The reward arrives only
-          when the whole period goal is complete.
+          {mode === 'edit'
+            ? 'Update its wording and cue without losing the record already built.'
+            : 'Set a clear action and a flexible period. The reward arrives only when the whole period goal is complete.'}
         </p>
 
         <div className="mt-5 space-y-4">
@@ -211,7 +279,8 @@ export function AddHabitDialog({
               ref={titleInputRef}
               name="habit-title"
               required
-              autoFocus
+              autoFocus={!contentLocked}
+              disabled={contentLocked}
               value={title}
               onChange={(event) => {
                 setTitle(event.target.value)
@@ -231,6 +300,7 @@ export function AddHabitDialog({
               ref={descriptionInputRef}
               name="habit-description"
               required
+              disabled={contentLocked}
               value={description}
               onChange={(event) => {
                 setDescription(event.target.value)
@@ -258,6 +328,7 @@ export function AddHabitDialog({
                   name="habit-frequency"
                   value="oncePerPeriod"
                   checked={frequency === 'oncePerPeriod'}
+                  disabled={rulesLocked}
                   onChange={() => {
                     setFrequency('oncePerPeriod')
                     clearError()
@@ -279,6 +350,7 @@ export function AddHabitDialog({
                   name="habit-frequency"
                   value="timesPerPeriod"
                   checked={frequency === 'timesPerPeriod'}
+                  disabled={rulesLocked}
                   onChange={() => {
                     setFrequency('timesPerPeriod')
                     if (Number(target) < 2) setTarget('2')
@@ -310,6 +382,7 @@ export function AddHabitDialog({
                 type="number"
                 inputMode="numeric"
                 required
+                disabled={rulesLocked}
                 min={2}
                 max={CUSTOM_HABIT_LIMITS.target}
                 step={1}
@@ -347,6 +420,7 @@ export function AddHabitDialog({
                     name="habit-period-preset"
                     value={value}
                     checked={periodPreset === value}
+                    disabled={rulesLocked}
                     onChange={() => {
                       setPeriodPreset(value)
                       clearError()
@@ -370,6 +444,7 @@ export function AddHabitDialog({
                   type="number"
                   inputMode="numeric"
                   required
+                  disabled={rulesLocked}
                   min={1}
                   max={CUSTOM_HABIT_LIMITS.periodDays}
                   step={1}
@@ -396,6 +471,70 @@ export function AddHabitDialog({
             </span>
           </fieldset>
 
+          {rulesLocked ? (
+            <p className="rounded-control border border-border bg-surface-2 p-3 text-xs leading-5 text-muted">
+              Frequency and effort stay fixed after the first record so earlier
+              periods and rewards are never rewritten. Archive this habit and
+              add a revised one when its rhythm needs to change.
+            </p>
+          ) : null}
+
+          <fieldset className="rounded-control border border-border bg-surface-2/55 p-3">
+            <legend className="add-habit-label px-1">Cue and reminder</legend>
+            <label className="mt-1 block">
+              <span className="text-xs font-medium text-muted">After or when...</span>
+              <input
+                name="habit-cue"
+                value={cue}
+                onChange={(event) => setCue(event.target.value)}
+                maxLength={CUSTOM_HABIT_LIMITS.cue}
+                className="add-habit-input"
+                placeholder="After breakfast"
+              />
+            </label>
+            <label className="mt-3 flex min-h-11 items-center justify-between gap-3">
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                  <Bell className="size-4" aria-hidden="true" /> Browser reminder
+                </span>
+                <span className="mt-0.5 block text-xs leading-5 text-faint">
+                  Uses this habit's name and cue. It catches up when this
+                  profile is next open; completed, paused, and archived goals
+                  stay quiet. Browser permission is required.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(event) => setReminderEnabled(event.target.checked)}
+                className="size-5 accent-current"
+              />
+            </label>
+            {reminderEnabled ? (
+              <>
+                <label className="mt-3 block">
+                  <span className="text-xs font-medium text-muted">Reminder time</span>
+                  <input
+                    type="time"
+                    value={reminderTime}
+                    onChange={(event) => setReminderTime(event.target.value)}
+                    className="add-habit-input"
+                  />
+                </label>
+                {notificationAvailability === 'denied' ? (
+                  <p className="mt-2 text-xs leading-5 text-danger">
+                    Notifications are blocked in this browser. The preference
+                    will be saved, but delivery needs browser permission.
+                  </p>
+                ) : notificationAvailability === 'unsupported' ? (
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    This browser does not support habit notifications.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+          </fieldset>
+
           <fieldset>
             <legend className="add-habit-label">Objective difficulty</legend>
             <div className="mt-2 grid grid-cols-3 gap-2">
@@ -404,6 +543,7 @@ export function AddHabitDialog({
                   key={option.value}
                   type="button"
                   aria-pressed={difficulty === option.value}
+                  disabled={rulesLocked}
                   onClick={() => {
                     setDifficulty(option.value)
                     clearError()
@@ -425,6 +565,83 @@ export function AddHabitDialog({
             </div>
           </fieldset>
         </div>
+
+        {mode === 'edit' ? (
+          <section className="mt-5 border-t border-border pt-4" aria-label="Habit lifecycle">
+            <p className="add-habit-label">Tracking controls</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {lifecycleStatus === 'paused' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onResume?.()
+                    closeDialog()
+                  }}
+                  className="habit-lifecycle-button"
+                >
+                  <Plus className="size-4" aria-hidden="true" /> Resume
+                </button>
+              ) : lifecycleStatus === 'active' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeDialog()
+                    onRequestPause?.()
+                  }}
+                  className="habit-lifecycle-button"
+                >
+                  <Pause className="size-4" aria-hidden="true" /> Pause
+                </button>
+              ) : null}
+              {lifecycleStatus === 'archived' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRestore?.()
+                    closeDialog()
+                  }}
+                  className="habit-lifecycle-button"
+                >
+                  <Plus className="size-4" aria-hidden="true" /> Restore
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Archive this habit? Its history and earned rewards stay, but it will stop appearing as due.',
+                      )
+                    ) {
+                      onArchive?.()
+                      closeDialog()
+                    }
+                  }}
+                  className="habit-lifecycle-button"
+                >
+                  <Archive className="size-4" aria-hidden="true" /> Archive
+                </button>
+              )}
+            </div>
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmation = window.prompt(
+                    `This permanently deletes every record and removes earned points. Export your CSV first if you want a copy.\n\nType "${title.trim()}" to delete.`,
+                  )
+                  if (confirmation?.trim() === title.trim()) {
+                    onDelete()
+                    closeDialog()
+                  }
+                }}
+                className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-control border border-danger/35 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger"
+              >
+                <Trash2 className="size-4" aria-hidden="true" /> Delete permanently
+              </button>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className="add-habit-reward-note" aria-live="polite">
           {cadence ? (
@@ -461,13 +678,24 @@ export function AddHabitDialog({
             Cancel
           </button>
           <button type="submit" className="add-habit-submit">
-            <Plus className="size-4" aria-hidden="true" />
-            Add habit
+            {mode === 'edit' ? (
+              <Save className="size-4" aria-hidden="true" />
+            ) : (
+              <Plus className="size-4" aria-hidden="true" />
+            )}
+            {mode === 'edit' ? 'Save changes' : 'Add habit'}
           </button>
         </div>
       </form>
     </dialog>
   )
+}
+
+function getInitialPeriodPreset(input?: NewHabitInput): HabitPeriodPreset {
+  if (!input) return 'daily'
+  if (input.periodUnit === 'weeks' && input.periodLength === 1) return 'weekly'
+  if (input.periodUnit === 'days' && input.periodLength === 1) return 'daily'
+  return 'custom'
 }
 
 function getValidationField(

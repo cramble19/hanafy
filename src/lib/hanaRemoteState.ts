@@ -14,6 +14,7 @@ export type RemoteHanaSnapshot = {
   totalFlowers: number
   state: unknown
   syncedAt: string
+  revision?: number
 }
 
 export type LoadHanaStateResult =
@@ -21,10 +22,8 @@ export type LoadHanaStateResult =
   | { ok: false; error: string }
 
 export type SaveHanaStateResult =
-  | { ok: true; syncedAt: string }
-  | { ok: false; error: string }
-
-export type ClearHanaStateResult = { ok: true } | { ok: false; error: string }
+  | { ok: true; syncedAt: string; revision: number }
+  | { ok: false; error: string; conflict?: boolean }
 
 export type DbFirstStateSource = 'database' | 'cache' | 'initial'
 
@@ -78,6 +77,7 @@ export async function saveProfileStateToDb(
   }
 
   const payload = createProfileCloudSyncPayload(profileId, state, questCatalog)
+  const baseRevision = state.syncRevision ?? 0
 
   try {
     const response = await fetchImpl('/api/hana-sync', {
@@ -85,14 +85,28 @@ export async function saveProfileStateToDb(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, baseRevision }),
     })
 
     if (!response.ok) {
-      return { ok: false, error: `Save failed with ${response.status}` }
+      return {
+        ok: false,
+        error:
+          response.status === 409
+            ? 'This profile changed on another device. Reload before saving again.'
+            : `Save failed with ${response.status}`,
+        conflict: response.status === 409,
+      }
     }
 
-    return { ok: true, syncedAt: payload.syncedAt }
+    const body = (await response.json()) as unknown
+    const revision =
+      isRecord(body) &&
+      Number.isInteger(body.revision) &&
+      (body.revision as number) > baseRevision
+        ? (body.revision as number)
+        : baseRevision + 1
+    return { ok: true, syncedAt: payload.syncedAt, revision }
   } catch (error) {
     return {
       ok: false,
@@ -100,28 +114,6 @@ export async function saveProfileStateToDb(
     }
   }
 }
-
-export async function clearHanaStateFromDb(
-  profileId: HanaProfileId = 'hana',
-  fetchImpl: FetchLike = fetch,
-): Promise<ClearHanaStateResult> {
-  try {
-    const response = await fetchImpl(`/api/hana-sync?profileId=${profileId}`, {
-      method: 'DELETE',
-    })
-    if (!response.ok) {
-      return { ok: false, error: `Clear failed with ${response.status}` }
-    }
-
-    return { ok: true }
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Clear failed',
-    }
-  }
-}
-
 
 export function chooseDbFirstState({
   databaseState,
@@ -170,13 +162,17 @@ function parseSnapshotResponse(
     return undefined
   }
 
-  return {
+  const parsed = {
     profileId: expectedProfileId,
     currentDate: snapshot.currentDate,
     totalFlowers: snapshot.totalFlowers,
     state: snapshot.state,
     syncedAt: snapshot.syncedAt,
   }
+  return Number.isInteger(snapshot.revision) &&
+    (snapshot.revision as number) >= 1
+    ? { ...parsed, revision: snapshot.revision as number }
+    : parsed
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

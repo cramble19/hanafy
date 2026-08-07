@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { HanaGameState } from '@/types'
 import {
-  clearHanaStateFromDb,
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveHanaStateToDb,
@@ -171,30 +170,34 @@ describe('Hana remote state helpers', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
-  it('clears Hana state from the DB endpoint', async () => {
+  it('couples a save to the revision captured with the local snapshot', async () => {
+    const state = createState({ syncRevision: 7 })
     const fetchImpl = vi.fn(async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, revision: 8 }), { status: 200 }),
     ) as unknown as typeof fetch
 
-    const result = await clearHanaStateFromDb('hana', fetchImpl)
+    const result = await saveHanaStateToDb(state, 'hana', fetchImpl)
+    const request = vi.mocked(fetchImpl).mock.calls[0]?.[1]
+    const body = JSON.parse(String(request?.body)) as {
+      baseRevision: number
+      writeToken: string
+    }
 
-    expect(result).toEqual({ ok: true })
-    expect(fetchImpl).toHaveBeenCalledWith('/api/hana-sync?profileId=hana', {
-      method: 'DELETE',
-    })
+    expect(result).toEqual(
+      expect.objectContaining({ ok: true, revision: 8 }),
+    )
+    expect(body.baseRevision).toBe(7)
+    expect(body.writeToken).toMatch(/^sync-/)
   })
 
-  it('clears only the requested Cramble profile endpoint', async () => {
+  it('reports a revision conflict without rebasing the stale snapshot', async () => {
+    const state = createState({ syncRevision: 3 })
     const fetchImpl = vi.fn(async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      new Response(JSON.stringify({ error: 'conflict' }), { status: 409 }),
     ) as unknown as typeof fetch
 
-    const result = await clearHanaStateFromDb('cramble', fetchImpl)
-
-    expect(result).toEqual({ ok: true })
-    expect(fetchImpl).toHaveBeenCalledWith(
-      '/api/hana-sync?profileId=cramble',
-      { method: 'DELETE' },
+    await expect(saveHanaStateToDb(state, 'hana', fetchImpl)).resolves.toEqual(
+      expect.objectContaining({ ok: false, conflict: true }),
     )
   })
 })

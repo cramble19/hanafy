@@ -246,8 +246,11 @@ date. New definitions use `schedule.kind = 'periodTarget'`. See
 [Custom Habits](custom-habits.md) for validation, cadence, reset, and persistence
 rules.
 
-Dates are stored as local `YYYY-MM-DD` keys, not UTC ISO slices, to avoid
-off-by-one behavior around local midnight.
+Dates are stored as local `YYYY-MM-DD` tracking-day keys, not UTC ISO slices.
+`todayKey()` uses a fixed local 04:00 boundary: 00:00â€“03:59 belongs to the
+previous key, and 04:00 begins the next key. Date-key arithmetic remains based
+on local calendar components so daylight-saving transitions do not change the
+boundary by an elapsed-hour subtraction.
 
 Long-term quests use `longTermWindows[questId] = startedAt`. The deadline is:
 
@@ -363,13 +366,14 @@ older database snapshot is accepted.
 
 Before `startDate` exists, Home -> Hana shows `HanaStartPage`. The setup page can:
 
-- commit today as Hana's first day, which clears Hana's old DB rows and saves a
-  fresh started state
+- commit today as Hana's first day, which atomically replaces Hana's old state
+  and projections through a revision-checked POST
 - open preview mode, which lets the app be explored without database writes
 
 `saveHanaStateToDb()` rejects unstarted states, and the API route also rejects
-`POST` payloads whose `state.startDate` is missing. `DELETE /api/hana-sync`
-clears the profile snapshot and analytics rows before the first committed start.
+`POST` payloads whose `state.startDate` is missing. There is no profile-wide
+DELETE route; reset/start changes the history epoch and commits the replacement
+snapshot and analytics rows in one transaction.
 
 Saved state is normalized on load from both DB snapshots and local cache. The
 previous single `completions[date][quest]` shape and the later

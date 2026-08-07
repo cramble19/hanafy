@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react'
 import type { Difficulty, Quest } from '@/types'
 import { flowersForQuest } from '@/lib/hanaGame'
 import { HabitMomentumBadge } from '@/components/HabitMomentumBadge'
@@ -30,6 +31,8 @@ type Props = {
   skippedLabel?: string
   periodProgress?: PeriodGoalProgress
   momentum?: HabitMomentumSignal | null
+  cue?: string
+  onManage?: (id: string) => void
   onToggle: (id: string) => void
   onUndoOccurrence?: (id: string) => void
   onSkip: (id: string) => void
@@ -49,6 +52,8 @@ export function QuestCard({
   skippedLabel = 'Skipped',
   periodProgress,
   momentum,
+  cue,
+  onManage,
   onToggle,
   onUndoOccurrence,
   onSkip,
@@ -146,6 +151,11 @@ export function QuestCard({
               {meta}
             </span>
           ) : null}
+          {cue ? (
+            <span className="mt-1.5 block text-xs font-medium text-muted">
+              Cue: {cue}
+            </span>
+          ) : null}
           {momentum?.kind === 'combo' ? (
             <span className="ml-2 inline-flex align-middle">
               <HabitMomentumBadge
@@ -175,6 +185,16 @@ export function QuestCard({
       </button>
 
       <div className="flex shrink-0 flex-col items-center justify-center gap-2 py-3 pr-3">
+        {onManage ? (
+          <button
+            type="button"
+            onClick={() => onManage(quest.id)}
+            aria-label={`Manage ${quest.title}`}
+            className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border bg-surface-2 text-muted"
+          >
+            <Settings className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
         {checked ? (
           <span className="rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-medium text-ink">
             Done

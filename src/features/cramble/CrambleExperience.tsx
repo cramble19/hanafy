@@ -4,6 +4,8 @@ import { crambleQuests } from '@/data/crambleQuests'
 import {
   createCustomHabitQuest,
   getNewHabitValidationError,
+  hasSameHabitScoringRules,
+  updateCustomHabitQuest,
   type NewHabitInput,
 } from '@/lib/customHabits'
 import {
@@ -22,15 +24,29 @@ import {
   hasHanaStarted,
   parseStoredHanaState,
   recomputeTotalFlowers,
+  recordQuestCompletionForDate,
   resetProfileProgress,
   syncActiveQuestPlan,
   syncStateToDate,
   todayKey,
   toggleQuestCompletion,
+  undoQuestCompletionForDate,
   undoQuestCompletion,
 } from '@/lib/hanaGame'
 import {
-  clearHanaStateFromDb,
+  archiveHabit,
+  deleteHabitPermanently,
+  hasHabitHistory,
+  restoreHabit,
+  resumeHabitTracking,
+  resumeProfileTracking,
+  startHabitPause,
+  startProfilePause,
+  updateHabitPreferences,
+  updateHabitWording,
+  type PauseInput,
+} from '@/lib/habitLifecycle'
+import {
   chooseDbFirstState,
   loadHanaStateFromDb,
   saveProfileStateToDb,
@@ -45,8 +61,11 @@ import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
 import type { HanaGameState } from '@/types'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
+import { useHabitReminders } from '@/hooks/useHabitReminders'
+import { downloadProfileCsv } from '@/lib/habitExport'
 
 type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail'
+const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
 
 type Props = {
   onBack: () => void
@@ -56,10 +75,11 @@ export function CrambleExperience({ onBack }: Props) {
   const [view, setView] = useState<CrambleView>('tracker')
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [game, setGame] = useState<HanaGameState | null>(null)
+  useHabitReminders('cramble', game, crambleQuests)
   const gameRef = useRef<HanaGameState | null>(null)
-  const clearedUnstartedDbRef = useRef(false)
   const pendingDbSaveRef = useRef<HanaGameState | null>(null)
   const isDbSaveInFlightRef = useRef(false)
+  const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
   const hydrationSequenceRef = useRef(0)
   const localMutationRevisionRef = useRef(0)
@@ -158,14 +178,36 @@ export function CrambleExperience({ onBack }: Props) {
 
           if (!result.ok) {
             pendingDbSaveRef.current ??= stateToSave
-            setCloudSyncStatus('error')
+            syncConflictRef.current = Boolean(result.conflict)
+            setCloudSyncStatus(result.conflict ? 'conflict' : 'error')
             return
           }
 
           clearPendingCacheIfSaved(stateToSave)
+          const baseRevision = stateToSave.syncRevision ?? 0
+          const pending = pendingDbSaveRef.current as HanaGameState | null
+          if (pending && (pending.syncRevision ?? 0) === baseRevision) {
+            const revisedPending = {
+              ...pending,
+              syncRevision: result.revision,
+            }
+            pendingDbSaveRef.current = revisedPending
+            cachePendingGame(revisedPending)
+          }
+          const latest = gameRef.current
+          if (latest && (latest.syncRevision ?? 0) === baseRevision) {
+            const revisedLatest = {
+              ...latest,
+              syncRevision: result.revision,
+            }
+            gameRef.current = revisedLatest
+            setGame(revisedLatest)
+            cacheGame(revisedLatest)
+          }
           setLastCloudSyncAt(result.syncedAt)
         }
         setCloudSyncStatus('synced')
+        syncConflictRef.current = false
       } finally {
         isDbSaveInFlightRef.current = false
       }
@@ -176,7 +218,7 @@ export function CrambleExperience({ onBack }: Props) {
     })
     saveLoopPromiseRef.current = savePromise
     return savePromise
-  }, [clearPendingCacheIfSaved])
+  }, [cacheGame, cachePendingGame, clearPendingCacheIfSaved])
 
   const hydrateFromDb = useCallback(
     async (silent = false) => {
@@ -270,12 +312,15 @@ export function CrambleExperience({ onBack }: Props) {
         return true
       }
 
-      const databaseState = parseStoredHanaState(
-        JSON.stringify(remote.snapshot.state),
-        crambleQuests,
-        todayKey(),
-        CRAMBLE_QUEST_PLAN_OPTIONS,
-      )
+      const databaseState = {
+        ...parseStoredHanaState(
+          JSON.stringify(remote.snapshot.state),
+          crambleQuests,
+          todayKey(),
+          CRAMBLE_QUEST_PLAN_OPTIONS,
+        ),
+        syncRevision: remote.snapshot.revision ?? 0,
+      }
       const chosen = chooseDbFirstState({
         databaseState,
         cachedState: readCachedGame(),
@@ -289,18 +334,13 @@ export function CrambleExperience({ onBack }: Props) {
       )
 
       if (!hasHanaStarted(stateForToday)) {
-        setGame(initialState)
+        const unstartedState = {
+          ...initialState,
+          syncRevision: remote.snapshot.revision ?? 0,
+        }
+        setGame(unstartedState)
         clearCache()
         clearPendingCache()
-        if (!clearedUnstartedDbRef.current) {
-          clearedUnstartedDbRef.current = true
-          setCloudSyncStatus('syncing')
-          const clearResult = await clearHanaStateFromDb('cramble')
-          if (!clearResult.ok) {
-            setCloudSyncStatus('error')
-            return false
-          }
-        }
         setCloudSyncStatus('idle')
         return true
       }
@@ -318,6 +358,7 @@ export function CrambleExperience({ onBack }: Props) {
 
       setLastCloudSyncAt(remote.snapshot.syncedAt)
       setCloudSyncStatus('synced')
+      syncConflictRef.current = false
       return true
     },
     [
@@ -372,25 +413,42 @@ export function CrambleExperience({ onBack }: Props) {
   )
 
   const refreshFromDb = useCallback(async () => {
+    if (syncConflictRef.current) {
+      const localState = gameRef.current
+      const shouldLoadDatabase = window.confirm(
+        'This profile changed on another device. Load the database copy now? Your current local copy will be downloaded as CSV and kept as a JSON recovery backup first.',
+      )
+      if (!shouldLoadDatabase) return false
+      if (localState) {
+        downloadProfileCsv(localState, crambleQuests, 'cramble')
+        window.localStorage.setItem(
+          CRAMBLE_CONFLICT_BACKUP_KEY,
+          JSON.stringify(localState),
+        )
+      }
+      pendingDbSaveRef.current = null
+      clearPendingCache()
+      syncConflictRef.current = false
+      return hydrateFromDb(false)
+    }
     if (pendingDbSaveRef.current || isDbSaveInFlightRef.current) {
       setCloudSyncStatus('syncing')
       await flushQueuedDbSave()
       if (pendingDbSaveRef.current) return false
     }
     return hydrateFromDb(false)
-  }, [flushQueuedDbSave, hydrateFromDb])
+  }, [clearPendingCache, flushQueuedDbSave, hydrateFromDb])
 
   useEffect(() => {
     void hydrateFromDb()
   }, [hydrateFromDb])
 
   useEffect(() => {
-    if (import.meta.env.DEV) return undefined
-
     const syncToToday = () => {
       const current = gameRef.current
       if (!current || !hasHanaStarted(current)) return
       const currentDate = todayKey()
+      if (import.meta.env.DEV && current.currentDate > currentDate) return
       if (current.currentDate !== currentDate) {
         void commitGameState(
           syncStateToDate(
@@ -453,17 +511,22 @@ export function CrambleExperience({ onBack }: Props) {
   ])
 
   const startToday = async () => {
-    const startedState = syncStateToDate(
-      createStartedHanaState(todayKey()),
-      crambleQuests,
-      todayKey(),
-      CRAMBLE_QUEST_PLAN_OPTIONS,
-    )
-    clearCache()
-    clearPendingCache()
+    const startDate = todayKey()
+    const startedState = {
+      ...syncStateToDate(
+        createStartedHanaState(startDate),
+        crambleQuests,
+        startDate,
+        CRAMBLE_QUEST_PLAN_OPTIONS,
+      ),
+      syncRevision: gameRef.current?.syncRevision ?? 0,
+    }
 
     if (import.meta.env.DEV) {
       localMutationRevisionRef.current += 1
+      clearCache()
+      clearPendingCache()
+      pendingDbSaveRef.current = null
       setGame(startedState)
       cacheGame(startedState)
       setCloudSyncStatus('disabled')
@@ -476,28 +539,30 @@ export function CrambleExperience({ onBack }: Props) {
     }
 
     setCloudSyncStatus('syncing')
-    const clearResult = await clearHanaStateFromDb('cramble')
-    if (!clearResult.ok) {
-      setCloudSyncStatus('error')
-      return
-    }
-
     const saveResult = await saveProfileStateToDb(
       startedState,
       'cramble',
       crambleQuests,
     )
     if (!saveResult.ok) {
-      setCloudSyncStatus('error')
+      setCloudSyncStatus(saveResult.conflict ? 'conflict' : 'error')
       return
     }
 
     localMutationRevisionRef.current += 1
-    setGame(startedState)
-    cacheGame(startedState)
+    const syncedStartedState = {
+      ...startedState,
+      syncRevision: saveResult.revision,
+    }
+    gameRef.current = syncedStartedState
+    setGame(syncedStartedState)
+    clearCache()
     clearPendingCache()
+    pendingDbSaveRef.current = null
+    cacheGame(syncedStartedState)
     setLastCloudSyncAt(saveResult.syncedAt)
     setCloudSyncStatus('synced')
+    syncConflictRef.current = false
   }
 
   const toggleQuest = (id: string) => {
@@ -578,9 +643,131 @@ export function CrambleExperience({ onBack }: Props) {
       previous.currentDate,
       existingTitles,
     )
-    void commitGameState({
+    const withHabit: HanaGameState = {
       ...previous,
       customHabits: [...previous.customHabits, customHabit],
+    }
+    void commitGameState(
+      updateHabitPreferences(withHabit, customHabit.id, {
+        cue: input.cue ?? '',
+        reminderTime: input.reminderTime ?? null,
+      }),
+    )
+    return null
+  }
+
+  const editCrambleHabit = (habitId: string, input: NewHabitInput) => {
+    const previous = gameRef.current
+    if (!previous) return 'Cramble’s tracker is not ready.'
+    const catalog = getQuestCatalog(crambleQuests, previous)
+    const habit = previous.customHabits.find((item) => item.id === habitId)
+    const existingTitles = catalog
+      .filter((quest) => quest.id !== habitId)
+      .map((quest) => quest.title)
+    const validationError = getNewHabitValidationError(input, existingTitles)
+    if (validationError) return validationError
+    if (!habit) {
+      if (!catalog.some((quest) => quest.id === habitId)) {
+        return 'That habit is unavailable.'
+      }
+      const withWording = updateHabitWording(previous, habitId, input)
+      void commitGameState(
+        updateHabitPreferences(withWording, habitId, {
+          cue: input.cue ?? '',
+          reminderTime: input.reminderTime ?? null,
+        }),
+      )
+      return null
+    }
+    if (
+      hasHabitHistory(previous, habitId) &&
+      !hasSameHabitScoringRules(habit, input)
+    ) {
+      return 'Frequency and effort cannot change after tracking begins. Archive this habit and add its new rhythm instead.'
+    }
+    const updatedHabit = updateCustomHabitQuest(habit, input, existingTitles)
+    const withDefinition: HanaGameState = {
+      ...previous,
+      customHabits: previous.customHabits.map((item) =>
+        item.id === habitId ? updatedHabit : item,
+      ),
+    }
+    void commitGameState(
+      updateHabitPreferences(withDefinition, habitId, {
+        cue: input.cue ?? '',
+        reminderTime: input.reminderTime ?? null,
+      }),
+    )
+    return null
+  }
+
+  const pauseCrambleHabit = (habitId: string, input: PauseInput) => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(startHabitPause(previous, habitId, input))
+  }
+
+  const resumeCrambleHabit = (habitId: string) => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(resumeHabitTracking(previous, habitId))
+  }
+
+  const archiveCrambleHabit = (habitId: string) => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(archiveHabit(previous, habitId))
+  }
+
+  const restoreCrambleHabit = (habitId: string) => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(restoreHabit(previous, habitId))
+  }
+
+  const deleteCrambleHabit = (habitId: string) => {
+    const previous = gameRef.current
+    if (!previous) return
+    const purged = deleteHabitPermanently(previous, habitId)
+    const catalog = getQuestCatalog(crambleQuests, purged)
+    void commitGameState({
+      ...purged,
+      totalFlowers: recomputeTotalFlowers(purged, catalog),
+    })
+  }
+
+  const pauseAllCramble = (input: PauseInput) => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(startProfilePause(previous, input))
+  }
+
+  const resumeAllCramble = () => {
+    const previous = gameRef.current
+    if (previous) void commitGameState(resumeProfileTracking(previous))
+  }
+
+  const backfillCramble = (dateKey: string, habitId: string) => {
+    const previous = gameRef.current
+    if (!previous) return 'Cramble’s tracker is not ready.'
+    const catalog = getQuestCatalog(crambleQuests, previous)
+    const quest = catalog.find((item) => item.id === habitId)
+    if (!quest) return 'That habit is unavailable.'
+    const result = recordQuestCompletionForDate(previous, quest, dateKey)
+    if (result.error) return result.error
+    void commitGameState({
+      ...result.state,
+      totalFlowers: recomputeTotalFlowers(result.state, catalog),
+    })
+    return null
+  }
+
+  const undoBackfillCramble = (dateKey: string, habitId: string) => {
+    const previous = gameRef.current
+    if (!previous) return "Cramble's tracker is not ready."
+    const catalog = getQuestCatalog(crambleQuests, previous)
+    const quest = catalog.find((item) => item.id === habitId)
+    if (!quest) return 'That habit is unavailable.'
+    const result = undoQuestCompletionForDate(previous, quest, dateKey)
+    if (result.error) return result.error
+    void commitGameState({
+      ...result.state,
+      totalFlowers: recomputeTotalFlowers(result.state, catalog),
     })
     return null
   }
@@ -635,6 +822,8 @@ export function CrambleExperience({ onBack }: Props) {
       <CrambleLedgerPage
         game={game}
         onBack={() => setView('tracker')}
+        onRestoreHabit={restoreCrambleHabit}
+        onDeleteHabit={deleteCrambleHabit}
         onOpenQuest={(questId) => {
           setSelectedQuestId(questId)
           setView('ledgerDetail')
@@ -659,6 +848,16 @@ export function CrambleExperience({ onBack }: Props) {
       onToggle={toggleQuest}
       onUndoOccurrence={undoQuestOccurrence}
       onAddHabit={addCrambleHabit}
+      onEditHabit={editCrambleHabit}
+      onPauseHabit={pauseCrambleHabit}
+      onResumeHabit={resumeCrambleHabit}
+      onArchiveHabit={archiveCrambleHabit}
+      onRestoreHabit={restoreCrambleHabit}
+      onDeleteHabit={deleteCrambleHabit}
+      onPauseTracking={pauseAllCramble}
+      onResumeTracking={resumeAllCramble}
+      onBackfill={backfillCramble}
+      onUndoBackfill={undoBackfillCramble}
       onSkip={toggleSkip}
       onOpenObservatory={() => setView('observatory')}
       onOpenLedger={() => setView('ledger')}

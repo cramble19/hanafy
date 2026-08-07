@@ -162,6 +162,37 @@ describe('Hana cloud sync payload', () => {
       }),
     ])
   })
+
+  it('serializes unresolved paused windows as neutral projection rows', () => {
+    const state = createState({
+      currentDate: '2026-07-14',
+      activeDailyQuests: {
+        '2026-07-14': ['morning-dew'],
+      },
+      activeLongTermQuestIds: ['badminton-boss'],
+      longTermWindows: {
+        'badminton-boss': '2026-07-14',
+      },
+      trackingPauses: [
+        {
+          id: 'pause-cloud',
+          startDate: '2026-07-14',
+          endDate: '2026-07-14',
+          reason: 'illness',
+          recordedAt: '2026-07-14T08:00:00.000Z',
+        },
+      ],
+    })
+
+    const rows = createHanaCloudSyncPayload('hana', state, quests).questStatuses
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ questId: 'morning-dew', status: 'paused' }),
+        expect.objectContaining({ questId: 'badminton-boss', status: 'paused' }),
+      ]),
+    )
+  })
 })
 
 function createQuotaQuest(): Quest {

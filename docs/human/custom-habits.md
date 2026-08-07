@@ -4,6 +4,17 @@ Hana and Cramble can each add their own habits from the large **Add habit**
 button at the bottom of the tracker. A habit belongs only to the profile where
 it was created: Hana earns flowers, while Cramble earns renown.
 
+## The tracking day
+
+Today runs from **4:00 AM until 3:59 AM the following calendar day** in the
+device's local time. For example, progress recorded at 1:00 AM on Friday still
+belongs to Thursday. At 4:00 AM the app advances to Friday. The Today card shows
+a **4 AM reset** badge as a reminder.
+
+Existing historical date keys are left unchanged because older records do not
+contain the time of day needed to move them safely. The 4:00 AM rule applies to
+new tracking and future rollovers.
+
 ## Creating a habit
 
 The form asks for:
@@ -13,6 +24,8 @@ The form asks for:
 - one of two goal patterns;
 - a Daily, Weekly, or Custom schedule; and
 - an easy, medium, or hard difficulty.
+- an optional routine cue, such as **After breakfast**; and
+- an optional in-app reminder time.
 
 The two goal patterns are:
 
@@ -60,3 +73,51 @@ begin fresh.
 
 Habits created with the older daily, weekly, or 10-day form continue to work with
 their original saved history and rewards.
+
+## Editing and lifecycle
+
+Use the settings button on a habit card to manage it. Any habit can change its
+name, completion description, cue, and reminder. User-added habits can also
+change frequency, target, and difficulty until they have records or an older due
+day. Built-in scoring rules are fixed. Once history exists, scoring rules lock so
+an edit cannot rewrite old periods or rewards; archive the old rhythm and add a
+new habit instead.
+
+Any habit can be paused or archived. A pause is temporary and records a neutral
+dated interval. Archive removes the habit from Today and suppresses its reminder
+while keeping the reminder choice, Ledger history, and already-earned rewards.
+Archived habits appear in the Ledger and can be restored. Any habit can be
+deleted permanently; a typed-name confirmation removes its records, settings,
+and rewards. Built-in habits receive a database tombstone so they cannot
+reappear after reload.
+
+## Recovery and recent corrections
+
+**Pause tracking** creates a neutral break for the whole profile. A reason such
+as rest, sick, period, vacation, travel, a changed schedule, or something else
+is saved as the selected reason label. No completions, misses, weeds, or
+reminders are recorded during the break. An indefinite pause remains until the
+user presses Resume.
+
+The **Recent day** action can record or undo something during the previous
+three tracking days. It cannot change a future, paused, archived,
+pre-creation, locked, unscheduled, or passed opportunity. These recent days stay
+open rather than becoming unfinished until the correction window closes.
+
+## Reminders and export
+
+Reminder intent is stored with the profile and is suppressed as soon as the
+goal is complete, paused, or archived. The current reminder is deliberately a
+browser notification while the profile is open. If its time passes, it catches
+up the next time that profile is opened during the same tracking day. Reminder
+times from midnight through 3:59 AM belong to the tracking day that began the
+previous calendar date. Reliable closed-app delivery requires authenticated Web
+Push infrastructure.
+
+**Export CSV** downloads a profile-isolated report containing habit definitions,
+period outcomes, exact occurrence dates, lifecycle state, reminders, profile and
+habit pause intervals, and one audit row for every backfill add or undo—even
+when the final count returns to zero. Each row identifies the 04:00 local
+tracking-day boundary. It works from the local
+normalized snapshot even when offline. CSV is a portable report, while Postgres
+remains the deployed app's live saved copy.

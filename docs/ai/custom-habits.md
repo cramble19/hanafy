@@ -20,6 +20,16 @@ Technical source of truth for user-created habits shared by Hana and Cramble.
 - `src/lib/customHabits.test.ts` covers validation, same-day repetition,
   all-or-nothing rewards, undo, renewal, normalization, reset, cloud rows, and
   profile isolation.
+- `src/lib/habitLifecycle.ts` owns profile/habit pause intervals, archive and
+  restore, permanent custom-habit purge, reminder/cue settings, and correction
+  limits.
+- `src/components/PauseTrackingDialog.tsx`, `BackfillDialog.tsx`, and
+  `TodayHabitControls.tsx` expose recovery controls shared by both themes.
+- `src/lib/habitExport.ts` creates a profile-isolated, formula-safe CSV report.
+- `src/lib/logicalDay.ts` owns the fixed local 04:00 tracking-day boundary and
+  resolves after-midnight reminder instants.
+- `src/hooks/useHabitReminders.ts` delivers best-effort in-app/browser reminders
+  while the PWA is visible; it is not closed-app Web Push.
 
 ## Input contract
 
@@ -35,8 +45,44 @@ type NewHabitInput = {
   periodLength: number
   periodUnit: HabitPeriodUnit
   difficulty: 'easy' | 'medium' | 'hard'
+  cue?: string
+  reminderTime?: string | null
 }
 ```
+
+## Lifecycle contract
+
+Persisted snapshots normalize to schema version 2 and may contain
+`habitSettings`, `trackingPauses`, `backfillAudit`, `deletedHabitIds`,
+`historyEpoch`, and `syncRevision`. `habitSettings` is keyed by any built-in or
+custom quest id so reminders, pause, archive, and source wording overrides also
+work for built-ins. Permanent deletion removes raw history for either kind and
+retains a tombstone for database cleanup.
+
+Pause intervals use inclusive `startDate` / `endDate`; `endDate: null` means
+manual resume. `isHabitTrackableOnDate()` is the shared guard for planning,
+recording, backfill, and reminders. Paused and archived windows are neutral in
+analytics and excluded from success/momentum denominators.
+
+Rule edits are allowed only before a custom habit has a completion, occurrence,
+skip, or earlier presented day. After that boundary, cadence and difficulty are
+locked because the current reward engine recomputes history from the saved
+definition. Content, cue, and reminder edits remain safe. Built-in wording can
+change through `habitSettings`, but its scoring rule stays immutable. Archive
+plus a new habit is the supported path for a later scoring-rule change.
+
+Backfill accepts only the previous three logical tracking dates and rejects future,
+pre-start, pre-creation, paused, archived, unscheduled, locked, or passed dates.
+`backfillAudit` retains performed date, recorded timestamp, and delta; the same
+window supports an audited one-record undo. Statistics keep those three dates
+open until the correction window closes.
+
+`todayKey()` delegates to `getLogicalDayKey()`: 00:00 through 03:59 maps to the
+previous local date, while 04:00 begins the next tracking day. Reminder times
+before 04:00 are resolved onto the following calendar date within that same
+logical day. The reminder hook also verifies that `game.currentDate` equals the
+current logical key before delivery, preventing a stale-day send during rollover.
+Legacy completion rows have no event time, so they are never bulk-shifted.
 
 The form exposes two goal patterns:
 

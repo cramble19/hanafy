@@ -12,7 +12,15 @@ import hanaWeeds from '@/data/hanaWeeds.json'
 import springQuotes from '@/data/springQuotes.json'
 import { EveningWeeds } from '@/components/EveningWeeds'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
+import { BackfillDialog } from '@/components/BackfillDialog'
+import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestSection } from '@/components/QuestSection'
+import {
+  PausedHabitsCard,
+  ProfilePauseBanner,
+  TodayProgressCard,
+  TodayUtilityActions,
+} from '@/components/TodayHabitControls'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import {
   displayDate,
@@ -27,7 +35,19 @@ import {
   getWeedProgress,
   visibleQuestsForState,
 } from '@/lib/hanaGame'
-import type { NewHabitInput } from '@/lib/customHabits'
+import {
+  habitInputFromQuest,
+  type NewHabitInput,
+} from '@/lib/customHabits'
+import {
+  getActiveHabitPause,
+  getActiveProfilePause,
+  getHabitSettings,
+  hasHabitHistory,
+  isHabitArchivedOnDate,
+  type PauseInput,
+} from '@/lib/habitLifecycle'
+import { downloadProfileCsv } from '@/lib/habitExport'
 import {
   getHabitMomentumSignal,
   getHabitRangeStats,
@@ -58,6 +78,16 @@ type Props = {
   onToggle: (id: string) => void
   onUndoOccurrence: (id: string) => void
   onAddHabit: (input: NewHabitInput) => string | null
+  onEditHabit: (habitId: string, input: NewHabitInput) => string | null
+  onPauseHabit: (habitId: string, input: PauseInput) => void
+  onResumeHabit: (habitId: string) => void
+  onArchiveHabit: (habitId: string) => void
+  onRestoreHabit: (habitId: string) => void
+  onDeleteHabit: (habitId: string) => void
+  onPauseTracking: (input: PauseInput) => void
+  onResumeTracking: () => void
+  onBackfill: (dateKey: string, habitId: string) => string | null
+  onUndoBackfill: (dateKey: string, habitId: string) => string | null
   onSkip: (id: string) => void
   onToggleWeed: (id: string) => void
   onOpenGarden: () => void
@@ -71,6 +101,7 @@ type Props = {
     | 'syncing'
     | 'synced'
     | 'error'
+    | 'conflict'
     | 'offline'
     | 'disabled'
     | 'preview'
@@ -83,6 +114,16 @@ export function HanaPage({
   onToggle,
   onUndoOccurrence,
   onAddHabit,
+  onEditHabit,
+  onPauseHabit,
+  onResumeHabit,
+  onArchiveHabit,
+  onRestoreHabit,
+  onDeleteHabit,
+  onPauseTracking,
+  onResumeTracking,
+  onBackfill,
+  onUndoBackfill,
   onSkip,
   onToggleWeed,
   onOpenGarden,
@@ -95,6 +136,10 @@ export function HanaPage({
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
+  const [managedHabitId, setManagedHabitId] = useState<string | null>(null)
+  const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
+  const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
+  const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const catalog = getQuestCatalog(quests, game)
   const levelProgress = getLevelProgress(game.totalFlowers)
   const visibleQuests = visibleQuestsForState(catalog, game)
@@ -139,6 +184,20 @@ export function HanaPage({
   const weedCheckedIds = game.eveningWeeds?.[game.currentDate] ?? {}
   const weedProgress = getWeedProgress(game)
   const longTermCheckedIds = getLongTermCheckedIds(game)
+  const activeProfilePause = getActiveProfilePause(game)
+  const pausedHabits = catalog.filter(
+    (quest) =>
+      !isHabitArchivedOnDate(game, quest.id) &&
+      Boolean(getActiveHabitPause(game, quest.id)),
+  )
+  const managedQuest = catalog.find((habit) => habit.id === managedHabitId)
+  const cueById = Object.fromEntries(
+    catalog.map((quest) => [quest.id, getHabitSettings(game, quest.id).cue]),
+  )
+  const todayTotal = visibleQuests.daily.length + visibleQuests.longTerm.length
+  const todayComplete =
+    Object.values(dailyCheckedIds).filter(Boolean).length +
+    Object.values(longTermCheckedIds).filter(Boolean).length
   const springArc = getSpringArcProgress(game)
   const seasonalQuote = getSeasonalQuote(game.currentDate)
   const showDevControls = import.meta.env.DEV
@@ -218,6 +277,60 @@ export function HanaPage({
         <p className="mt-3 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
       </header>
 
+      <TodayProgressCard
+        profile="hana"
+        complete={todayComplete}
+        total={todayTotal}
+      />
+      {activeProfilePause ? (
+        <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
+      ) : null}
+      <TodayUtilityActions
+        isPaused={Boolean(activeProfilePause)}
+        onPause={() => setIsPauseTrackingOpen(true)}
+        onBackfill={() => setIsBackfillOpen(true)}
+        onExport={() => downloadProfileCsv(game, quests, 'hana')}
+      />
+
+      {!activeProfilePause ? (
+        <main className="mt-6 space-y-8">
+          <QuestSection
+            title="Daily Quests"
+            quests={visibleQuests.daily}
+            checkedIds={dailyCheckedIds}
+            skippedIds={skippedIds}
+            canSkip={skipProgress.remaining > 0}
+            metaById={dailyMetaById}
+            periodProgressById={periodProgressById}
+            momentumById={momentumById}
+            cueById={cueById}
+            onManage={setManagedHabitId}
+            onToggle={onToggle}
+            onUndoOccurrence={onUndoOccurrence}
+            onSkip={onSkip}
+          />
+          <QuestSection
+            title="Long Term Quests"
+            quests={visibleQuests.longTerm}
+            checkedIds={longTermCheckedIds}
+            skippedIds={skippedIds}
+            canSkip={skipProgress.remaining > 0}
+            metaById={longTermMetaById}
+            momentumById={momentumById}
+            cueById={cueById}
+            onManage={setManagedHabitId}
+            onToggle={onToggle}
+            onSkip={onSkip}
+          />
+        </main>
+      ) : null}
+
+      <PausedHabitsCard
+        habits={pausedHabits}
+        onResume={onResumeHabit}
+        onManage={setManagedHabitId}
+      />
+
       <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
@@ -272,31 +385,7 @@ export function HanaPage({
         />
       </section>
 
-      <main className="space-y-8">
-        <QuestSection
-          title="Daily Quests"
-          quests={visibleQuests.daily}
-          checkedIds={dailyCheckedIds}
-          skippedIds={skippedIds}
-          canSkip={skipProgress.remaining > 0}
-          metaById={dailyMetaById}
-          periodProgressById={periodProgressById}
-          momentumById={momentumById}
-          onToggle={onToggle}
-          onUndoOccurrence={onUndoOccurrence}
-          onSkip={onSkip}
-        />
-        <QuestSection
-          title="Long Term Quests"
-          quests={visibleQuests.longTerm}
-          checkedIds={longTermCheckedIds}
-          skippedIds={skippedIds}
-          canSkip={skipProgress.remaining > 0}
-          metaById={longTermMetaById}
-          momentumById={momentumById}
-          onToggle={onToggle}
-          onSkip={onSkip}
-        />
+      <main className="mt-8 space-y-8">
         <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
           <span className="font-medium text-ink">Weekly skips:</span>{' '}
           {skipProgress.remaining}/{skipProgress.limit} left
@@ -304,14 +393,16 @@ export function HanaPage({
             Skips reset every Sunday. A skipped quest gives 0 flowers.
           </p>
         </div>
-        <EveningWeeds
-          weeds={eveningWeeds}
-          checkedIds={weedCheckedIds}
-          weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
-          weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
-          wiltedFlowers={weedProgress.wiltedFlowers}
-          onToggle={onToggleWeed}
-        />
+        {!activeProfilePause ? (
+          <EveningWeeds
+            weeds={eveningWeeds}
+            checkedIds={weedCheckedIds}
+            weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
+            weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
+            wiltedFlowers={weedProgress.wiltedFlowers}
+            onToggle={onToggleWeed}
+          />
+        ) : null}
       </main>
 
       <section className="spring-arc-card mt-10 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
@@ -453,6 +544,62 @@ export function HanaPage({
           existingTitles={catalog.map((quest) => quest.title)}
           onClose={() => setIsAddHabitOpen(false)}
           onSubmit={onAddHabit}
+        />
+      ) : null}
+      {managedQuest ? (
+        <AddHabitDialog
+          profile="hana"
+          mode="edit"
+          initialValue={habitInputFromQuest(managedQuest, {
+            cue: getHabitSettings(game, managedQuest.id).cue,
+            reminderTime: getHabitSettings(game, managedQuest.id).reminder.time,
+          })}
+          rulesLocked={!managedQuest.custom || hasHabitHistory(game, managedQuest.id)}
+          contentLocked={false}
+          lifecycleStatus={
+            isHabitArchivedOnDate(game, managedQuest.id)
+              ? 'archived'
+              : getActiveHabitPause(game, managedQuest.id)
+                ? 'paused'
+                : 'active'
+          }
+          existingTitles={catalog
+            .filter((quest) => quest.id !== managedQuest.id)
+            .map((quest) => quest.title)}
+          onClose={() => setManagedHabitId(null)}
+          onSubmit={(input) => onEditHabit(managedQuest.id, input)}
+          onRequestPause={() => setPauseHabitId(managedQuest.id)}
+          onResume={() => onResumeHabit(managedQuest.id)}
+          onArchive={() => onArchiveHabit(managedQuest.id)}
+          onRestore={() => onRestoreHabit(managedQuest.id)}
+          onDelete={() => onDeleteHabit(managedQuest.id)}
+        />
+      ) : null}
+      {isPauseTrackingOpen ? (
+        <PauseTrackingDialog
+          profile="hana"
+          currentDate={game.currentDate}
+          onClose={() => setIsPauseTrackingOpen(false)}
+          onSubmit={onPauseTracking}
+        />
+      ) : null}
+      {pauseHabitId ? (
+        <PauseTrackingDialog
+          profile="hana"
+          currentDate={game.currentDate}
+          habitTitle={catalog.find((quest) => quest.id === pauseHabitId)?.title}
+          onClose={() => setPauseHabitId(null)}
+          onSubmit={(input) => onPauseHabit(pauseHabitId, input)}
+        />
+      ) : null}
+      {isBackfillOpen ? (
+        <BackfillDialog
+          profile="hana"
+          game={game}
+          baseQuests={quests}
+          onClose={() => setIsBackfillOpen(false)}
+          onRecord={onBackfill}
+          onUndo={onUndoBackfill}
         />
       ) : null}
     </div>
@@ -597,6 +744,9 @@ function getCloudSyncLabel(
   }
   if (status === 'error') {
     return 'Database save failed. Refresh will retry the latest local garden first.'
+  }
+  if (status === 'conflict') {
+    return 'A newer database garden exists. Export is automatic when you press sync to review it.'
   }
   if (status === 'offline') {
     return 'Offline. Showing the saved cache until database returns.'

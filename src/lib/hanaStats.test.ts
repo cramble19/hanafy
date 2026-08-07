@@ -47,11 +47,11 @@ describe('Hana stats', () => {
     expect(stats.totalShown).toBe(4)
     expect(stats.completed).toBe(1)
     expect(stats.skipped).toBe(1)
-    expect(stats.missed).toBe(1)
-    expect(stats.open).toBe(1)
-    expect(stats.completionRate).toBe(25)
+    expect(stats.missed).toBe(0)
+    expect(stats.open).toBe(2)
+    expect(stats.completionRate).toBe(100)
     expect(stats.skipRate).toBe(25)
-    expect(stats.needsLove[0]?.questId).toBe('sun-catch')
+    expect(stats.needsLove).toHaveLength(0)
     expect(stats.weedStats[0]).toEqual({ weedId: 'scroll-fog', checked: 2 })
   })
 
@@ -210,9 +210,9 @@ describe('Hana stats', () => {
         rangeStart: '2026-08-01',
         activeDays: 6,
         completedPeriods: 2,
-        missedPeriods: 3,
-        decidedPeriods: 5,
-        successRate: 40,
+        missedPeriods: 1,
+        decidedPeriods: 3,
+        successRate: 67,
         totalRecords: 2,
         weeklyPace: 2.3,
       }),
@@ -220,8 +220,8 @@ describe('Hana stats', () => {
     expect(stats?.periods.map(({ status }) => status)).toEqual([
       'missed',
       'completed',
-      'missed',
-      'missed',
+      'open',
+      'open',
       'completed',
       'open',
     ])
@@ -436,16 +436,16 @@ describe('Hana stats', () => {
     expect(
       stats?.periods.map(({ completed, status }) => [completed, status]),
     ).toEqual([
-      [1, 'missed'],
+      [1, 'open'],
       [2, 'completed'],
     ])
     expect(stats?.days.map(({ count }) => count)).toEqual([1, 2])
     expect(stats).toEqual(
       expect.objectContaining({
         completedPeriods: 1,
-        missedPeriods: 1,
+        missedPeriods: 0,
         totalRecords: 3,
-        successRate: 50,
+        successRate: 100,
         nextDueDate: '2026-08-07',
       }),
     )
@@ -613,6 +613,37 @@ describe('Hana stats', () => {
         label: 'Rekindle',
       }),
     )
+  })
+
+  it('keeps weekly pace stable while a habit remains archived', () => {
+    const quest = createPeriodTargetQuest({
+      id: 'archived-daily',
+      target: 1,
+      createdDate: '2026-08-01',
+    })
+    const state = createState({
+      startDate: '2026-08-01',
+      currentDate: '2026-08-10',
+      activeDailyQuests: {
+        '2026-08-01': [quest.id],
+      },
+      habitOccurrences: {
+        '2026-08-01': { [quest.id]: 1 },
+      },
+      habitSettings: {
+        [quest.id]: {
+          cue: '',
+          reminder: { enabled: false, time: null },
+          archivedAt: '2026-08-02',
+          pauses: [],
+        },
+      },
+    })
+
+    const stats = getHabitRangeStats(state, [quest], 'hana', quest.id, 'all')
+
+    expect(stats?.activeDays).toBe(1)
+    expect(stats?.weeklyPace).toBe(7)
   })
 })
 

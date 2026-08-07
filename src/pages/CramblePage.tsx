@@ -12,7 +12,15 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
+import { BackfillDialog } from '@/components/BackfillDialog'
+import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestSection } from '@/components/QuestSection'
+import {
+  PausedHabitsCard,
+  ProfilePauseBanner,
+  TodayProgressCard,
+  TodayUtilityActions,
+} from '@/components/TodayHabitControls'
 import { SunMark } from '@/components/icons/SunMark'
 import crambleChronicles from '@/data/crambleChronicles.json'
 import { crambleQuests } from '@/data/crambleQuests'
@@ -20,7 +28,19 @@ import {
   getCrambleChapterProgress,
   getCrambleJourneyProgress,
 } from '@/lib/crambleGame'
-import type { NewHabitInput } from '@/lib/customHabits'
+import {
+  habitInputFromQuest,
+  type NewHabitInput,
+} from '@/lib/customHabits'
+import {
+  getActiveHabitPause,
+  getActiveProfilePause,
+  getHabitSettings,
+  hasHabitHistory,
+  isHabitArchivedOnDate,
+  type PauseInput,
+} from '@/lib/habitLifecycle'
+import { downloadProfileCsv } from '@/lib/habitExport'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import {
   displayDate,
@@ -45,6 +65,7 @@ export type CrambleSyncStatus =
   | 'syncing'
   | 'synced'
   | 'error'
+  | 'conflict'
   | 'offline'
   | 'disabled'
 
@@ -58,6 +79,16 @@ type Props = {
   onToggle: (id: string) => void
   onUndoOccurrence: (id: string) => void
   onAddHabit: (input: NewHabitInput) => string | null
+  onEditHabit: (habitId: string, input: NewHabitInput) => string | null
+  onPauseHabit: (habitId: string, input: PauseInput) => void
+  onResumeHabit: (habitId: string) => void
+  onArchiveHabit: (habitId: string) => void
+  onRestoreHabit: (habitId: string) => void
+  onDeleteHabit: (habitId: string) => void
+  onPauseTracking: (input: PauseInput) => void
+  onResumeTracking: () => void
+  onBackfill: (dateKey: string, habitId: string) => string | null
+  onUndoBackfill: (dateKey: string, habitId: string) => string | null
   onSkip: (id: string) => void
   onOpenObservatory: () => void
   onOpenLedger: () => void
@@ -76,6 +107,16 @@ export function CramblePage({
   onToggle,
   onUndoOccurrence,
   onAddHabit,
+  onEditHabit,
+  onPauseHabit,
+  onResumeHabit,
+  onArchiveHabit,
+  onRestoreHabit,
+  onDeleteHabit,
+  onPauseTracking,
+  onResumeTracking,
+  onBackfill,
+  onUndoBackfill,
   onSkip,
   onOpenObservatory,
   onOpenLedger,
@@ -87,6 +128,10 @@ export function CramblePage({
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
+  const [managedHabitId, setManagedHabitId] = useState<string | null>(null)
+  const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
+  const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
+  const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const levelProgress = getLevelProgress(game.totalFlowers)
@@ -132,6 +177,20 @@ export function CramblePage({
   const longTermCheckedIds = getLongTermCheckedIds(game)
   const skippedIds = getSkippedIdsForState(catalog, game)
   const skipProgress = getSkipProgress(game)
+  const activeProfilePause = getActiveProfilePause(game)
+  const pausedHabits = catalog.filter(
+    (quest) =>
+      !isHabitArchivedOnDate(game, quest.id) &&
+      Boolean(getActiveHabitPause(game, quest.id)),
+  )
+  const managedQuest = catalog.find((habit) => habit.id === managedHabitId)
+  const cueById = Object.fromEntries(
+    catalog.map((quest) => [quest.id, getHabitSettings(game, quest.id).cue]),
+  )
+  const todayTotal = visibleQuests.daily.length + visibleQuests.longTerm.length
+  const todayComplete =
+    Object.values(dailyCheckedIds).filter(Boolean).length +
+    Object.values(longTermCheckedIds).filter(Boolean).length
   const line = getChronicleLine(game.currentDate)
   const showDevControls = import.meta.env.DEV
   const dailyMetaById = visibleQuests.daily.reduce<Record<string, string>>(
@@ -228,6 +287,74 @@ export function CramblePage({
         </p>
       </header>
 
+      <TodayProgressCard
+        profile="cramble"
+        complete={todayComplete}
+        total={todayTotal}
+      />
+      {activeProfilePause ? (
+        <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
+      ) : null}
+      <TodayUtilityActions
+        isPaused={Boolean(activeProfilePause)}
+        onPause={() => setIsPauseTrackingOpen(true)}
+        onBackfill={() => setIsBackfillOpen(true)}
+        onExport={() => downloadProfileCsv(game, crambleQuests, 'cramble')}
+      />
+
+      {!activeProfilePause ? (
+        <main className="relative z-10 mt-6 space-y-8">
+          <QuestSection
+            title="Daily Lessons"
+            quests={visibleQuests.daily}
+            checkedIds={dailyCheckedIds}
+            skippedIds={skippedIds}
+            canSkip={skipProgress.remaining > 0}
+            metaById={dailyMetaById}
+            periodProgressById={periodProgressById}
+            momentumById={momentumById}
+            cueById={cueById}
+            onManage={setManagedHabitId}
+            variant="archive"
+            rewardSingular="renown"
+            rewardPlural="renown"
+            completionVerb="recorded"
+            skipLabel="Pass"
+            skippedLabel="Passed"
+            onToggle={onToggle}
+            onUndoOccurrence={onUndoOccurrence}
+            onSkip={onSkip}
+          />
+          {visibleQuests.longTerm.length > 0 ? (
+            <QuestSection
+              title="Long Studies"
+              quests={visibleQuests.longTerm}
+              checkedIds={longTermCheckedIds}
+              skippedIds={skippedIds}
+              canSkip={skipProgress.remaining > 0}
+              metaById={longTermMetaById}
+              momentumById={momentumById}
+              cueById={cueById}
+              onManage={setManagedHabitId}
+              variant="archive"
+              rewardSingular="renown"
+              rewardPlural="renown"
+              completionVerb="recorded"
+              skipLabel="Pass"
+              skippedLabel="Passed"
+              onToggle={onToggle}
+              onSkip={onSkip}
+            />
+          ) : null}
+        </main>
+      ) : null}
+
+      <PausedHabitsCard
+        habits={pausedHabits}
+        onResume={onResumeHabit}
+        onManage={setManagedHabitId}
+      />
+
       <section className="cramble-codex-card relative z-10 mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-faint">
@@ -285,46 +412,7 @@ export function CramblePage({
         />
       </section>
 
-      <main className="relative z-10 space-y-8">
-        <QuestSection
-          title="Daily Lessons"
-          quests={visibleQuests.daily}
-          checkedIds={dailyCheckedIds}
-          skippedIds={skippedIds}
-          canSkip={skipProgress.remaining > 0}
-          metaById={dailyMetaById}
-          periodProgressById={periodProgressById}
-          momentumById={momentumById}
-          variant="archive"
-          rewardSingular="renown"
-          rewardPlural="renown"
-          completionVerb="recorded"
-          skipLabel="Pass"
-          skippedLabel="Passed"
-          onToggle={onToggle}
-          onUndoOccurrence={onUndoOccurrence}
-          onSkip={onSkip}
-        />
-        {visibleQuests.longTerm.length > 0 ? (
-          <QuestSection
-            title="Long Studies"
-            quests={visibleQuests.longTerm}
-            checkedIds={longTermCheckedIds}
-            skippedIds={skippedIds}
-            canSkip={skipProgress.remaining > 0}
-            metaById={longTermMetaById}
-            momentumById={momentumById}
-            variant="archive"
-            rewardSingular="renown"
-            rewardPlural="renown"
-            completionVerb="recorded"
-            skipLabel="Pass"
-            skippedLabel="Passed"
-            onToggle={onToggle}
-            onSkip={onSkip}
-          />
-        ) : null}
-
+      <main className="relative z-10 mt-8 space-y-8">
         <div className="cramble-codex-card rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
           <span className="font-medium text-ink">Weekly passes:</span>{' '}
           {skipProgress.remaining}/{skipProgress.limit} left
@@ -470,6 +558,62 @@ export function CramblePage({
           onSubmit={onAddHabit}
         />
       ) : null}
+      {managedQuest ? (
+        <AddHabitDialog
+          profile="cramble"
+          mode="edit"
+          initialValue={habitInputFromQuest(managedQuest, {
+            cue: getHabitSettings(game, managedQuest.id).cue,
+            reminderTime: getHabitSettings(game, managedQuest.id).reminder.time,
+          })}
+          rulesLocked={!managedQuest.custom || hasHabitHistory(game, managedQuest.id)}
+          contentLocked={false}
+          lifecycleStatus={
+            isHabitArchivedOnDate(game, managedQuest.id)
+              ? 'archived'
+              : getActiveHabitPause(game, managedQuest.id)
+                ? 'paused'
+                : 'active'
+          }
+          existingTitles={catalog
+            .filter((quest) => quest.id !== managedQuest.id)
+            .map((quest) => quest.title)}
+          onClose={() => setManagedHabitId(null)}
+          onSubmit={(input) => onEditHabit(managedQuest.id, input)}
+          onRequestPause={() => setPauseHabitId(managedQuest.id)}
+          onResume={() => onResumeHabit(managedQuest.id)}
+          onArchive={() => onArchiveHabit(managedQuest.id)}
+          onRestore={() => onRestoreHabit(managedQuest.id)}
+          onDelete={() => onDeleteHabit(managedQuest.id)}
+        />
+      ) : null}
+      {isPauseTrackingOpen ? (
+        <PauseTrackingDialog
+          profile="cramble"
+          currentDate={game.currentDate}
+          onClose={() => setIsPauseTrackingOpen(false)}
+          onSubmit={onPauseTracking}
+        />
+      ) : null}
+      {pauseHabitId ? (
+        <PauseTrackingDialog
+          profile="cramble"
+          currentDate={game.currentDate}
+          habitTitle={catalog.find((quest) => quest.id === pauseHabitId)?.title}
+          onClose={() => setPauseHabitId(null)}
+          onSubmit={(input) => onPauseHabit(pauseHabitId, input)}
+        />
+      ) : null}
+      {isBackfillOpen ? (
+        <BackfillDialog
+          profile="cramble"
+          game={game}
+          baseQuests={crambleQuests}
+          onClose={() => setIsBackfillOpen(false)}
+          onRecord={onBackfill}
+          onUndo={onUndoBackfill}
+        />
+      ) : null}
     </div>
   )
 }
@@ -547,6 +691,7 @@ function getSyncLabel(
   if (status === 'loading') return 'Opening the latest chronicle from the database...'
   if (status === 'syncing') return 'Recording the newest page in the database...'
   if (status === 'error') return 'The database could not record this page. Refresh will retry it first.'
+  if (status === 'conflict') return 'A newer chronicle exists. Press sync to back up this copy and load it safely.'
   if (status === 'offline') return 'Offline. Showing Cramble’s saved cache for now.'
   if (status === 'synced' && lastCloudSyncAt) {
     return `Chronicle synchronized ${formatSyncTime(lastCloudSyncAt)}.`

@@ -27,6 +27,12 @@ endpoint and generic payload/save helpers support both profiles.
 
 The controllers must not share state, caches, or pending/in-flight refs.
 
+Lifecycle version 2 fields (`habitSettings`, profile/habit pause intervals,
+archive state, reminder intent, deletion tombstones, history epoch, sync
+revision, and backfill audit) live inside the same JSONB snapshot and therefore
+use the serialized cache/pending/POST flow. Legacy snapshots normalize to safe
+active/default lifecycle collections.
+
 ## Relevant files
 
 - `src/lib/hanaCloudSync.ts`
@@ -38,16 +44,23 @@ The controllers must not share state, caches, or pending/in-flight refs.
     equals the requested profile.
   - `saveProfileStateToDb(state, profileId, catalog)` is the generic save path.
   - `saveHanaStateToDb()` supplies Hana's catalog for existing code.
-  - `clearHanaStateFromDb(profileId)` deletes only one profile.
-- `api/hana-sync.ts` serves GET, POST, DELETE, and OPTIONS.
+- `api/hana-sync.ts` serves GET, POST, and OPTIONS. There is deliberately no
+  profile-wide DELETE route.
+
+POST builds one non-interactive Postgres transaction containing snapshot CAS,
+tombstone/history-epoch cleanup, refresh of current unresolved rows, weed
+replacement, and projection upserts. A unique write token guards every
+projection statement so a losing concurrent request is a complete no-op.
 
 ## Start and hydration flow
 
 Both profiles are consent-first. A POST requires `state.startDate` to be a string.
 
-Hana can explore without saving, then **Start Health Overhaul** clears and seeds
+Hana can explore without saving, then **Start Health Overhaul** atomically seeds
 only `profileId=hana`. Cramble has no preview; after the client gate,
-**Begin the First Oath** clears and seeds only `profileId=cramble`.
+**Begin the First Oath** atomically seeds only `profileId=cramble`. If an old
+unstarted snapshot exists, the client preserves its server revision and replaces
+it through POST CAS instead of deleting first.
 
 Production hydration:
 
@@ -72,10 +85,11 @@ controller also stores the newest unsaved full state under that profile's
 pending key and runs one save at a time.
 
 On reconnect or a later reload, the marked snapshot is normalized to today and
-uploaded before accepting an older database snapshot. A successful save clears
-the pending key only if it still matches the state just saved, so a newer tap
-cannot be cleared by an older request. This is a last-write snapshot retry, not
-an operation-by-operation merge log.
+uploaded against the `syncRevision` captured with that exact pending state. A
+successful save advances the current and any newer queued state to the returned
+revision, and clears the pending key only if it still matches the state just
+saved. A 409 never silently rebases stale local state: explicit conflict recovery
+exports CSV, stores a JSON backup, and then loads the database copy.
 
 Hydration uses a sequence and local-mutation revision guard. A GET that started
 before a newer local change or a newer hydration cannot overwrite the current UI.
@@ -96,6 +110,8 @@ state. Each controller has its own handlers.
 ```ts
 type HanaCloudSyncPayload = {
   profileId: 'hana' | 'cramble'
+  baseRevision: number
+  writeToken: string
   syncedAt: string
   currentDate: string
   totalFlowers: number
@@ -120,7 +136,8 @@ period:
 - `period_key` and `window_start`: inclusive period start;
 - `due_date`: inclusive period end;
 - `date_key`: `null`;
-- `status`: completed only after the target count is reached;
+- `status`: `completed` only after the target count is reached; paused or
+  archived unresolved windows use `paused` and are neutral;
 - `flowers_earned` for `periodTarget`: zero while partial, then one difficulty
   reward when the full target is complete;
 - `flowers_earned` for a legacy `quota`: its original per-occurrence reward,
@@ -130,16 +147,13 @@ This makes once-or-several-times goals in configurable day/week windows one
 reporting outcome rather than a collection of false daily misses. Partial
 progress has no penalty. The full dated boolean and counted occurrence history
 remains in the snapshot. Old snapshots without `habitOccurrences` normalize it
-to an empty record, while legacy quota history keeps its original meaning. No
-database migration is required.
+to an empty record, while legacy quota history keeps its original meaning. The
+API applies additive migrations for revision, write-token, history-epoch, and
+paused-status support.
 
 The API rejects the whole POST if the profile is invalid, `startDate` is missing,
 or any quest/weed row is malformed or carries a different profile. Inserts derive
 `profile_id` from the top-level payload rather than trusting child rows.
-
-`DELETE /api/hana-sync?profileId=hana|cramble`
-
-- Deletes snapshot, quest rows, and weed rows only for the requested profile.
 
 All API responses send `Cache-Control: no-store` so profile snapshots are not
 stored by intermediary/browser HTTP caches. The PWA service worker also leaves
@@ -155,6 +169,8 @@ hana_state_snapshots (
   current_date_key text not null,
   total_flowers integer not null,
   state jsonb not null,
+  revision integer not null,
+  write_token text not null,
   synced_at timestamptz not null
 )
 ```
@@ -168,8 +184,9 @@ hana_quest_statuses (
   date_key text,
   window_start text,
   due_date text,
-  status text not null,
+  status text not null, -- pending|completed|skipped|paused
   flowers_earned integer not null,
+  history_epoch text not null,
   synced_at timestamptz not null,
   primary key (profile_id, quest_group, quest_id, period_key)
 )
@@ -186,13 +203,10 @@ hana_weed_statuses (
 )
 ```
 
-Table names are historical; `profile_id` is the ownership boundary. Existing
-deployments require no table migration for Cramble.
-
-Snapshot and analytics upserts are not wrapped in one database transaction. A
-failure after the snapshot write can leave analytics rows temporarily behind the
-snapshot; the next full save repairs upserted rows. Treat transactional writes as
-future hardening.
+Table names are historical; `profile_id` is the data-partition boundary. The API
+adds missing columns/paused-status constraints to existing deployments and wraps
+each accepted snapshot plus its projection changes in one transaction. Revision
+CAS rejects a full snapshot whose captured base is stale.
 
 ## Environment and deployment
 
@@ -207,5 +221,5 @@ values prevent accidental state mixing but are publicly selectable API inputs.
 Cramble's `hana` password is client-side and does not protect this endpoint.
 
 Before public or sensitive deployment, add server-validated sessions, bind each
-session to one profile, authorize GET/POST/DELETE, protect mutating requests,
+session to one profile, authorize GET/POST, protect mutating requests,
 avoid caching responses, and move secrets out of client code.

@@ -59,6 +59,52 @@ export type Quest = {
   createdDate?: string
 }
 
+export type PauseReason =
+  | 'rest'
+  | 'illness'
+  | 'period'
+  | 'vacation'
+  | 'travel'
+  | 'overwhelmed'
+  | 'scheduleChange'
+  | 'other'
+
+export type TrackingPause = {
+  id: string
+  /** First neutral tracking day; tracking days run from 04:00 to 03:59 local time. */
+  startDate: string
+  /** Last neutral tracking day. Null means paused until manually resumed. */
+  endDate: string | null
+  reason: PauseReason
+  /** Private, optional context. Kept short because it may contain health data. */
+  note?: string
+  recordedAt: string
+}
+
+export type HabitReminder = {
+  enabled: boolean
+  /** Local wall-clock time in HH:mm. */
+  time: string | null
+}
+
+export type HabitSettings = {
+  /** Optional wording overrides for source-defined habits. */
+  titleOverride?: string
+  descriptionOverride?: string
+  cue: string
+  reminder: HabitReminder
+  archivedAt: string | null
+  pauses: TrackingPause[]
+}
+
+export type HabitBackfillEvent = {
+  id: string
+  habitId: string
+  performedDate: string
+  recordedAt: string
+  delta: 1 | -1
+}
+
 export type CustomHabitQuest = Quest & {
   custom: true
   createdDate: string
@@ -76,10 +122,23 @@ export type GardenWeed = {
 }
 
 export type GameState = {
+  schemaVersion?: 2
   /** Null means this profile has not started its tracker yet. */
   startDate: string | null
   currentDate: string
   customHabits: CustomHabitQuest[]
+  /** Tombstones for deleted built-in habits so they cannot reappear after reload. */
+  deletedHabitIds?: string[]
+  /** Changes only when all progress is reset; used to retire old DB projections. */
+  historyEpoch?: string
+  /** Server revision this full snapshot was based on; persisted with offline work. */
+  syncRevision?: number
+  /** Per-habit lifecycle and reminder intent, shared by built-in and custom habits. */
+  habitSettings?: Record<string, HabitSettings>
+  /** Profile-wide neutral intervals. */
+  trackingPauses?: TrackingPause[]
+  /** Provenance for corrections entered after their performed date. */
+  backfillAudit?: HabitBackfillEvent[]
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>

@@ -1,4 +1,4 @@
-import type { CustomHabitQuest, Difficulty, QuestSchedule } from '@/types'
+import type { CustomHabitQuest, Difficulty, Quest, QuestSchedule } from '@/types'
 import { PERIOD_TARGET_LIMITS } from '@/lib/hanaGame'
 
 export type HabitProfile = 'hana' | 'cramble'
@@ -14,6 +14,8 @@ export type NewHabitInput = {
   periodLength: number
   periodUnit: HabitPeriodUnit
   difficulty: Difficulty
+  cue?: string
+  reminderTime?: string | null
 }
 
 export const CUSTOM_HABIT_LIMITS = {
@@ -22,6 +24,7 @@ export const CUSTOM_HABIT_LIMITS = {
   target: PERIOD_TARGET_LIMITS.target,
   periodDays: PERIOD_TARGET_LIMITS.periodDays,
   periodWeeks: 52,
+  cue: 100,
 } as const
 
 export function resolveHabitPeriodPreset(
@@ -53,6 +56,15 @@ export function getNewHabitValidationError(
   }
   if (!['easy', 'medium', 'hard'].includes(input.difficulty)) {
     return 'Choose an objective difficulty.'
+  }
+  if ((input.cue?.trim().length ?? 0) > CUSTOM_HABIT_LIMITS.cue) {
+    return `Keep the cue within ${CUSTOM_HABIT_LIMITS.cue} characters.`
+  }
+  if (
+    input.reminderTime &&
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.reminderTime)
+  ) {
+    return 'Choose a valid reminder time.'
   }
   if (!['oncePerPeriod', 'timesPerPeriod'].includes(input.frequency)) {
     return 'Choose a goal pattern.'
@@ -87,6 +99,66 @@ export function getNewHabitValidationError(
     return 'A habit with this name already exists in this profile.'
   }
   return null
+}
+
+export function updateCustomHabitQuest(
+  quest: CustomHabitQuest,
+  input: NewHabitInput,
+  existingTitles: string[] = [],
+): CustomHabitQuest {
+  const validationError = getNewHabitValidationError(input, existingTitles)
+  if (validationError) throw new Error(validationError)
+  return {
+    ...quest,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    difficulty: input.difficulty,
+    schedule: createSchedule(input),
+  }
+}
+
+export function habitInputFromQuest(
+  quest: Quest,
+  preferences: { cue?: string; reminderTime?: string | null } = {},
+): NewHabitInput {
+  const schedule = quest.schedule ?? { kind: 'daily' as const }
+  const target =
+    schedule.kind === 'periodTarget' || schedule.kind === 'quota'
+      ? schedule.target
+      : 1
+  const periodDays = quest.group === 'longTerm'
+    ? quest.durationDays ?? 7
+    : schedule.kind === 'periodTarget' || schedule.kind === 'quota'
+      ? schedule.periodDays
+      : 1
+  const isWeeklyPeriod =
+    schedule.kind === 'weekly' ||
+    periodDays === 7 &&
+      (quest.group === 'longTerm' ||
+        ((schedule.kind === 'periodTarget' || schedule.kind === 'quota') &&
+          schedule.anchor === 'calendarWeek'))
+
+  return {
+    title: quest.title,
+    description: quest.description,
+    frequency: target === 1 ? 'oncePerPeriod' : 'timesPerPeriod',
+    target,
+    periodLength: isWeeklyPeriod ? 1 : periodDays,
+    periodUnit: isWeeklyPeriod ? 'weeks' : 'days',
+    difficulty: quest.difficulty,
+    cue: preferences.cue ?? '',
+    reminderTime: preferences.reminderTime ?? null,
+  }
+}
+
+export function hasSameHabitScoringRules(
+  quest: CustomHabitQuest,
+  input: NewHabitInput,
+) {
+  return (
+    quest.difficulty === input.difficulty &&
+    JSON.stringify(quest.schedule) === JSON.stringify(createSchedule(input))
+  )
 }
 
 export function createCustomHabitQuest(

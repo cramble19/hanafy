@@ -1,0 +1,150 @@
+import { describe, expect, it } from 'vitest'
+import { buildProfileCsv } from './habitExport'
+import { createCustomHabitQuest, type NewHabitInput } from './customHabits'
+import { createStartedHanaState } from './hanaGame'
+import { startHabitPause, updateHabitPreferences } from './habitLifecycle'
+import type { Quest } from '@/types'
+
+describe('CSV habit export', () => {
+  it('exports one profile with periods, occurrences, pauses, and spreadsheet-safe user text', () => {
+    const input: NewHabitInput = {
+      title: '=SUM(A1:A2)',
+      description: 'A title that must not become a formula.',
+      frequency: 'timesPerPeriod',
+      target: 2,
+      periodLength: 1,
+      periodUnit: 'days',
+      difficulty: 'medium',
+    }
+    const habit = createCustomHabitQuest(
+      input,
+      'hana',
+      '2026-08-05',
+      [],
+      'custom-hana-export',
+    )
+    const base = {
+      ...createStartedHanaState('2026-08-05'),
+      currentDate: '2026-08-06',
+      customHabits: [habit],
+      habitOccurrences: {
+        '2026-08-05': { [habit.id]: 2 },
+      },
+      trackingPauses: [
+        {
+          id: 'pause-export',
+          startDate: '2026-08-06',
+          endDate: '2026-08-06',
+          reason: 'vacation' as const,
+          recordedAt: '2026-08-06T08:00:00.000Z',
+        },
+      ],
+    }
+    const configured = updateHabitPreferences(base, habit.id, {
+      cue: 'After breakfast, before work',
+      reminderTime: '08:30',
+    })
+    const state = startHabitPause(configured, habit.id, {
+      reason: 'illness',
+      note: 'Recovering',
+      endDate: '2026-08-06',
+    })
+
+    const csv = buildProfileCsv(state, [], 'hana')
+
+    expect(csv).toContain('"hana"')
+    expect(csv).not.toContain('"cramble"')
+    expect(csv).toContain('profile,tracking_day_start,record_type')
+    expect(csv).toContain('"04:00 local"')
+    expect(csv).toContain("\"'=SUM(A1:A2)\"")
+    expect(csv).toContain('"After breakfast, before work"')
+    expect(csv).toContain('"profile_pause"')
+    expect(csv).toContain('"habit_pause"')
+    expect(csv).toContain('"vacation"')
+    expect(csv).toContain('"Recovering"')
+    expect(csv).toContain('"occurrence"')
+  })
+
+  it('exports every earned point for a legacy quota period', () => {
+    const quest: Quest = {
+      id: 'legacy-quota',
+      emoji: 'sword',
+      title: 'Training',
+      description: 'Train three times.',
+      group: 'daily',
+      difficulty: 'easy',
+      color: '#6f8465',
+      required: true,
+      schedule: {
+        kind: 'quota',
+        target: 3,
+        periodDays: 7,
+        anchor: 'calendarWeek',
+      },
+    }
+    const state = {
+      ...createStartedHanaState('2026-08-02'),
+      currentDate: '2026-08-08',
+      dailyCompletions: {
+        '2026-08-02': { [quest.id]: true },
+        '2026-08-03': { [quest.id]: true },
+        '2026-08-04': { [quest.id]: true },
+      },
+    }
+
+    const periodRow = buildProfileCsv(state, [quest], 'hana')
+      .split('\r\n')
+      .find((row) => row.includes('"period"') && row.includes('"legacy-quota"'))
+
+    expect(periodRow).toContain('"3","3","completed","easy","3"')
+  })
+
+  it('exports every backfill add and undo event even when the final count is zero', () => {
+    const habit = createCustomHabitQuest(
+      {
+        title: 'Evening walk',
+        description: 'Walk around the block.',
+        frequency: 'oncePerPeriod',
+        target: 1,
+        periodLength: 1,
+        periodUnit: 'days',
+        difficulty: 'easy',
+      },
+      'hana',
+      '2026-08-05',
+      [],
+      'custom-audit-export',
+    )
+    const state = {
+      ...createStartedHanaState('2026-08-05'),
+      currentDate: '2026-08-06',
+      customHabits: [habit],
+      backfillAudit: [
+        {
+          id: 'add-event',
+          habitId: habit.id,
+          performedDate: '2026-08-05',
+          recordedAt: '2026-08-06T09:00:00.000Z',
+          delta: 1 as const,
+        },
+        {
+          id: 'undo-event',
+          habitId: habit.id,
+          performedDate: '2026-08-05',
+          recordedAt: '2026-08-06T09:05:00.000Z',
+          delta: -1 as const,
+        },
+      ],
+    }
+
+    const auditRows = buildProfileCsv(state, [], 'hana')
+      .split('\r\n')
+      .filter((row) => row.includes('"backfill_event"'))
+
+    expect(auditRows).toHaveLength(2)
+    expect(auditRows[0]).toContain('"added"')
+    expect(auditRows[0]).toContain('"1"')
+    expect(auditRows[1]).toContain('"undone"')
+    expect(auditRows[1]).toContain('"-1"')
+  })
+})

@@ -3191,3 +3191,306 @@ select.add-habit-input {
     transition: none;
   }
 }
+
+/* Habit lifecycle, recovery, and Today-first controls */
+.today-progress-card,
+.tracking-pause-banner,
+.paused-habits-card {
+  position: relative;
+  z-index: 10;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgb(20 24 21 / 6%);
+}
+
+.today-progress-value {
+  display: grid;
+  min-width: 3rem;
+  min-height: 3rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-progress-track {
+  height: 0.5rem;
+  margin-top: 0.9rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.today-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success);
+  transition: width 220ms ease;
+}
+
+.today-utility-grid {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.today-utility-button,
+.habit-lifecycle-button,
+.ledger-restore-button,
+.backfill-record-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  padding: 0.55rem 0.7rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.today-utility-button:active,
+.habit-lifecycle-button:active,
+.backfill-record-button:active {
+  transform: scale(0.98);
+}
+
+.today-utility-button:disabled,
+.backfill-record-button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.tracking-pause-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-color: color-mix(in srgb, var(--warning) 42%, var(--border));
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+}
+
+.tracking-pause-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning) 15%, var(--surface));
+  color: var(--ink);
+}
+
+.paused-habits-card {
+  margin-top: 1.25rem;
+}
+
+.paused-habit-row,
+.backfill-habit-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  padding: 0.65rem;
+}
+
+.paused-habit-icon-button {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.habit-lifecycle-button {
+  width: 100%;
+}
+
+.pause-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.pause-choice,
+.pause-reason-choice {
+  display: flex;
+  min-height: 2.75rem;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+  padding: 0.7rem;
+  color: var(--muted);
+}
+
+.pause-reason-choice {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pause-choice[data-selected='true'],
+.pause-reason-choice[data-selected='true'] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.pause-choice input,
+.pause-reason-choice input {
+  accent-color: var(--ink);
+}
+
+.backfill-date-button {
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  padding: 0.5rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.backfill-date-button[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--canvas);
+}
+
+.ledger-group-heading,
+.ledger-record-group > summary {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-group-heading > span,
+.ledger-record-group > summary > span {
+  display: grid;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.ledger-record-group {
+  border-top: 1px solid var(--border);
+  padding-top: 0.35rem;
+}
+
+.ledger-record-group > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.ledger-quest-row-wrap {
+  position: relative;
+}
+
+.ledger-restore-button {
+  width: 100%;
+  margin-top: 0.4rem;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.ledger-archived-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.ledger-delete-button {
+  min-height: 2.75rem;
+  margin-top: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--danger);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.ledger-recent-mark[data-status='paused'],
+.ledger-period-token[data-status='paused'] .ledger-period-symbol,
+.ledger-legend i[data-kind='paused'] {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+}
+
+.ledger-activity-day[data-paused='true'] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2),
+    var(--surface-2) 3px,
+    color-mix(in srgb, var(--warning) 14%, var(--surface)) 3px,
+    color-mix(in srgb, var(--warning) 14%, var(--surface)) 6px
+  );
+}
+
+.backfill-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+@media (max-width: 360px) {
+  .today-utility-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-pause-banner,
+  .paused-habit-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .pause-choice-grid,
+  .pause-reason-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-progress-track > span,
+  .today-utility-button,
+  .habit-lifecycle-button,
+  .backfill-record-button {
+    transition: none;
+  }
+}

@@ -20,14 +20,26 @@ import {
   getProfileStats,
 } from '@/lib/hanaStats'
 import type { HanaGameState, Quest } from '@/types'
+import {
+  isHabitArchivedOnDate,
+  isHabitPausedOnDate,
+} from '@/lib/habitLifecycle'
 
 type Props = {
   game: HanaGameState
   onBack: () => void
   onOpenQuest: (questId: string) => void
+  onRestoreHabit?: (questId: string) => void
+  onDeleteHabit?: (questId: string) => void
 }
 
-export function CrambleLedgerPage({ game, onBack, onOpenQuest }: Props) {
+export function CrambleLedgerPage({
+  game,
+  onBack,
+  onOpenQuest,
+  onRestoreHabit,
+  onDeleteHabit,
+}: Props) {
   return (
     <HabitLedgerPage
       game={game}
@@ -35,6 +47,8 @@ export function CrambleLedgerPage({ game, onBack, onOpenQuest }: Props) {
       profileId="cramble"
       onBack={onBack}
       onOpenQuest={onOpenQuest}
+      onRestoreHabit={onRestoreHabit}
+      onDeleteHabit={onDeleteHabit}
     />
   )
 }
@@ -50,6 +64,8 @@ export function HabitLedgerPage({
   profileId,
   onBack,
   onOpenQuest,
+  onRestoreHabit,
+  onDeleteHabit,
 }: HabitLedgerPageProps) {
   const headingRef = usePageHeadingFocus()
   const isCramble = profileId === 'cramble'
@@ -79,11 +95,23 @@ export function HabitLedgerPage({
       recent,
       history,
       isLocked: (quest.minLevel ?? 1) > level && !history?.periods.length,
+      isArchived: isHabitArchivedOnDate(game, quest.id),
+      isPaused: isHabitPausedOnDate(game, quest.id),
       momentum: history
         ? getHabitMomentumSignal(history, profileId)
         : null,
     }
   })
+  const currentRecords = questRecords.filter(
+    (record) => !record.isLocked && !record.isArchived && !record.isPaused,
+  )
+  const pausedRecords = questRecords.filter(
+    (record) => !record.isLocked && !record.isArchived && record.isPaused,
+  )
+  const archivedRecords = questRecords.filter((record) => record.isArchived)
+  const futureRecords = questRecords.filter(
+    (record) => record.isLocked && !record.isArchived,
+  )
   const allTime = questRecords.reduce(
     (total, { quest, history }) => ({
       records:
@@ -103,6 +131,94 @@ export function HabitLedgerPage({
       : Math.round(
           (allTime.completed / (allTime.completed + allTime.missed)) * 100,
         )
+
+  const renderQuestRecord = (
+    record: (typeof questRecords)[number],
+    allowRestore = false,
+  ) => {
+    const { quest, stat, recent, momentum, isLocked, isPaused, isArchived } = record
+    return (
+      <div key={quest.id} className="ledger-quest-row-wrap">
+        <button
+          type="button"
+          onClick={() => onOpenQuest(quest.id)}
+          className="habit-ledger-card ledger-quest-row flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-sm"
+        >
+          <span
+            className="grid size-11 shrink-0 place-items-center rounded-full text-xl"
+            style={{
+              backgroundColor: `${quest.color}18`,
+              boxShadow: `inset 0 0 0 1px ${quest.color}55`,
+            }}
+            aria-hidden="true"
+          >
+            {quest.emoji}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate text-sm font-semibold text-ink">
+                {quest.title}
+              </span>
+              <HabitMomentumBadge signal={momentum} profile={profileId} compact />
+            </span>
+            <span className="mt-1 block text-xs text-muted">
+              {formatQuestCadence(quest)}
+              {isPaused ? ' · Paused' : isArchived ? ' · Archived' : ''}
+            </span>
+            <span className="mt-2 flex min-h-2 items-center gap-1" aria-hidden="true">
+              {recent?.periods.slice(-6).map((period) => (
+                <span key={period.periodKey} className="ledger-recent-mark" data-status={period.status} />
+              ))}
+            </span>
+            <span className="sr-only">
+              {isLocked
+                ? `Unlocks at level ${quest.minLevel}. Open task preview.`
+                : `${recent?.completedPeriods ?? stat?.completed ?? 0} of ${recent?.decidedPeriods ?? stat?.shown ?? 0} recent targets met. Open task history.`}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 text-muted">
+            <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs font-semibold tabular-nums text-ink">
+              {isLocked
+                ? `Level ${quest.minLevel}`
+                : recent?.decidedPeriods
+                  ? `${recent.successRate}% · 30D`
+                  : isPaused
+                    ? 'Paused'
+                    : isArchived
+                      ? 'Archived'
+                      : 'In progress'}
+            </span>
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </span>
+        </button>
+        {allowRestore ? (
+          <div className="ledger-archived-actions">
+            {onRestoreHabit ? (
+              <button type="button" onClick={() => onRestoreHabit(quest.id)} className="ledger-restore-button">
+                Restore
+              </button>
+            ) : null}
+            {onDeleteHabit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmation = window.prompt(
+                    `This permanently deletes every record and removes earned points. Export your CSV first if you want a copy.\n\nType "${quest.title}" to delete.`,
+                  )
+                  if (confirmation?.trim() === quest.title.trim()) {
+                    onDeleteHabit(quest.id)
+                  }
+                }}
+                className="ledger-delete-button"
+              >
+                Delete permanently
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -238,64 +354,54 @@ export function HabitLedgerPage({
 
         <div className="mt-3 space-y-3">
           {questRecords.length ? (
-            questRecords.map(({ quest, stat, recent, momentum, isLocked }) => (
-              <button
-                key={quest.id}
-                type="button"
-                onClick={() => onOpenQuest(quest.id)}
-                className="habit-ledger-card ledger-quest-row flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-sm"
-              >
-                <span
-                  className="grid size-11 shrink-0 place-items-center rounded-full text-xl"
-                  style={{
-                    backgroundColor: `${quest.color}18`,
-                    boxShadow: `inset 0 0 0 1px ${quest.color}55`,
-                  }}
-                  aria-hidden="true"
-                >
-                  {quest.emoji}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="min-w-0 truncate text-sm font-semibold text-ink">
-                      {quest.title}
-                    </span>
-                    <HabitMomentumBadge
-                      signal={momentum}
-                      profile={profileId}
-                      compact
-                    />
-                  </span>
-                  <span className="mt-1 block text-xs text-muted">
-                    {formatQuestCadence(quest)}
-                  </span>
-                  <span className="mt-2 flex min-h-2 items-center gap-1" aria-hidden="true">
-                    {recent?.periods.slice(-6).map((period) => (
-                      <span
-                        key={period.periodKey}
-                        className="ledger-recent-mark"
-                        data-status={period.status}
-                      />
-                    ))}
-                  </span>
-                  <span className="sr-only">
-                    {isLocked
-                      ? `Unlocks at level ${quest.minLevel}. Open task preview.`
-                      : `${recent?.completedPeriods ?? stat?.completed ?? 0} of ${recent?.decidedPeriods ?? stat?.shown ?? 0} recent targets met. Open task history.`}
-                  </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-1.5 text-muted">
-                  <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs font-semibold tabular-nums text-ink">
-                    {isLocked
-                      ? `Level ${quest.minLevel}`
-                      : recent?.decidedPeriods
-                      ? `${recent.successRate}% · 30D`
-                      : 'New'}
-                  </span>
-                  <ChevronRight className="size-4" aria-hidden="true" />
-                </span>
-              </button>
-            ))
+            <>
+              <h3 className="ledger-group-heading">
+                Active &amp; attempted <span>{currentRecords.length}</span>
+              </h3>
+              {currentRecords.map((record) => renderQuestRecord(record))}
+
+              {pausedRecords.length ? (
+                <details className="ledger-record-group" open>
+                  <summary>
+                    Paused habits <span>{pausedRecords.length}</span>
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    These periods are neutral and create no backlog.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {pausedRecords.map((record) => renderQuestRecord(record))}
+                  </div>
+                </details>
+              ) : null}
+
+              {archivedRecords.length ? (
+                <details className="ledger-record-group" open>
+                  <summary>
+                    Archived habits <span>{archivedRecords.length}</span>
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    History and earned rewards remain. Restore one whenever it fits again.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {archivedRecords.map((record) => renderQuestRecord(record, true))}
+                  </div>
+                </details>
+              ) : null}
+
+              {futureRecords.length ? (
+                <details className="ledger-record-group">
+                  <summary>
+                    Future quests <span>{futureRecords.length}</span>
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    These begin only after they unlock. They create no earlier misses.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {futureRecords.map((record) => renderQuestRecord(record))}
+                  </div>
+                </details>
+              ) : null}
+            </>
           ) : (
             <div className="habit-ledger-card rounded-card border border-border bg-surface p-5 text-center text-sm leading-6 text-muted shadow-sm">
               {isCramble

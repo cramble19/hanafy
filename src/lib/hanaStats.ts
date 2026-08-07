@@ -8,9 +8,20 @@ import {
   getQuestScheduleProgress,
 } from '@/lib/hanaGame'
 import type { HanaGameState, Quest, Weekday } from '@/types'
+import {
+  isHabitPausedOnDate,
+  isHabitArchivedOnDate,
+  isHabitTrackableOnDate,
+  MAX_BACKFILL_DAYS,
+} from '@/lib/habitLifecycle'
 
 export type HabitStatsRange = 7 | 30 | 90 | 'all'
-export type HabitPeriodStatus = 'completed' | 'skipped' | 'missed' | 'open'
+export type HabitPeriodStatus =
+  | 'completed'
+  | 'skipped'
+  | 'missed'
+  | 'open'
+  | 'paused'
 
 export type HabitPeriodStat = {
   periodKey: string
@@ -26,6 +37,7 @@ export type HabitDayStat = {
   count: number
   /** The habit could be recorded that day; this is never a miss indicator. */
   isEligible: boolean
+  isPaused: boolean
   isToday: boolean
 }
 
@@ -38,6 +50,7 @@ export type HabitRangeStats = {
   completedPeriods: number
   missedPeriods: number
   skippedPeriods: number
+  pausedPeriods: number
   decidedPeriods: number
   successRate: number
   totalRecords: number
@@ -86,7 +99,7 @@ export type DailyStat = {
 
 export type QuestHistoryDay = {
   dateKey: string
-  status: 'completed' | 'skipped' | 'missed' | 'open'
+  status: HabitPeriodStatus
   flowersEarned: number
 }
 
@@ -146,6 +159,15 @@ export function getProfileStats(
   payload.questStatuses.forEach((row) => {
     const status = resolveStatus(row, state.currentDate)
     const quest = questById.get(row.questId)
+    const periodStart = row.windowStart ?? row.dateKey ?? row.periodKey
+    const periodEnd = row.dueDate ?? row.dateKey ?? row.periodKey
+    if (
+      status === 'paused' ||
+      status !== 'completed' &&
+      isPeriodPaused(state, row.questId, periodStart, periodEnd)
+    ) {
+      return
+    }
     const stat = questStats.get(row.questId) ?? {
       questId: row.questId,
       title: quest?.title ?? row.questId,
@@ -161,7 +183,7 @@ export function getProfileStats(
 
     stat.shown += 1
     stat[status] += 1
-    stat.completionRate = percent(stat.completed, stat.shown)
+    stat.completionRate = percent(stat.completed, stat.completed + stat.missed)
     questStats.set(row.questId, stat)
 
     const dateKey = row.dateKey ?? row.windowStart
@@ -180,7 +202,10 @@ export function getProfileStats(
     }
     dailyStat.shown += 1
     dailyStat[status] += 1
-    dailyStat.completionRate = percent(dailyStat.completed, dailyStat.shown)
+    dailyStat.completionRate = percent(
+      dailyStat.completed,
+      dailyStat.completed + dailyStat.missed,
+    )
     dailyStats.set(dateKey, dailyStat)
   })
 
@@ -200,10 +225,10 @@ export function getProfileStats(
     )
     .slice(0, 3)
   const needsLove = sortedQuestStats
-    .filter((stat) => stat.skipped + stat.missed > 0)
+    .filter((stat) => stat.missed > 0)
     .sort(
       (first, second) =>
-        second.skipped + second.missed - (first.skipped + first.missed) ||
+        second.missed - first.missed ||
         first.completionRate - second.completionRate ||
         first.title.localeCompare(second.title),
     )
@@ -243,7 +268,7 @@ export function getQuestHistory(
   const skipped = days.filter((day) => day.status === 'skipped').length
   const missed = days.filter((day) => day.status === 'missed').length
   const open = days.filter((day) => day.status === 'open').length
-  const shown = days.length
+  const shown = completed + skipped + missed + open
 
   return {
     stat: {
@@ -256,7 +281,7 @@ export function getQuestHistory(
       skipped,
       missed,
       open,
-      completionRate: percent(completed, shown),
+      completionRate: percent(completed, completed + missed),
     },
     days,
   }
@@ -309,9 +334,15 @@ export function getHabitRangeStats(
   const skippedPeriods = periods.filter(
     ({ status }) => status === 'skipped',
   ).length
+  const pausedPeriods = periods.filter(
+    ({ status }) => status === 'paused',
+  ).length
   const decidedPeriods = completedPeriods + missedPeriods
   const totalRecords = days.reduce((total, day) => total + day.count, 0)
-  const activeDays = Math.max(1, dateDiffDays(rangeStart, rangeEnd) + 1)
+  const activeDays = Math.max(
+    1,
+    days.filter((day) => !day.isPaused).length,
+  )
   const weekdayRecords = WEEKDAY_SHORT_NAMES.map((label, weekday) => ({
     weekday,
     label,
@@ -333,6 +364,7 @@ export function getHabitRangeStats(
     completedPeriods,
     missedPeriods,
     skippedPeriods,
+    pausedPeriods,
     decidedPeriods,
     successRate: percent(completedPeriods, decidedPeriods),
     totalRecords,
@@ -480,6 +512,9 @@ function buildHabitDays(
     dateKey,
     count: getHabitRecordCount(state, quest, dateKey),
     isEligible: isHabitAvailableOnDate(state, quest, dateKey),
+    isPaused:
+      isHabitPausedOnDate(state, quest.id, dateKey) ||
+      isHabitArchivedOnDate(state, quest.id, dateKey),
     isToday: dateKey === state.currentDate,
   }))
 }
@@ -498,7 +533,8 @@ function buildDailyGroupPeriods(
     listDateKeys(activeStart, currentDate)
       .filter(
         (dateKey) =>
-          canDeriveEveryWindow ||
+          (canDeriveEveryWindow &&
+            !isHabitArchivedOnDate(state, quest.id, dateKey)) ||
           isHabitAvailableOnDate(state, quest, dateKey) ||
           getHabitRecordCount(state, quest, dateKey) > 0,
       )
@@ -513,9 +549,11 @@ function buildDailyGroupPeriods(
           target: progress.target,
           status: progress.isComplete
             ? 'completed'
-            : progress.periodEnd < currentDate
-              ? 'missed'
-              : 'open',
+            : isPeriodPaused(state, quest.id, progress.periodStart, progress.periodEnd)
+              ? 'paused'
+              : isPastCorrectionWindow(progress.periodEnd, currentDate)
+                ? 'missed'
+                : 'open',
         })
       })
     return Array.from(periods.values()).sort((first, second) =>
@@ -543,9 +581,11 @@ function buildDailyGroupPeriods(
             ? 'completed'
             : skippedDates.has(dateKey)
               ? 'skipped'
-              : dateKey < currentDate
-                ? 'missed'
-                : 'open',
+              : isHabitPausedOnDate(state, quest.id, dateKey)
+                ? 'paused'
+                : isPastCorrectionWindow(dateKey, currentDate)
+                  ? 'missed'
+                  : 'open',
       }
     })
 }
@@ -563,13 +603,18 @@ function buildLongTermPeriods(
       const startDate = row.windowStart ?? row.dateKey ?? row.periodKey
       const endDate = row.dueDate ?? getLongTermDueDate(startDate, quest)
       const status = resolveStatus(row, state.currentDate)
+      const resolvedStatus =
+        status !== 'completed' &&
+        isPeriodPaused(state, quest.id, startDate, endDate)
+          ? 'paused'
+          : status
       return {
         periodKey: row.periodKey,
         startDate,
         endDate,
-        completed: status === 'completed' ? 1 : 0,
+        completed: resolvedStatus === 'completed' ? 1 : 0,
         target: 1,
-        status,
+        status: resolvedStatus,
       }
     })
     .sort((first, second) => first.startDate.localeCompare(second.startDate))
@@ -593,6 +638,7 @@ function isHabitAvailableOnDate(
 ) {
   if (quest.group !== 'daily') return false
   if (quest.createdDate && dateKey < quest.createdDate) return false
+  if (!isHabitTrackableOnDate(state, quest.id, dateKey)) return false
 
   const schedule = quest.schedule ?? { kind: 'daily' as const }
   const wasPresented = Boolean(
@@ -660,6 +706,7 @@ function getNextDueDate(
 ) {
   const currentDate = state.currentDate
   if (quest.group !== 'daily') return null
+  if (!isHabitTrackableOnDate(state, quest.id, currentDate)) return null
   const schedule = quest.schedule ?? { kind: 'daily' as const }
   if (schedule.kind === 'quota' || schedule.kind === 'periodTarget') {
     if (!currentPeriod) return null
@@ -722,6 +769,22 @@ function dateDiffDays(fromDateKey: string, toDateKey: string) {
   )
 }
 
+function isPastCorrectionWindow(periodEnd: string, currentDate: string) {
+  return dateDiffDays(periodEnd, currentDate) > MAX_BACKFILL_DAYS
+}
+
+function isPeriodPaused(
+  state: HanaGameState,
+  habitId: string,
+  startDate: string,
+  endDate: string,
+) {
+  return listDateKeys(startDate, endDate).some((dateKey) =>
+    isHabitPausedOnDate(state, habitId, dateKey) ||
+    isHabitArchivedOnDate(state, habitId, dateKey),
+  )
+}
+
 export function getWeedHistory(
   state: HanaGameState,
   weedId: string,
@@ -752,19 +815,27 @@ export function getCalendarWindow(currentDateKey: string, daysToShow = 35) {
 function resolveStatus(
   row: ReturnType<typeof createProfileCloudSyncPayload>['questStatuses'][number],
   currentDate: string,
-): 'completed' | 'skipped' | 'missed' | 'open' {
-  if (row.status === 'completed' || row.status === 'skipped') {
+): HabitPeriodStatus {
+  if (
+    row.status === 'completed' ||
+    row.status === 'skipped' ||
+    row.status === 'paused'
+  ) {
     return row.status
   }
 
   if (row.questGroup === 'daily') {
     if (row.dateKey) {
-      return row.dateKey < currentDate ? 'missed' : 'open'
+      return isPastCorrectionWindow(row.dateKey, currentDate) ? 'missed' : 'open'
     }
-    return row.dueDate && row.dueDate < currentDate ? 'missed' : 'open'
+    return row.dueDate && isPastCorrectionWindow(row.dueDate, currentDate)
+      ? 'missed'
+      : 'open'
   }
 
-  return row.dueDate && row.dueDate < currentDate ? 'missed' : 'open'
+  return row.dueDate && isPastCorrectionWindow(row.dueDate, currentDate)
+    ? 'missed'
+    : 'open'
 }
 
 function sumStats(
@@ -788,7 +859,10 @@ function sumStats(
     skipped: totals.skipped,
     missed: totals.missed,
     open: totals.open,
-    completionRate: percent(totals.completed, totals.shown),
+    completionRate: percent(
+      totals.completed,
+      totals.completed + totals.missed,
+    ),
     skipRate: percent(totals.skipped, totals.shown),
   }
 }
