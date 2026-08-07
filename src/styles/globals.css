@@ -496,25 +496,6 @@ body {
   outline-offset: 3px;
 }
 
-.sticky-garden-moon {
-  position: relative;
-  display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  place-items: center;
-  border-radius: 9999px;
-  background: linear-gradient(180deg, #1f2855, #59674c);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-}
-.sticky-garden-moon::before {
-  content: "";
-  width: 0.68rem;
-  height: 0.68rem;
-  border-radius: 9999px;
-  background: #fff4bf;
-  box-shadow: 0 0 12px rgba(255, 244, 191, 0.64);
-}
 .sticky-stats-button {
   background: rgba(255, 255, 255, 0.7);
 }

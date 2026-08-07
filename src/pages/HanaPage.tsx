@@ -23,6 +23,7 @@ import {
   TodayUtilityActions,
 } from '@/components/TodayHabitControls'
 import { FlowerMark } from '@/components/icons/FlowerMark'
+import { GardenBlossomIcon } from '@/components/icons/GardenBlossomIcon'
 import {
   displayDate,
   getLongTermCheckedIds,
@@ -512,7 +513,7 @@ export function HanaPage({
           className="profile-action-button"
           aria-label={`Open Hana's night garden. ${game.totalFlowers} flowers planted and ${skipProgress.remaining} skips left`}
         >
-          <span className="sticky-garden-moon" aria-hidden="true" />
+          <GardenBlossomIcon className="size-8 shrink-0" />
           <span className="profile-action-copy">
             <span className="profile-action-label">Garden</span>
             <span className="profile-action-detail">
