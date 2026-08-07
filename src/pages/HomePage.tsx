@@ -2,21 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { LockKeyhole } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
+import { TogetherMark } from '@/components/icons/TogetherMark'
 
 type Props = {
   onSelectHana: () => void
   onSelectCramble: () => void
-  focusTarget?: 'hana' | 'cramble' | null
+  onSelectTogether: () => void
+  focusTarget?: 'hana' | 'cramble' | 'together' | null
 }
 
 export function HomePage({
   onSelectHana,
   onSelectCramble,
+  onSelectTogether,
   focusTarget = null,
 }: Props) {
   const [showPhoto, setShowPhoto] = useState(false)
   const hanaButtonRef = useRef<HTMLButtonElement>(null)
   const crambleButtonRef = useRef<HTMLButtonElement>(null)
+  const togetherButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (focusTarget === 'hana') {
@@ -24,6 +28,9 @@ export function HomePage({
     }
     if (focusTarget === 'cramble') {
       crambleButtonRef.current?.focus({ preventScroll: true })
+    }
+    if (focusTarget === 'together') {
+      togetherButtonRef.current?.focus({ preventScroll: true })
     }
   }, [focusTarget])
 
@@ -85,7 +92,24 @@ export function HomePage({
         </button>
       </div>
 
-      <p className="mt-12 text-center text-sm leading-6 text-muted">
+      <button
+        ref={togetherButtonRef}
+        type="button"
+        onClick={onSelectTogether}
+        aria-label="Unlock combined stats for Hana and Cramble"
+        className="home-together-card mt-10 flex w-full items-center gap-4 rounded-[26px] border border-border bg-surface/90 px-5 py-4 text-left outline-none"
+      >
+        <TogetherMark className="home-together-mark shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-lg font-semibold text-ink">Together</span>
+          <span className="mt-0.5 block text-sm text-muted">
+            See your shared rhythm
+          </span>
+        </span>
+        <LockKeyhole className="size-4 shrink-0 text-faint" aria-hidden="true" />
+      </button>
+
+      <p className="mt-10 text-center text-sm leading-6 text-muted">
         Two separate paths, each with its own progress and story.
       </p>
 

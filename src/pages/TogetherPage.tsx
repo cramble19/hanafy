@@ -1,0 +1,421 @@
+import { useMemo, useState } from 'react'
+import { CalendarDays, ChevronLeft, Leaf } from 'lucide-react'
+import { FlowerMark } from '@/components/icons/FlowerMark'
+import { SunMark } from '@/components/icons/SunMark'
+import { TogetherMark } from '@/components/icons/TogetherMark'
+import { crambleQuests } from '@/data/crambleQuests'
+import { quests } from '@/data/quests'
+import {
+  getCombinedStats,
+  type CombinedStatsResult,
+  type ComparisonRange,
+  type ComparisonTrendBucket,
+  type ProfileComparisonSummary,
+} from '@/lib/combinedStats'
+import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
+import type { HanaGameState } from '@/types'
+
+type Props = {
+  hanaGame: HanaGameState
+  crambleGame: HanaGameState
+  notice?: string | null
+  onBack: () => void
+}
+
+const RANGE_OPTIONS: ComparisonRange[] = [7, 30, 90]
+
+export function TogetherPage({
+  hanaGame,
+  crambleGame,
+  notice = null,
+  onBack,
+}: Props) {
+  const [range, setRange] = useState<ComparisonRange>(30)
+  const headingRef = usePageHeadingFocus()
+  const stats = useMemo(
+    () =>
+      getCombinedStats(
+        hanaGame,
+        quests,
+        crambleGame,
+        crambleQuests,
+        range,
+      ),
+    [crambleGame, hanaGame, range],
+  )
+
+  return (
+    <div className="together-shell mx-auto min-h-full w-full max-w-md px-5 pb-10 pt-6">
+      <div className="together-decor-layer" aria-hidden="true" />
+
+      <header className="relative z-10 text-center">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to home"
+          className="together-back-button absolute left-0 top-0 grid size-11 place-items-center rounded-full border border-border bg-surface/90 text-ink outline-none"
+        >
+          <ChevronLeft className="size-5" aria-hidden="true" />
+        </button>
+        <TogetherMark className="together-page-mark mx-auto" />
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="mt-2 text-3xl font-semibold tracking-tight text-ink outline-none"
+        >
+          Shared Journey
+        </h1>
+        <p className="mt-1 text-sm text-muted">Two paths. One steady rhythm.</p>
+      </header>
+
+      <div
+        className="together-range-control relative z-10 mt-6"
+        role="group"
+        aria-label="Comparison range"
+      >
+        {RANGE_OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={range === option}
+            onClick={() => setRange(option)}
+            className="together-range-button"
+          >
+            {option}D
+          </button>
+        ))}
+      </div>
+
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        Showing {range}-day comparison: Hana {stats.hana.activeDays} active
+        days, Cramble {stats.cramble.activeDays} active days, and{' '}
+        {stats.sharedActiveDays} shared active days.
+      </p>
+
+      {notice ? (
+        <p className="together-notice relative z-10 mt-4" role="status">
+          {notice}
+        </p>
+      ) : null}
+
+      <main className="relative z-10 mt-5 space-y-5">
+        <section className="together-hero-card" aria-labelledby="showing-up-title">
+          <h2 id="showing-up-title" className="text-xl font-semibold text-ink">
+            Showing up together
+          </h2>
+          <p className="mt-1 text-4xl font-semibold tracking-tight text-ink">
+            {stats.sharedActiveDays}{' '}
+            <span className="text-2xl font-medium">
+              {stats.sharedActiveDays === 1 ? 'day' : 'days'}
+            </span>
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Both saved at least one quest or item action
+          </p>
+          <JourneyPaths />
+        </section>
+
+        <section aria-labelledby="settled-rhythm-title">
+          <h2 id="settled-rhythm-title" className="together-section-title">
+            Settled rhythm
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <ProfileRhythmCard profile="hana" summary={stats.hana} />
+            <ProfileRhythmCard profile="cramble" summary={stats.cramble} />
+          </div>
+          <p className="together-active-definition mt-2 text-center text-xs leading-5">
+            Active days contain a saved, dated quest or item interaction.
+          </p>
+        </section>
+
+        <ConsistencyTrend stats={stats} />
+
+        <section aria-labelledby="strongest-rhythms-title">
+          <h2 id="strongest-rhythms-title" className="together-section-title">
+            Strongest rhythms
+          </h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <StrongestRhythmCard profile="hana" summary={stats.hana} />
+            <StrongestRhythmCard profile="cramble" summary={stats.cramble} />
+          </div>
+        </section>
+
+        <p className="together-neutral-note">
+          <Leaf className="size-4 shrink-0" aria-hidden="true" />
+          Paused, skipped, archived, and still-open windows stay neutral.
+        </p>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="together-home-button"
+        >
+          Back home
+        </button>
+      </main>
+    </div>
+  )
+}
+
+function ProfileRhythmCard({
+  profile,
+  summary,
+}: {
+  profile: 'hana' | 'cramble'
+  summary: ProfileComparisonSummary
+}) {
+  const isHana = profile === 'hana'
+  const name = isHana ? 'Hana' : 'Cramble'
+  const Mark = isHana ? FlowerMark : SunMark
+
+  return (
+    <article className="together-profile-card" data-profile={profile}>
+      <Mark className="together-profile-mark" />
+      <h3 className="mt-2 text-base font-semibold text-ink">{name}</h3>
+      {summary.settledRate === null ? (
+        <p className="mt-3 text-lg font-semibold text-ink">Still gathering</p>
+      ) : (
+        <p className="mt-2 text-3xl font-semibold tracking-tight text-ink">
+          {summary.settledRate}%
+        </p>
+      )}
+      <p className="mt-0.5 text-xs text-muted">
+        {summary.settledWindows === 0
+          ? 'No settled goals yet'
+          : `${summary.settledCompleted} of ${summary.settledWindows} resolved goals`}
+      </p>
+      <div className="together-active-days mt-4">
+        <CalendarDays className="size-4" aria-hidden="true" />
+        <span>
+          {summary.activeDays} active {summary.activeDays === 1 ? 'day' : 'days'}
+        </span>
+      </div>
+    </article>
+  )
+}
+
+function ConsistencyTrend({ stats }: { stats: CombinedStatsResult }) {
+  const chart = getChartGeometry(stats.trend)
+  const hasEvidence = stats.trend.some(
+    (bucket) => bucket.hanaRate !== null || bucket.crambleRate !== null,
+  )
+  const summary = [
+    trendSummary('Hana', stats.trend.map((bucket) => bucket.hanaRate)),
+    trendSummary('Cramble', stats.trend.map((bucket) => bucket.crambleRate)),
+  ].join(' ')
+
+  return (
+    <section className="together-trend-card" aria-labelledby="consistency-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 id="consistency-title" className="together-section-title">
+          Consistency trend
+        </h2>
+        <div className="together-chart-legend" aria-hidden="true">
+          <span><i data-profile="hana" />Hana</span>
+          <span><i data-profile="cramble" />Cramble</span>
+        </div>
+      </div>
+      <p className="sr-only">{summary}</p>
+      <div className="relative mt-3">
+        <svg
+          viewBox="0 0 360 190"
+          className="w-full"
+          role="img"
+          aria-label="Settled goal rate over the selected range"
+        >
+          {[0, 25, 50, 75, 100].map((tick) => {
+            const y = chart.yFor(tick)
+            return (
+              <g key={tick}>
+                <line
+                  x1="42"
+                  x2="346"
+                  y1={y}
+                  y2={y}
+                  className="together-chart-grid"
+                />
+                <text x="35" y={y + 4} textAnchor="end" className="together-chart-axis">
+                  {tick}%
+                </text>
+              </g>
+            )
+          })}
+
+          {chart.hanaSegments.map((segment, index) => (
+            <polyline
+              key={`hana-${index}`}
+              points={segment}
+              className="together-chart-line together-chart-line-hana"
+            />
+          ))}
+          {chart.crambleSegments.map((segment, index) => (
+            <polyline
+              key={`cramble-${index}`}
+              points={segment}
+              className="together-chart-line together-chart-line-cramble"
+            />
+          ))}
+
+          {stats.trend.map((bucket, index) => {
+            const x = chart.xFor(index)
+            return (
+              <g key={bucket.startDate}>
+                {bucket.hanaRate !== null ? (
+                  <circle
+                    cx={x}
+                    cy={chart.yFor(bucket.hanaRate)}
+                    r="4.2"
+                    className="together-chart-dot-hana"
+                  />
+                ) : null}
+                {bucket.crambleRate !== null ? (
+                  <rect
+                    x={x - 4}
+                    y={chart.yFor(bucket.crambleRate) - 4}
+                    width="8"
+                    height="8"
+                    rx="1.5"
+                    transform={`rotate(45 ${x} ${chart.yFor(bucket.crambleRate)})`}
+                    className="together-chart-dot-cramble"
+                  />
+                ) : null}
+                <text
+                  x={x}
+                  y="181"
+                  textAnchor="middle"
+                  className="together-chart-axis together-chart-label"
+                >
+                  {formatAxisDate(bucket.startDate)}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+        {!hasEvidence ? (
+          <p className="together-chart-empty">Trend still forming</p>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
+function StrongestRhythmCard({
+  profile,
+  summary,
+}: {
+  profile: 'hana' | 'cramble'
+  summary: ProfileComparisonSummary
+}) {
+  const isHana = profile === 'hana'
+  const Mark = isHana ? FlowerMark : SunMark
+  const name = isHana ? 'Hana' : 'Cramble'
+
+  return (
+    <article className="together-strongest-card" data-profile={profile}>
+      <div className="flex items-center gap-2">
+        <Mark className="together-strongest-mark" />
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-ink">{name}</h3>
+          <p className="mt-0.5 truncate text-xs text-muted">
+            {summary.strongestHabit?.title ?? 'Trend still forming'}
+          </p>
+        </div>
+      </div>
+      {summary.strongestHabit ? (
+        <div className="together-strongest-rate">
+          <span>{summary.strongestHabit.rate}%</span>
+          <small>
+            {summary.strongestHabit.settledWindows} settled goals
+          </small>
+        </div>
+      ) : (
+        <p className="together-forming-copy mt-4 text-xs leading-5">
+          Three settled windows will reveal this rhythm.
+        </p>
+      )}
+    </article>
+  )
+}
+
+function JourneyPaths() {
+  return (
+    <svg
+      viewBox="0 0 360 112"
+      className="together-paths"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id="hana-path" x1="0" x2="1">
+          <stop offset="0" stopColor="#f5c8d1" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#df91a4" stopOpacity="0.7" />
+        </linearGradient>
+        <linearGradient id="cramble-path" x1="1" x2="0">
+          <stop offset="0" stopColor="#f6d397" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#dfa13b" stopOpacity="0.68" />
+        </linearGradient>
+      </defs>
+      <path d="M0 105C54 83 99 93 159 48" fill="none" stroke="url(#hana-path)" strokeWidth="30" strokeLinecap="round" />
+      <path d="M360 105C306 83 261 93 201 48" fill="none" stroke="url(#cramble-path)" strokeWidth="30" strokeLinecap="round" />
+      <path d="M180 92V48" stroke="#73805a" strokeWidth="3" strokeLinecap="round" />
+      <path d="M179 63c-17-2-22-13-22-23 14 1 23 7 22 23Z" fill="#b7c590" stroke="#73805a" strokeWidth="1.5" />
+      <path d="M181 58c16-2 21-12 20-21-13 1-21 7-20 21Z" fill="#d1d9a8" stroke="#73805a" strokeWidth="1.5" />
+      <circle cx="55" cy="37" r="3" fill="#e49bae" opacity="0.62" />
+      <circle cx="302" cy="31" r="3" fill="#e5ad4e" opacity="0.66" />
+      <path d="M28 48l5 5m0-5-5 5M327 48l5 5m0-5-5 5" stroke="#d7ae79" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function getChartGeometry(buckets: ComparisonTrendBucket[]) {
+  const xFor = (index: number) =>
+    buckets.length <= 1 ? 194 : 50 + (index * 288) / (buckets.length - 1)
+  const yFor = (rate: number) => 154 - (Math.max(0, Math.min(100, rate)) / 100) * 126
+  const segmentsFor = (key: 'hanaRate' | 'crambleRate') => {
+    const segments: string[] = []
+    let points: string[] = []
+    buckets.forEach((bucket, index) => {
+      const rate = bucket[key]
+      if (rate === null) {
+        if (points.length > 1) segments.push(points.join(' '))
+        points = []
+        return
+      }
+      points.push(`${xFor(index)},${yFor(rate)}`)
+    })
+    if (points.length > 1) segments.push(points.join(' '))
+    return segments
+  }
+
+  return {
+    xFor,
+    yFor,
+    hanaSegments: segmentsFor('hanaRate'),
+    crambleSegments: segmentsFor('crambleRate'),
+  }
+}
+
+function trendSummary(name: string, rates: Array<number | null>) {
+  const available = rates.filter((rate): rate is number => rate !== null)
+  if (available.length === 0) return `${name}'s trend is still forming.`
+  return `${name}'s settled rates in this range are ${available.join(', ')} percent.`
+}
+
+function formatAxisDate(dateKey: string) {
+  const [, month, day] = dateKey.split('-').map(Number)
+  const monthName = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][month - 1]
+  return `${monthName} ${day}`
+}
