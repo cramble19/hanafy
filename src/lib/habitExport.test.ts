@@ -12,6 +12,7 @@ import {
   updateHabitWording,
 } from './habitLifecycle'
 import type { Quest } from '@/types'
+import { createOpenActivity } from './openActivities'
 
 describe('CSV habit export', () => {
   it('exports one profile with periods, occurrences, pauses, and spreadsheet-safe user text', () => {
@@ -155,6 +156,86 @@ describe('CSV habit export', () => {
     expect(auditRows[1]).toContain('"undone"')
     expect(auditRows[1]).toContain('"-1"')
   })
+
+  it('exports deadline-free definitions and logs without rewards or outcome states', () => {
+    const check = createOpenActivity(
+      {
+        title: 'Gym visit',
+        description: 'Any movement session counts.',
+        kind: 'check',
+      },
+      'cramble',
+      '2026-08-01',
+      [],
+      'open-cramble-gym',
+    )
+    const count = createOpenActivity(
+      {
+        title: 'Pages read',
+        description: 'Record pages completed.',
+        kind: 'count',
+        unit: '=pages',
+      },
+      'cramble',
+      '2026-08-01',
+      [check.title],
+      'open-cramble-pages',
+    )
+    const state = {
+      ...createStartedHanaState('2026-08-01'),
+      currentDate: '2026-08-03',
+      totalFlowers: 12,
+      openActivities: [check, count],
+      openActivityLogs: {
+        '2026-08-01': { [check.id]: 1, [count.id]: 12 },
+        '2026-08-03': { [count.id]: 8 },
+      },
+      habitSettings: {
+        [check.id]: {
+          cue: '',
+          reminder: { enabled: false, time: null },
+          archivedAt: null,
+          pauses: [
+            {
+              id: 'pause-open-check',
+              startDate: '2026-08-02',
+              endDate: '2026-08-02',
+              reason: 'illness' as const,
+              note: 'Rested',
+              recordedAt: '2026-08-02T06:00:00.000Z',
+            },
+          ],
+        },
+      },
+      backfillAudit: [
+        {
+          id: 'backfill-open-count',
+          habitId: count.id,
+          performedDate: '2026-08-01',
+          recordedAt: '2026-08-03T08:00:00.000Z',
+          delta: 1 as const,
+        },
+      ],
+    }
+
+    const csv = buildProfileCsv(state, [], 'cramble')
+    const rows = csv.split('\r\n')
+    const definitionRows = rows.filter((row) => row.includes('"anytime_activity"'))
+    const logRows = rows.filter((row) => row.includes('"anytime_log"'))
+
+    expect(definitionRows).toHaveLength(2)
+    expect(logRows).toHaveLength(3)
+    expect(csv).toContain('"anytime","check"')
+    expect(csv).toContain('"anytime","count","\'=pages"')
+    expect(logRows.every((row) => row.includes('"logged"'))).toBe(true)
+    expect(logRows.every((row) => row.includes('"0"'))).toBe(true)
+    expect(csv).toContain('"habit_pause"')
+    expect(csv).toContain('"illness","Rested"')
+    expect(csv).toContain('"backfill_event"')
+    expect(csv).toContain('"2026-08-03T08:00:00.000Z","true","1"')
+    expect(csv).not.toContain('"completed"')
+    expect(csv).not.toContain('"missed"')
+  })
 })
 
 describe('JSON profile backup', () => {
@@ -193,7 +274,7 @@ describe('JSON profile backup', () => {
     })
 
     expect(backup.format).toBe('hanafy-profile-backup')
-    expect(backup.formatVersion).toBe(1)
+    expect(backup.formatVersion).toBe(2)
     expect(backup.profile).toEqual({
       id: 'cramble',
       name: 'Cramble',
@@ -211,6 +292,7 @@ describe('JSON profile backup', () => {
       description: 'Drink one glass after waking.',
       lifecycle: 'active',
     })
+    expect(backup.catalog.anytimeActivities).toEqual([])
     expect('syncRevision' in backup.state).toBe(false)
     expect(backup.state.deletedHabitIds).toEqual(['retired-built-in'])
 
@@ -221,5 +303,45 @@ describe('JSON profile backup', () => {
       }),
     ) as typeof backup
     expect(parsed).toEqual(backup)
+  })
+
+  it('keeps anytime definitions and their complete dated history', () => {
+    const activity = createOpenActivity(
+      {
+        title: 'Training hall',
+        description: 'Record any gym session.',
+        kind: 'check',
+      },
+      'cramble',
+      '2026-08-01',
+      [],
+      'open-cramble-training',
+    )
+    const state = {
+      ...createStartedHanaState('2026-08-01'),
+      currentDate: '2026-08-04',
+      syncRevision: 8,
+      openActivities: [activity],
+      openActivityLogs: {
+        '2026-08-01': { [activity.id]: 1 },
+        '2026-08-04': { [activity.id]: 1 },
+      },
+    }
+
+    const backup = buildProfileBackup(state, [], 'cramble', {
+      exportedAt: '2026-08-04T12:00:00.000Z',
+      timeZone: 'Asia/Calcutta',
+    })
+
+    expect(backup.catalog.anytimeActivities).toEqual([
+      expect.objectContaining({
+        id: activity.id,
+        kind: 'check',
+        lifecycle: 'active',
+      }),
+    ])
+    expect(backup.state.openActivities).toEqual([activity])
+    expect(backup.state.openActivityLogs).toEqual(state.openActivityLogs)
+    expect(backup.source.databaseRevision).toBe(8)
   })
 })

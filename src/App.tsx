@@ -48,6 +48,17 @@ import {
   loadHanaStateFromDb,
   saveHanaStateToDb,
 } from '@/lib/hanaRemoteState'
+import {
+  createOpenActivity,
+  getNewOpenActivityValidationError,
+  hasOpenActivityHistory,
+  incrementOpenActivityCountForDate,
+  OPEN_ACTIVITY_LIMITS,
+  recordOpenActivityForDate,
+  setOpenActivityValueForDate,
+  undoOpenActivityForDate,
+  updateOpenActivityDefinition,
+} from '@/lib/openActivities'
 import { HomePage } from '@/pages/HomePage'
 import { HanaStartPage } from '@/pages/HanaStartPage'
 import { HanaPage } from '@/pages/HanaPage'
@@ -57,9 +68,10 @@ import { QuestDetailPage } from '@/pages/QuestDetailPage'
 import { CrambleGatePage } from '@/pages/CrambleGatePage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
-import type { HanaGameState } from '@/types'
+import type { HanaGameState, NewOpenActivityInput } from '@/types'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
+import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 
 type View =
   | 'home'
@@ -459,6 +471,7 @@ export default function App() {
   }, [hydrateFromDb])
 
   useEffect(() => {
+    let rolloverTimer: number | null = null
     const syncToToday = () => {
       const previousState = hanaGameRef.current
       if (!previousState || !hasHanaStarted(previousState)) {
@@ -474,21 +487,35 @@ export default function App() {
       }
     }
 
+    const scheduleRollover = () => {
+      if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
+      rolloverTimer = window.setTimeout(() => {
+        syncToToday()
+        scheduleRollover()
+      }, millisecondsUntilNextLogicalDay() + 100)
+    }
+
     const syncWhenVisible = () => {
       if (document.visibilityState === 'visible') {
         syncToToday()
+        scheduleRollover()
       }
     }
 
+    const syncOnFocus = () => {
+      syncToToday()
+      scheduleRollover()
+    }
+
     syncToToday()
-    window.addEventListener('focus', syncToToday)
+    scheduleRollover()
+    window.addEventListener('focus', syncOnFocus)
     document.addEventListener('visibilitychange', syncWhenVisible)
-    const intervalId = window.setInterval(syncToToday, 60 * 1000)
 
     return () => {
-      window.removeEventListener('focus', syncToToday)
+      window.removeEventListener('focus', syncOnFocus)
       document.removeEventListener('visibilitychange', syncWhenVisible)
-      window.clearInterval(intervalId)
+      if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
     }
   }, [commitHanaState])
 
@@ -720,6 +747,116 @@ export default function App() {
     return null
   }
 
+  const addHanaOpenActivity = (input: NewOpenActivityInput) => {
+    const previousState = hanaGameRef.current
+    if (!previousState || !hasHanaStarted(previousState)) {
+      return "Start Hana's Health Overhaul before adding an anytime log."
+    }
+    if (previousState.openActivities.length >= OPEN_ACTIVITY_LIMITS.definitions) {
+      return 'This profile has reached its anytime-log limit.'
+    }
+
+    const existingTitles = [
+      ...getQuestCatalog(quests, previousState).map((quest) => quest.title),
+      ...previousState.openActivities.map((activity) => activity.title),
+    ]
+    const validationError = getNewOpenActivityValidationError(
+      input,
+      existingTitles,
+    )
+    if (validationError) return validationError
+
+    try {
+      const activity = createOpenActivity(
+        input,
+        'hana',
+        previousState.currentDate,
+        existingTitles,
+      )
+      void commitHanaState({
+        ...previousState,
+        openActivities: [...previousState.openActivities, activity],
+      })
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : 'Could not add this anytime log.'
+    }
+  }
+
+  const editHanaOpenActivity = (
+    activityId: string,
+    input: NewOpenActivityInput,
+  ) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return "Hana's tracker is not ready."
+    const activity = previousState.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (!activity) return 'That anytime log is unavailable.'
+
+    const existingTitles = [
+      ...getQuestCatalog(quests, previousState).map((quest) => quest.title),
+      ...previousState.openActivities
+        .filter((candidate) => candidate.id !== activityId)
+        .map((candidate) => candidate.title),
+    ]
+    const validationError = getNewOpenActivityValidationError(
+      input,
+      existingTitles,
+    )
+    if (validationError) return validationError
+
+    const nextUnit = input.kind === 'count' ? input.unit?.trim() || null : null
+    if (
+      hasOpenActivityHistory(previousState, activityId) &&
+      (input.kind !== activity.kind || nextUnit !== activity.unit)
+    ) {
+      return 'Record type and unit cannot change after logging begins. Archive this item, then add the revised version with a different name.'
+    }
+
+    try {
+      const updated = updateOpenActivityDefinition(
+        activity,
+        input,
+        existingTitles,
+      )
+      void commitHanaState({
+        ...previousState,
+        openActivities: previousState.openActivities.map((candidate) =>
+          candidate.id === activityId ? updated : candidate,
+        ),
+      })
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : 'Could not update this anytime log.'
+    }
+  }
+
+  const changeHanaOpenActivity = (activityId: string, delta: 1 | -1) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const activity = previousState.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (!activity) return
+
+    const nextState =
+      activity.kind === 'check'
+        ? setOpenActivityValueForDate(
+            previousState,
+            activityId,
+            previousState.currentDate,
+            delta > 0 ? 1 : 0,
+          )
+        : incrementOpenActivityCountForDate(
+            previousState,
+            activityId,
+            previousState.currentDate,
+            delta,
+          )
+    if (nextState !== previousState) void commitHanaState(nextState)
+  }
+
   const pauseHanaHabit = (habitId: string, input: PauseInput) => {
     const previousState = hanaGameRef.current
     if (previousState) void commitHanaState(startHabitPause(previousState, habitId, input))
@@ -789,6 +926,35 @@ export default function App() {
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
     })
     return null
+  }
+
+  const backfillHanaOpenActivity = (dateKey: string, activityId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return "Hana's tracker is not ready."
+    const result = recordOpenActivityForDate(
+      previousState,
+      activityId,
+      dateKey,
+    )
+    if (result.error) return result.error
+    void commitHanaState(result.state)
+    return result.error
+  }
+
+  const undoBackfillHanaOpenActivity = (
+    dateKey: string,
+    activityId: string,
+  ) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return "Hana's tracker is not ready."
+    const result = undoOpenActivityForDate(
+      previousState,
+      activityId,
+      dateKey,
+    )
+    if (result.error) return result.error
+    void commitHanaState(result.state)
+    return result.error
   }
 
   const goToNextDay = () => {
@@ -887,6 +1053,14 @@ export default function App() {
           onUndoOccurrence={undoHanaOccurrence}
           onAddHabit={addHanaHabit}
           onEditHabit={editHanaHabit}
+          onAddOpenActivity={addHanaOpenActivity}
+          onEditOpenActivity={editHanaOpenActivity}
+          onIncrementOpenActivity={(activityId) =>
+            changeHanaOpenActivity(activityId, 1)
+          }
+          onDecrementOpenActivity={(activityId) =>
+            changeHanaOpenActivity(activityId, -1)
+          }
           onPauseHabit={pauseHanaHabit}
           onResumeHabit={resumeHanaHabit}
           onArchiveHabit={archiveHanaHabit}
@@ -896,6 +1070,8 @@ export default function App() {
           onResumeTracking={resumeAllHana}
           onBackfill={backfillHana}
           onUndoBackfill={undoBackfillHana}
+          onBackfillOpenActivity={backfillHanaOpenActivity}
+          onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
           onSkip={toggleSkip}
           onToggleWeed={toggleWeed}
           onOpenGarden={() => setView('garden')}
@@ -946,6 +1122,14 @@ export default function App() {
         onUndoOccurrence={undoHanaOccurrence}
         onAddHabit={addHanaHabit}
         onEditHabit={editHanaHabit}
+        onAddOpenActivity={addHanaOpenActivity}
+        onEditOpenActivity={editHanaOpenActivity}
+        onIncrementOpenActivity={(activityId) =>
+          changeHanaOpenActivity(activityId, 1)
+        }
+        onDecrementOpenActivity={(activityId) =>
+          changeHanaOpenActivity(activityId, -1)
+        }
         onPauseHabit={pauseHanaHabit}
         onResumeHabit={resumeHanaHabit}
         onArchiveHabit={archiveHanaHabit}
@@ -955,6 +1139,8 @@ export default function App() {
         onResumeTracking={resumeAllHana}
         onBackfill={backfillHana}
         onUndoBackfill={undoBackfillHana}
+        onBackfillOpenActivity={backfillHanaOpenActivity}
+        onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
         onSkip={toggleSkip}
         onToggleWeed={toggleWeed}
         onOpenGarden={() => setView('garden')}

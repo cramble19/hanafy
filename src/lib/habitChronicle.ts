@@ -15,7 +15,12 @@ import {
   isHabitPausedOnDate,
 } from '@/lib/habitLifecycle'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
-import type { HanaGameState, Quest } from '@/types'
+import type { HanaGameState, OpenActivity, Quest } from '@/types'
+import { getOpenActivityCatalog } from '@/lib/openActivities'
+import {
+  getOpenActivityRangeStats,
+  type OpenActivityRangeStats,
+} from '@/lib/openActivityStats'
 
 type ChronicleTheme = {
   documentTitle: string
@@ -34,6 +39,13 @@ type ChronicleTheme = {
 type ChronicleHabit = {
   quest: Quest
   stats: HabitRangeStats
+  lifecycle: 'active' | 'paused' | 'archived'
+  archivedAt: string | null
+}
+
+type ChronicleOpenActivity = {
+  activity: OpenActivity
+  stats: OpenActivityRangeStats
   lifecycle: 'active' | 'paused' | 'archived'
   archivedAt: string | null
 }
@@ -82,9 +94,10 @@ export function buildProfileChronicleHtml(
 ) {
   const theme = THEMES[profileId]
   const habits = getChronicleHabits(state, baseQuests, profileId)
-  const summary = summarizeHabits(habits)
+  const anytimeActivities = getChronicleOpenActivities(state)
+  const summary = summarizeHabits(habits, anytimeActivities)
   const exportedDate = normalizeExportDate(exportedAt)
-  const historyStart = getHistoryStart(state, habits)
+  const historyStart = getHistoryStart(state, habits, anytimeActivities)
 
   return `<!doctype html>
 <html lang="en" data-profile="${profileId}">
@@ -206,6 +219,7 @@ export function buildProfileChronicleHtml(
       font-family: ui-sans-serif, system-ui, sans-serif;
     }
     .period.completed { --period-color: var(--met); }
+    .period.recorded { --period-color: var(--accent); }
     .period.missed { --period-color: var(--missed); }
     .period.skipped, .period.paused { --period-color: var(--neutral); }
     .period.open { --period-color: var(--open); }
@@ -285,8 +299,10 @@ export function buildProfileChronicleHtml(
       </ul>
     </section>
 
+    ${renderOpenActivitySection(anytimeActivities, theme)}
+
     <aside class="privacy-note">
-      Neutral windows do not lower success rates. Personal pause reasons and notes are intentionally excluded from this chronicle.
+      Neutral windows do not lower success rates. Blank days in anytime records are neutral and intentionally omitted. Personal pause reasons and notes are intentionally excluded from this chronicle.
     </aside>
     <footer>Created from the local ${escapeHtml(profileId === 'hana' ? 'Hana' : 'Cramble')} profile · Dates follow the 4:00 AM tracking day.</footer>
   </main>
@@ -350,6 +366,35 @@ function getChronicleHabits(
   ).sort(sortChronicleHabits)
 }
 
+function getChronicleOpenActivities(state: HanaGameState) {
+  return getOpenActivityCatalog(state)
+    .reduce<ChronicleOpenActivity[]>((result, activity) => {
+      const stats = getOpenActivityRangeStats(state, activity.id, 'all')
+      if (!stats) return result
+      const archived = isHabitArchivedOnDate(state, activity.id)
+      const paused = !archived && isHabitPausedOnDate(state, activity.id)
+      result.push({
+        activity,
+        stats,
+        lifecycle: archived ? 'archived' : paused ? 'paused' : 'active',
+        archivedAt: state.habitSettings?.[activity.id]?.archivedAt ?? null,
+      })
+      return result
+    }, [])
+    .sort(sortChronicleOpenActivities)
+}
+
+function sortChronicleOpenActivities(
+  first: ChronicleOpenActivity,
+  second: ChronicleOpenActivity,
+) {
+  const lifecycleOrder = { active: 0, paused: 1, archived: 2 }
+  return (
+    lifecycleOrder[first.lifecycle] - lifecycleOrder[second.lifecycle] ||
+    first.activity.title.localeCompare(second.activity.title)
+  )
+}
+
 function sortChronicleHabits(first: ChronicleHabit, second: ChronicleHabit) {
   const lifecycleOrder = { active: 0, paused: 1, archived: 2 }
   return (
@@ -358,7 +403,10 @@ function sortChronicleHabits(first: ChronicleHabit, second: ChronicleHabit) {
   )
 }
 
-function summarizeHabits(habits: ChronicleHabit[]) {
+function summarizeHabits(
+  habits: ChronicleHabit[],
+  anytimeActivities: ChronicleOpenActivity[],
+) {
   const totals = habits.reduce(
     (result, { quest, stats }) => ({
       records:
@@ -374,16 +422,111 @@ function summarizeHabits(habits: ChronicleHabit[]) {
     { records: 0, completed: 0, missed: 0, neutral: 0 },
   )
   const decided = totals.completed + totals.missed
+  const anytimeRecords = anytimeActivities.reduce(
+    (total, { stats }) => total + stats.activeDays,
+    0,
+  )
   return {
     ...totals,
+    records: totals.records + anytimeRecords,
     decided,
-    active: habits.filter(({ lifecycle }) => lifecycle === 'active').length,
-    paused: habits.filter(({ lifecycle }) => lifecycle === 'paused').length,
-    archived: habits.filter(({ lifecycle }) => lifecycle === 'archived').length,
+    active:
+      habits.filter(({ lifecycle }) => lifecycle === 'active').length +
+      anytimeActivities.filter(({ lifecycle }) => lifecycle === 'active').length,
+    paused:
+      habits.filter(({ lifecycle }) => lifecycle === 'paused').length +
+      anytimeActivities.filter(({ lifecycle }) => lifecycle === 'paused').length,
+    archived:
+      habits.filter(({ lifecycle }) => lifecycle === 'archived').length +
+      anytimeActivities.filter(({ lifecycle }) => lifecycle === 'archived').length,
     successRate: decided
       ? Math.round((totals.completed / decided) * 100)
       : 0,
   }
+}
+
+function renderOpenActivitySection(
+  activities: ChronicleOpenActivity[],
+  theme: ChronicleTheme,
+) {
+  if (!activities.length) return ''
+  return `<section aria-labelledby="anytime-history-heading" style="margin-top:46px">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">${theme.mark} ${activities.length} anytime ${activities.length === 1 ? 'record' : 'records'}</p>
+          <h2 id="anytime-history-heading">Anytime records</h2>
+        </div>
+        <p>Only recorded days appear. Blank days stay neutral.</p>
+      </div>
+      <div class="habit-list">
+        ${activities.map(renderOpenActivity).join('\n')}
+      </div>
+    </section>`
+}
+
+function renderOpenActivity({
+  activity,
+  stats,
+  lifecycle,
+  archivedAt,
+}: ChronicleOpenActivity) {
+  const archivedLabel =
+    lifecycle === 'archived' && archivedAt
+      ? ` · since ${formatDateKey(archivedAt)}`
+      : ''
+  const total =
+    activity.kind === 'check'
+      ? stats.activeDays
+      : stats.total
+  const totalLabel = activity.kind === 'check'
+    ? 'Logged days'
+    : activity.unit || 'Total'
+  const average = activity.kind === 'check'
+    ? `${formatNumber(stats.weeklyPace)}/wk`
+    : `${formatNumber(stats.averagePerActiveDay)}${activity.unit ? ` ${activity.unit}` : ''}`
+  return `<article class="habit anytime ${lifecycle}" style="--habit:${safeColor(activity.color)}">
+    <header class="habit-head">
+      <div class="habit-title">
+        <span class="emoji" aria-hidden="true">${escapeHtml(activity.emoji)}</span>
+        <div>
+          <h3>${escapeHtml(activity.title)}</h3>
+          <p class="description">${escapeHtml(activity.description)}</p>
+        </div>
+      </div>
+      <span class="lifecycle">${escapeHtml(lifecycle + archivedLabel)}</span>
+    </header>
+    <div class="habit-stats">
+      ${habitStat(activity.kind === 'check' ? 'Once today' : 'Count', 'Record type')}
+      ${habitStat(formatNumber(total), totalLabel)}
+      ${habitStat(formatNumber(stats.activeDays), 'Active days')}
+      ${habitStat(average, activity.kind === 'check' ? 'Pace' : 'Avg / active day')}
+      ${habitStat(stats.lastLoggedDate ? formatDateKey(stats.lastLoggedDate) : '—', 'Last recorded')}
+      ${habitStat('None', 'Rewards')}
+    </div>
+    <div class="period-history">
+      <div class="history-label"><strong>Recorded days</strong><span>Blank days are neutral and omitted</span></div>
+      ${renderOpenActivityDays(stats)}
+    </div>
+  </article>`
+}
+
+function renderOpenActivityDays(stats: OpenActivityRangeStats) {
+  const recordedDays = stats.days.filter(({ active }) => active)
+  if (!recordedDays.length) {
+    return '<p class="empty-history">Nothing has been recorded yet. There are no missed entries.</p>'
+  }
+  return `<ol class="periods">${[...recordedDays]
+    .reverse()
+    .map(
+      (day) => `<li class="period recorded">
+        <time datetime="${escapeHtml(day.dateKey)}">${escapeHtml(formatDateKey(day.dateKey))}</time>
+        <strong>Recorded</strong>
+        <span>${stats.activity.kind === 'check'
+          ? 'Yes'
+          : `${formatNumber(day.count)}${stats.activity.unit ? ` ${escapeHtml(stats.activity.unit)}` : ''}`}</span>
+      </li>`,
+    )
+    .join('')}</ol>`
 }
 
 function renderHabit({ quest, stats, lifecycle, archivedAt }: ChronicleHabit) {
@@ -453,9 +596,14 @@ function countPeriods(stats: HabitRangeStats, status: HabitPeriodStatus) {
   return stats.periods.filter((period) => period.status === status).length
 }
 
-function getHistoryStart(state: HanaGameState, habits: ChronicleHabit[]) {
+function getHistoryStart(
+  state: HanaGameState,
+  habits: ChronicleHabit[],
+  anytimeActivities: ChronicleOpenActivity[],
+) {
   const starts = habits
     .flatMap(({ stats }) => stats.periods.map((period) => period.startDate))
+    .concat(anytimeActivities.map(({ stats }) => stats.rangeStart))
     .sort()
   return starts[0] ?? state.startDate ?? state.currentDate
 }

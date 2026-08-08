@@ -45,6 +45,8 @@ src/
     CrambleExperience.tsx         # isolated Cramble controller and views
   components/
     AddHabitDialog.tsx            # shared accessible creation form
+    AddAnytimeLogDialog.tsx       # scheduled/anytime chooser + neutral form
+    AnytimeLogSection.tsx         # shared deadline-free Today cards
     QuestCard.tsx                 # shared interaction, garden/archive variants
     QuestSection.tsx
     EveningWeeds.tsx              # Hana only
@@ -54,6 +56,8 @@ src/
     crambleTasks.json, crambleQuests.ts, crambleChronicles.json
   lib/
     customHabits.ts               # custom input validation and quest creation
+    openActivities.ts             # deadline-free definitions and mutations
+    openActivityStats.ts          # neutral factual range statistics
     logicalDay.ts                 # shared local 04:00 tracking-day clock
     hanaGame.ts                   # shared pure date/quest/reward engine
     hanaCloudSync.ts              # profile-aware payload generation
@@ -87,6 +91,8 @@ type GameState = {
   startDate: string | null
   currentDate: string
   customHabits: CustomHabitQuest[]
+  openActivities: OpenActivity[]
+  openActivityLogs: Record<string, Record<string, number>>
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>
@@ -130,6 +136,14 @@ plus one Sunday habit and no long-term/rotating entries; either started profile
 can add a deliberate once-or-several-times goal in a configurable number of days
 or weeks. See
 [custom-habits.md](custom-habits.md).
+
+Deadline-free records are a separate first-class model. `openActivities` stores
+`check` (one mark per logical day) and `count` definitions, while
+`openActivityLogs[date][activityId]` stores the positive daily value. They are
+not quest schedules: they create no due period, miss, reward, skip/pass,
+reminder, or Today-score entry. Their positive dated values count as Shared
+Journey tracked days, and their own Ledger views treat every blank day as
+neutral.
 
 ## Profile isolation
 

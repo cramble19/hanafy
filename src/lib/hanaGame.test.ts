@@ -282,6 +282,8 @@ function createSavedState(overrides: Partial<HanaGameState> = {}): HanaGameState
     startDate: '2026-07-07',
     currentDate: '2026-07-07',
     customHabits: [],
+    openActivities: [],
+    openActivityLogs: {},
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},

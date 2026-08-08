@@ -47,6 +47,9 @@ secure authentication.
 - `src/lib/crambleGame.ts` — password, cache key, and chapter progress.
 - `src/lib/customHabits.ts` / `src/components/AddHabitDialog.tsx` — shared
   custom-habit validation, creation, and form UI.
+- `src/lib/openActivities.ts` / `src/components/AddAnytimeLogDialog.tsx` /
+  `src/components/AnytimeLogSection.tsx` — shared deadline-free records and
+  Cramble-skinned create/Today UI.
 - `src/lib/hanaGame.ts` — shared cadence, date, plan, and reward calculations.
 - `src/lib/hanaCloudSync.ts` / `hanaStats.ts` — period-aware serialization and
   reporting.
@@ -104,6 +107,12 @@ Cramble-owned goals done once or several times on a Daily, Weekly, or Custom
 1–365 day schedule. These live in
 `GameState.customHabits`; they do not change the five-entry built-in JSON catalog
 or Hana's state. See [Custom Habits](custom-habits.md).
+
+The same action can create a separate **Anytime log**. Check logs record one mark
+per logical day; count logs store a whole-number daily amount and optional unit.
+They create no deadline, miss, pass, renown, Today denominator, reminder, or
+momentum signal. Their neutral field-note history appears in the shared Ledger,
+and every blank day remains unjudged.
 
 ## Cadence rules
 

@@ -24,6 +24,8 @@ import {
   isHabitArchivedOnDate,
   isHabitPausedOnDate,
 } from '@/lib/habitLifecycle'
+import { getOpenActivityRangeStats } from '@/lib/openActivityStats'
+import { getOpenActivityCatalog } from '@/lib/openActivities'
 
 type Props = {
   game: HanaGameState
@@ -111,6 +113,23 @@ export function HabitLedgerPage({
   const archivedRecords = questRecords.filter((record) => record.isArchived)
   const futureRecords = questRecords.filter(
     (record) => record.isLocked && !record.isArchived,
+  )
+  const activityRecords = getOpenActivityCatalog(game).map((activity) => ({
+    activity,
+    recent: getOpenActivityRangeStats(
+      game,
+      activity.id,
+      activity.kind === 'check' ? 14 : 7,
+    ),
+    history: getOpenActivityRangeStats(game, activity.id, 'all'),
+    isArchived: isHabitArchivedOnDate(game, activity.id),
+    isPaused: isHabitPausedOnDate(game, activity.id),
+  }))
+  const currentActivityRecords = activityRecords.filter(
+    (record) => !record.isArchived,
+  )
+  const archivedActivityRecords = activityRecords.filter(
+    (record) => record.isArchived,
   )
   const allTime = questRecords.reduce(
     (total, { quest, history }) => ({
@@ -220,6 +239,133 @@ export function HabitLedgerPage({
     )
   }
 
+  const renderActivityRecord = (
+    record: (typeof activityRecords)[number],
+    allowRestore = false,
+  ) => {
+    const { activity, recent, history, isArchived, isPaused } = record
+    const totalLabel =
+      activity.kind === 'check'
+        ? `${history?.activeDays ?? 0} active ${history?.activeDays === 1 ? 'day' : 'days'}`
+        : `${formatOpenAmount(history?.total ?? 0)}${activity.unit ? ` ${activity.unit}` : ''}`
+    const lastLogged = history?.lastLoggedDate
+      ? history.lastLoggedDate === game.currentDate
+        ? 'Today'
+        : formatShortDate(history.lastLoggedDate)
+      : 'Not yet'
+    const peak = Math.max(1, recent?.peakCount ?? 0)
+
+    return (
+      <div key={activity.id} className="ledger-quest-row-wrap">
+        <button
+          type="button"
+          onClick={() => onOpenQuest(activity.id)}
+          className="habit-ledger-card ledger-quest-row w-full rounded-card border border-border bg-surface p-4 text-left shadow-sm"
+        >
+          <span className="flex items-start gap-3">
+            <span
+              className="grid size-12 shrink-0 place-items-center rounded-full text-2xl"
+              style={{
+                backgroundColor: `${activity.color}18`,
+                boxShadow: `inset 0 0 0 1px ${activity.color}55`,
+              }}
+              aria-hidden="true"
+            >
+              {activity.emoji}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-start justify-between gap-2">
+                <span>
+                  <span className="block text-base font-semibold text-ink">
+                    {activity.title}
+                  </span>
+                  <span className="mt-1 block text-sm font-semibold text-[color:var(--ledger-secondary)]">
+                    {totalLabel}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    {activity.kind === 'count'
+                      ? `${history?.activeDays ?? 0} active ${(history?.activeDays ?? 0) === 1 ? 'day' : 'days'} · `
+                      : ''}
+                    Last logged {lastLogged}
+                    {isPaused ? ' · Paused' : isArchived ? ' · Archived' : ''}
+                  </span>
+                </span>
+                <ChevronRight className="mt-1 size-4 shrink-0 text-muted" aria-hidden="true" />
+              </span>
+            </span>
+          </span>
+
+          {activity.kind === 'check' ? (
+            <span
+              className="ledger-open-activity-strip mt-4 flex flex-wrap items-center gap-1.5"
+              role="img"
+              aria-label={getOpenActivityStripLabel(recent?.days ?? [], activity.kind, activity.unit)}
+            >
+              {(recent?.days ?? []).map((day) => (
+                <span
+                  key={day.dateKey}
+                  className="size-3.5 shrink-0 rounded-full border"
+                  style={{
+                    borderColor: day.active ? activity.color : `${activity.color}66`,
+                    backgroundColor: day.active ? activity.color : 'transparent',
+                  }}
+                  aria-hidden="true"
+                />
+              ))}
+            </span>
+          ) : (
+            <span
+              className="mt-4 flex h-12 items-end gap-1.5"
+              role="img"
+              aria-label={getOpenActivityStripLabel(recent?.days ?? [], activity.kind, activity.unit)}
+            >
+              {(recent?.days ?? []).map((day) => (
+                <span
+                  key={day.dateKey}
+                  className="min-h-px flex-1 rounded-t-sm"
+                  style={{
+                    height: day.count ? `${Math.max(12, (day.count / peak) * 100)}%` : '1px',
+                    backgroundColor: day.count ? activity.color : `${activity.color}33`,
+                  }}
+                  aria-hidden="true"
+                />
+              ))}
+            </span>
+          )}
+          <span className="mt-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-faint">
+            {recent?.days.length ?? 0}-day view · Blank days are neutral
+          </span>
+        </button>
+
+        {allowRestore ? (
+          <div className="ledger-archived-actions">
+            {onRestoreHabit ? (
+              <button type="button" onClick={() => onRestoreHabit(activity.id)} className="ledger-restore-button">
+                Restore
+              </button>
+            ) : null}
+            {onDeleteHabit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const confirmation = window.prompt(
+                    `This permanently deletes this anytime record and all of its logged history. Export your data first if you want a copy.\n\nType "${activity.title}" to delete.`,
+                  )
+                  if (confirmation?.trim() === activity.title.trim()) {
+                    onDeleteHabit(activity.id)
+                  }
+                }}
+                className="ledger-delete-button"
+              >
+                Delete permanently
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   return (
     <div
       className={`${isCramble ? 'cramble-archive-shell' : 'stats-page-shell hana-ledger-shell'} habit-ledger-shell mx-auto min-h-full w-full max-w-md px-5 pb-12 pt-6`}
@@ -271,6 +417,56 @@ export function HabitLedgerPage({
             : 'A gentle record of habits attempted, completed, and skipped. Each mark is information—not judgment.'}
         </p>
       </header>
+
+      {activityRecords.length ? (
+        <section
+          className="relative z-10 mt-8"
+          aria-labelledby={`${profileId}-anytime-records-heading`}
+        >
+          <div className="px-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">
+              {isCramble ? 'Field notes' : 'Garden notes'}
+            </p>
+            <h2
+              id={`${profileId}-anytime-records-heading`}
+              className="mt-1 text-xl font-semibold text-ink"
+            >
+              Anytime records
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-faint">
+              Only recorded days are marked. Blank days stay neutral.
+            </p>
+            <div className="section-sigil-divider" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-3">
+            {currentActivityRecords.map((record) =>
+              renderActivityRecord(record),
+            )}
+            {archivedActivityRecords.length ? (
+              <details className="ledger-record-group">
+                <summary>
+                  Archived anytime records{' '}
+                  <span>{archivedActivityRecords.length}</span>
+                </summary>
+                <p className="mt-2 text-xs leading-5 text-faint">
+                  Their factual history stays available and never affects quest
+                  scores.
+                </p>
+                <div className="mt-3 space-y-3">
+                  {archivedActivityRecords.map((record) =>
+                    renderActivityRecord(record, true),
+                  )}
+                </div>
+              </details>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="relative z-10 mt-5 grid grid-cols-3 gap-3">
         <LedgerMetric
@@ -473,4 +669,31 @@ function getWeekChartLabel(
 function dateFromKey(dateKey: string) {
   const [year, month, day] = dateKey.split('-').map(Number)
   return new Date(year, month - 1, day, 12)
+}
+
+function formatShortDate(dateKey: string) {
+  return dateFromKey(dateKey).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatOpenAmount(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function getOpenActivityStripLabel(
+  days: Array<{ dateKey: string; count: number; active: boolean }>,
+  kind: 'check' | 'count',
+  unit?: string | null,
+) {
+  if (!days.length) return 'No activity days are available in this view. Blank days are neutral.'
+  const total = days.reduce((sum, day) => sum + day.count, 0)
+  const activeDays = days.filter((day) => day.active).length
+  const range = `${formatShortDate(days[0].dateKey)} through ${formatShortDate(days.at(-1)!.dateKey)}`
+  return kind === 'check'
+    ? `${range}. Logged on ${activeDays} of ${days.length} days. Unlogged days are neutral.`
+    : `${range}. ${formatOpenAmount(total)}${unit ? ` ${unit}` : ' total'} across ${activeDays} active days. Unlogged days are neutral.`
 }

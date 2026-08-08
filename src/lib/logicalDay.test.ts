@@ -3,6 +3,7 @@ import {
   getLogicalDayKey,
   getLogicalDayReminderAt,
   isLogicalDayReminderDue,
+  millisecondsUntilNextLogicalDay,
 } from './logicalDay'
 
 describe('4 AM logical day', () => {
@@ -22,6 +23,18 @@ describe('4 AM logical day', () => {
 
     expect(lateEvening).toEqual(new Date(2026, 7, 6, 21, 0, 0, 0))
     expect(afterMidnight).toEqual(new Date(2026, 7, 7, 2, 0, 0, 0))
+  })
+
+  it('schedules the next rollover at the next local 4 AM boundary', () => {
+    expect(
+      millisecondsUntilNextLogicalDay(new Date(2026, 7, 7, 3, 59, 30)),
+    ).toBe(30_000)
+    expect(
+      millisecondsUntilNextLogicalDay(new Date(2026, 7, 7, 4, 0, 0)),
+    ).toBe(24 * 60 * 60 * 1000)
+    expect(
+      millisecondsUntilNextLogicalDay(new Date(2026, 7, 7, 23, 0, 0)),
+    ).toBe(5 * 60 * 60 * 1000)
   })
 
   it('catches up an evening reminder after midnight without firing a later reminder early', () => {

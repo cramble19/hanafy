@@ -10,6 +10,8 @@ import hanaWeeds from '@/data/hanaWeeds.json'
 import springQuotes from '@/data/springQuotes.json'
 import { EveningWeeds } from '@/components/EveningWeeds'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
+import { AddAnytimeLogDialog } from '@/components/AddAnytimeLogDialog'
+import { AnytimeLogSection } from '@/components/AnytimeLogSection'
 import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
@@ -53,7 +55,15 @@ import {
   getHabitMomentumSignal,
   getHabitRangeStats,
 } from '@/lib/hanaStats'
-import type { GardenWeed, HanaGameState } from '@/types'
+import {
+  getOpenActivityCatalog,
+  hasOpenActivityHistory,
+} from '@/lib/openActivities'
+import type {
+  GardenWeed,
+  HanaGameState,
+  NewOpenActivityInput,
+} from '@/types'
 
 const eveningWeeds = hanaWeeds as GardenWeed[]
 const seasonalQuotes = springQuotes as SeasonQuote[]
@@ -80,6 +90,13 @@ type Props = {
   onUndoOccurrence: (id: string) => void
   onAddHabit: (input: NewHabitInput) => string | null
   onEditHabit: (habitId: string, input: NewHabitInput) => string | null
+  onAddOpenActivity: (input: NewOpenActivityInput) => string | null
+  onEditOpenActivity: (
+    activityId: string,
+    input: NewOpenActivityInput,
+  ) => string | null
+  onIncrementOpenActivity: (activityId: string) => void
+  onDecrementOpenActivity: (activityId: string) => void
   onPauseHabit: (habitId: string, input: PauseInput) => void
   onResumeHabit: (habitId: string) => void
   onArchiveHabit: (habitId: string) => void
@@ -89,6 +106,14 @@ type Props = {
   onResumeTracking: () => void
   onBackfill: (dateKey: string, habitId: string) => string | null
   onUndoBackfill: (dateKey: string, habitId: string) => string | null
+  onBackfillOpenActivity: (
+    dateKey: string,
+    activityId: string,
+  ) => string | null
+  onUndoBackfillOpenActivity: (
+    dateKey: string,
+    activityId: string,
+  ) => string | null
   onSkip: (id: string) => void
   onToggleWeed: (id: string) => void
   onOpenGarden: () => void
@@ -116,6 +141,10 @@ export function HanaPage({
   onUndoOccurrence,
   onAddHabit,
   onEditHabit,
+  onAddOpenActivity,
+  onEditOpenActivity,
+  onIncrementOpenActivity,
+  onDecrementOpenActivity,
   onPauseHabit,
   onResumeHabit,
   onArchiveHabit,
@@ -125,6 +154,8 @@ export function HanaPage({
   onResumeTracking,
   onBackfill,
   onUndoBackfill,
+  onBackfillOpenActivity,
+  onUndoBackfillOpenActivity,
   onSkip,
   onToggleWeed,
   onOpenGarden,
@@ -137,12 +168,15 @@ export function HanaPage({
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
+  const [isScheduledHabitOpen, setIsScheduledHabitOpen] = useState(false)
   const [managedHabitId, setManagedHabitId] = useState<string | null>(null)
+  const [managedActivityId, setManagedActivityId] = useState<string | null>(null)
   const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const catalog = getQuestCatalog(quests, game)
+  const openActivities = getOpenActivityCatalog(game)
   const levelProgress = getLevelProgress(game.totalFlowers)
   const visibleQuests = visibleQuestsForState(catalog, game)
   const momentumById = Object.fromEntries(
@@ -192,7 +226,24 @@ export function HanaPage({
       !isHabitArchivedOnDate(game, quest.id) &&
       Boolean(getActiveHabitPause(game, quest.id)),
   )
+  const pausedOpenActivities = openActivities.filter(
+    (activity) =>
+      !isHabitArchivedOnDate(game, activity.id) &&
+      Boolean(getActiveHabitPause(game, activity.id)),
+  )
+  const activeOpenActivities = openActivities.filter(
+    (activity) =>
+      !isHabitArchivedOnDate(game, activity.id) &&
+      !getActiveHabitPause(game, activity.id),
+  )
   const managedQuest = catalog.find((habit) => habit.id === managedHabitId)
+  const managedActivity = openActivities.find(
+    (activity) => activity.id === managedActivityId,
+  )
+  const allTrackerTitles = [
+    ...catalog.map((quest) => quest.title),
+    ...openActivities.map((activity) => activity.title),
+  ]
   const cueById = Object.fromEntries(
     catalog.map((quest) => [quest.id, getHabitSettings(game, quest.id).cue]),
   )
@@ -334,13 +385,27 @@ export function HanaPage({
             onToggle={onToggle}
             onSkip={onSkip}
           />
+          <AnytimeLogSection
+            profile="hana"
+            activities={activeOpenActivities}
+            todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
+            onIncrement={onIncrementOpenActivity}
+            onDecrement={onDecrementOpenActivity}
+            onManage={setManagedActivityId}
+          />
         </main>
       ) : null}
 
       <PausedHabitsCard
-        habits={pausedHabits}
+        habits={[...pausedHabits, ...pausedOpenActivities]}
         onResume={onResumeHabit}
-        onManage={setManagedHabitId}
+        onManage={(itemId) => {
+          if (openActivities.some((activity) => activity.id === itemId)) {
+            setManagedActivityId(itemId)
+          } else {
+            setManagedHabitId(itemId)
+          }
+        }}
       />
 
       <section className="mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
@@ -500,7 +565,7 @@ export function HanaPage({
             <span className="profile-action-label">Add habit</span>
             <span className="profile-action-detail">
               {game.startDate
-                ? 'Choose its rhythm and period reward'
+                ? 'Add a scheduled habit or anytime log'
                 : 'Start the Health Overhaul first'}
             </span>
           </span>
@@ -536,10 +601,19 @@ export function HanaPage({
       </nav>
 
       {isAddHabitOpen ? (
+        <AddAnytimeLogDialog
+          profile="hana"
+          existingTitles={allTrackerTitles}
+          onClose={() => setIsAddHabitOpen(false)}
+          onChooseScheduled={() => setIsScheduledHabitOpen(true)}
+          onSubmit={onAddOpenActivity}
+        />
+      ) : null}
+      {isScheduledHabitOpen ? (
         <AddHabitDialog
           profile="hana"
-          existingTitles={catalog.map((quest) => quest.title)}
-          onClose={() => setIsAddHabitOpen(false)}
+          existingTitles={allTrackerTitles}
+          onClose={() => setIsScheduledHabitOpen(false)}
           onSubmit={onAddHabit}
         />
       ) : null}
@@ -572,6 +646,42 @@ export function HanaPage({
           onDelete={() => onDeleteHabit(managedQuest.id)}
         />
       ) : null}
+      {managedActivity ? (
+        <AddAnytimeLogDialog
+          profile="hana"
+          mode="edit"
+          initialView="anytime"
+          initialValue={{
+            title: managedActivity.title,
+            description: managedActivity.description,
+            kind: managedActivity.kind,
+            unit: managedActivity.unit,
+            emoji: managedActivity.emoji,
+            color: managedActivity.color,
+          }}
+          kindLocked={hasOpenActivityHistory(game, managedActivity.id)}
+          lifecycleStatus={
+            isHabitArchivedOnDate(game, managedActivity.id)
+              ? 'archived'
+              : getActiveHabitPause(game, managedActivity.id)
+                ? 'paused'
+                : 'active'
+          }
+          existingTitles={allTrackerTitles.filter(
+            (title) => title !== managedActivity.title,
+          )}
+          onClose={() => setManagedActivityId(null)}
+          onChooseScheduled={() => {}}
+          onSubmit={(input) =>
+            onEditOpenActivity(managedActivity.id, input)
+          }
+          onRequestPause={() => setPauseHabitId(managedActivity.id)}
+          onResume={() => onResumeHabit(managedActivity.id)}
+          onArchive={() => onArchiveHabit(managedActivity.id)}
+          onRestore={() => onRestoreHabit(managedActivity.id)}
+          onDelete={() => onDeleteHabit(managedActivity.id)}
+        />
+      ) : null}
       {isPauseTrackingOpen ? (
         <PauseTrackingDialog
           profile="hana"
@@ -584,7 +694,10 @@ export function HanaPage({
         <PauseTrackingDialog
           profile="hana"
           currentDate={game.currentDate}
-          habitTitle={catalog.find((quest) => quest.id === pauseHabitId)?.title}
+          habitTitle={
+            catalog.find((quest) => quest.id === pauseHabitId)?.title ??
+            openActivities.find((activity) => activity.id === pauseHabitId)?.title
+          }
           onClose={() => setPauseHabitId(null)}
           onSubmit={(input) => onPauseHabit(pauseHabitId, input)}
         />
@@ -597,6 +710,8 @@ export function HanaPage({
           onClose={() => setIsBackfillOpen(false)}
           onRecord={onBackfill}
           onUndo={onUndoBackfill}
+          onRecordActivity={onBackfillOpenActivity}
+          onUndoActivity={onUndoBackfillOpenActivity}
         />
       ) : null}
       {isExportOpen ? (

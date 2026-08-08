@@ -8,6 +8,11 @@ import {
   getQuestScheduleProgress,
 } from '@/lib/hanaGame'
 import { MAX_BACKFILL_DAYS } from '@/lib/habitLifecycle'
+import {
+  getOpenActivityCatalog,
+  getOpenActivityDateValidationError,
+  getOpenActivityValue,
+} from '@/lib/openActivities'
 import type { HanaGameState, Quest } from '@/types'
 
 type Props = {
@@ -17,6 +22,8 @@ type Props = {
   onClose: () => void
   onRecord: (dateKey: string, habitId: string) => string | null
   onUndo: (dateKey: string, habitId: string) => string | null
+  onRecordActivity: (dateKey: string, activityId: string) => string | null
+  onUndoActivity: (dateKey: string, activityId: string) => string | null
 }
 
 export function BackfillDialog({
@@ -26,6 +33,8 @@ export function BackfillDialog({
   onClose,
   onRecord,
   onUndo,
+  onRecordActivity,
+  onUndoActivity,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -65,6 +74,16 @@ export function BackfillDialog({
         if (quest.custom || quest.required) return true
         return game.activeDailyQuests?.[selectedDate]?.includes(quest.id)
       })
+    : []
+  const eligibleActivities = selectedDate
+    ? getOpenActivityCatalog(game).filter(
+        (activity) =>
+          !getOpenActivityDateValidationError(
+            game,
+            activity.id,
+            selectedDate,
+          ),
+      )
     : []
 
   return (
@@ -124,12 +143,16 @@ export function BackfillDialog({
           ))}
         </div>
 
-        <div className="mt-5 space-y-2">
+        <div className="mt-5 space-y-3">
           <p className="add-habit-label">
             {selectedDate ? displayDate(selectedDate) : 'No earlier tracker day'}
           </p>
           {eligible.length ? (
-            eligible.map((quest) => {
+            <div className="space-y-2" aria-labelledby="recent-scheduled-heading">
+              <h3 id="recent-scheduled-heading" className="add-habit-label">
+                Scheduled habits
+              </h3>
+              {eligible.map((quest) => {
               const progress = getQuestScheduleProgress(game, quest, selectedDate)
               const isCounted = quest.schedule?.kind === 'periodTarget'
               const done = progress.isComplete
@@ -157,6 +180,7 @@ export function BackfillDialog({
                     {recordedOnDate > 0 ? (
                       <button
                         type="button"
+                        aria-label={`Undo one ${quest.title} record on ${displayDate(selectedDate)}`}
                         onClick={() => {
                           const undoError = onUndo(selectedDate, quest.id)
                           setError(undoError)
@@ -169,6 +193,11 @@ export function BackfillDialog({
                     <button
                       type="button"
                       disabled={recordDisabled}
+                      aria-label={
+                        recordDisabled
+                          ? `${quest.title} is already complete on ${displayDate(selectedDate)}`
+                          : `Record ${quest.title} on ${displayDate(selectedDate)}`
+                      }
                       onClick={() => {
                         const recordError = onRecord(selectedDate, quest.id)
                         setError(recordError)
@@ -180,12 +209,127 @@ export function BackfillDialog({
                   </span>
                 </div>
               )
-            })
-          ) : (
+              })}
+            </div>
+          ) : null}
+
+          {eligibleActivities.length ? (
+            <div className="space-y-2" aria-labelledby="recent-anytime-heading">
+              <div>
+                <h3 id="recent-anytime-heading" className="add-habit-label">
+                  Anytime logs
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-faint">
+                  Empty days stay neutral. Record only what happened.
+                </p>
+              </div>
+              {eligibleActivities.map((activity) => {
+                const value = getOpenActivityValue(
+                  game,
+                  activity.id,
+                  selectedDate,
+                )
+                const isCheck = activity.kind === 'check'
+                const unit = activity.unit || (value === 1 ? 'time' : 'times')
+                return (
+                  <div key={activity.id} className="backfill-habit-row">
+                    <span className="text-xl" aria-hidden="true">
+                      {activity.emoji}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">
+                        {activity.title}
+                      </span>
+                      <span
+                        className="block text-xs text-faint"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {isCheck
+                          ? value > 0
+                            ? 'Logged on this day'
+                            : 'Once today · not logged'
+                          : `${value} ${unit} on this day`}
+                      </span>
+                    </span>
+                    <span className="backfill-row-actions">
+                      {isCheck ? (
+                        <button
+                          type="button"
+                          aria-pressed={value > 0}
+                          aria-label={
+                            value > 0
+                              ? `Undo ${activity.title} on ${displayDate(selectedDate)}`
+                              : `Log ${activity.title} on ${displayDate(selectedDate)}`
+                          }
+                          onClick={() => {
+                            const actionError = value > 0
+                              ? onUndoActivity(selectedDate, activity.id)
+                              : onRecordActivity(selectedDate, activity.id)
+                            setError(actionError)
+                          }}
+                          className="backfill-record-button"
+                        >
+                          {value > 0 ? (
+                            <>
+                              <Minus className="size-4" aria-hidden="true" />
+                              Undo
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="size-4" aria-hidden="true" />
+                              Log
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <>
+                          {value > 0 ? (
+                            <button
+                              type="button"
+                              aria-label={`Subtract one from ${activity.title} on ${displayDate(selectedDate)}`}
+                              onClick={() => {
+                                const undoError = onUndoActivity(
+                                  selectedDate,
+                                  activity.id,
+                                )
+                                setError(undoError)
+                              }}
+                              className="backfill-record-button"
+                            >
+                              <Minus className="size-4" aria-hidden="true" />
+                              −1
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            aria-label={`Add one to ${activity.title} on ${displayDate(selectedDate)}`}
+                            onClick={() => {
+                              const recordError = onRecordActivity(
+                                selectedDate,
+                                activity.id,
+                              )
+                              setError(recordError)
+                            }}
+                            className="backfill-record-button"
+                          >
+                            <Plus className="size-4" aria-hidden="true" />
+                            +1
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {!eligible.length && !eligibleActivities.length ? (
             <p className="rounded-control border border-border bg-surface-2 p-4 text-sm leading-6 text-muted">
-              No habits were due and trackable on this date.
+              No scheduled habits or anytime logs can be recorded on this date.
             </p>
-          )}
+          ) : null}
         </div>
 
         {error ? <p className="mt-3 text-sm font-medium text-danger" role="alert">{error}</p> : null}

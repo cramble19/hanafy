@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
+import { AddAnytimeLogDialog } from '@/components/AddAnytimeLogDialog'
+import { AnytimeLogSection } from '@/components/AnytimeLogSection'
 import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
@@ -53,11 +55,15 @@ import {
   getSkipProgress,
   visibleQuestsForState,
 } from '@/lib/hanaGame'
-import type { HanaGameState } from '@/types'
+import type { HanaGameState, NewOpenActivityInput } from '@/types'
 import {
   getHabitMomentumSignal,
   getHabitRangeStats,
 } from '@/lib/hanaStats'
+import {
+  getOpenActivityCatalog,
+  hasOpenActivityHistory,
+} from '@/lib/openActivities'
 
 export type CrambleSyncStatus =
   | 'idle'
@@ -80,6 +86,13 @@ type Props = {
   onUndoOccurrence: (id: string) => void
   onAddHabit: (input: NewHabitInput) => string | null
   onEditHabit: (habitId: string, input: NewHabitInput) => string | null
+  onAddOpenActivity: (input: NewOpenActivityInput) => string | null
+  onEditOpenActivity: (
+    activityId: string,
+    input: NewOpenActivityInput,
+  ) => string | null
+  onIncrementOpenActivity: (activityId: string) => void
+  onDecrementOpenActivity: (activityId: string) => void
   onPauseHabit: (habitId: string, input: PauseInput) => void
   onResumeHabit: (habitId: string) => void
   onArchiveHabit: (habitId: string) => void
@@ -89,6 +102,14 @@ type Props = {
   onResumeTracking: () => void
   onBackfill: (dateKey: string, habitId: string) => string | null
   onUndoBackfill: (dateKey: string, habitId: string) => string | null
+  onBackfillOpenActivity: (
+    dateKey: string,
+    activityId: string,
+  ) => string | null
+  onUndoBackfillOpenActivity: (
+    dateKey: string,
+    activityId: string,
+  ) => string | null
   onSkip: (id: string) => void
   onOpenObservatory: () => void
   onOpenLedger: () => void
@@ -108,6 +129,10 @@ export function CramblePage({
   onUndoOccurrence,
   onAddHabit,
   onEditHabit,
+  onAddOpenActivity,
+  onEditOpenActivity,
+  onIncrementOpenActivity,
+  onDecrementOpenActivity,
   onPauseHabit,
   onResumeHabit,
   onArchiveHabit,
@@ -117,6 +142,8 @@ export function CramblePage({
   onResumeTracking,
   onBackfill,
   onUndoBackfill,
+  onBackfillOpenActivity,
+  onUndoBackfillOpenActivity,
   onSkip,
   onOpenObservatory,
   onOpenLedger,
@@ -128,13 +155,16 @@ export function CramblePage({
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
+  const [isScheduledHabitOpen, setIsScheduledHabitOpen] = useState(false)
   const [managedHabitId, setManagedHabitId] = useState<string | null>(null)
+  const [managedActivityId, setManagedActivityId] = useState<string | null>(null)
   const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
+  const openActivities = getOpenActivityCatalog(game)
   const levelProgress = getLevelProgress(game.totalFlowers)
   const chapter = getCrambleChapterProgress(game)
   const journey = getCrambleJourneyProgress(game)
@@ -184,7 +214,24 @@ export function CramblePage({
       !isHabitArchivedOnDate(game, quest.id) &&
       Boolean(getActiveHabitPause(game, quest.id)),
   )
+  const pausedOpenActivities = openActivities.filter(
+    (activity) =>
+      !isHabitArchivedOnDate(game, activity.id) &&
+      Boolean(getActiveHabitPause(game, activity.id)),
+  )
+  const activeOpenActivities = openActivities.filter(
+    (activity) =>
+      !isHabitArchivedOnDate(game, activity.id) &&
+      !getActiveHabitPause(game, activity.id),
+  )
   const managedQuest = catalog.find((habit) => habit.id === managedHabitId)
+  const managedActivity = openActivities.find(
+    (activity) => activity.id === managedActivityId,
+  )
+  const allTrackerTitles = [
+    ...catalog.map((quest) => quest.title),
+    ...openActivities.map((activity) => activity.title),
+  ]
   const cueById = Object.fromEntries(
     catalog.map((quest) => [quest.id, getHabitSettings(game, quest.id).cue]),
   )
@@ -353,13 +400,27 @@ export function CramblePage({
               onSkip={onSkip}
             />
           ) : null}
+          <AnytimeLogSection
+            profile="cramble"
+            activities={activeOpenActivities}
+            todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
+            onIncrement={onIncrementOpenActivity}
+            onDecrement={onDecrementOpenActivity}
+            onManage={setManagedActivityId}
+          />
         </main>
       ) : null}
 
       <PausedHabitsCard
-        habits={pausedHabits}
+        habits={[...pausedHabits, ...pausedOpenActivities]}
         onResume={onResumeHabit}
-        onManage={setManagedHabitId}
+        onManage={(itemId) => {
+          if (openActivities.some((activity) => activity.id === itemId)) {
+            setManagedActivityId(itemId)
+          } else {
+            setManagedHabitId(itemId)
+          }
+        }}
       />
 
       <section className="cramble-codex-card relative z-10 mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
@@ -514,7 +575,7 @@ export function CramblePage({
           <span className="profile-action-copy">
             <span className="profile-action-label">Add habit</span>
             <span className="profile-action-detail">
-              Choose its rhythm and period reward
+              Add a scheduled habit or anytime log
             </span>
           </span>
         </button>
@@ -553,10 +614,19 @@ export function CramblePage({
       </nav>
 
       {isAddHabitOpen ? (
+        <AddAnytimeLogDialog
+          profile="cramble"
+          existingTitles={allTrackerTitles}
+          onClose={() => setIsAddHabitOpen(false)}
+          onChooseScheduled={() => setIsScheduledHabitOpen(true)}
+          onSubmit={onAddOpenActivity}
+        />
+      ) : null}
+      {isScheduledHabitOpen ? (
         <AddHabitDialog
           profile="cramble"
-          existingTitles={catalog.map((quest) => quest.title)}
-          onClose={() => setIsAddHabitOpen(false)}
+          existingTitles={allTrackerTitles}
+          onClose={() => setIsScheduledHabitOpen(false)}
           onSubmit={onAddHabit}
         />
       ) : null}
@@ -589,6 +659,42 @@ export function CramblePage({
           onDelete={() => onDeleteHabit(managedQuest.id)}
         />
       ) : null}
+      {managedActivity ? (
+        <AddAnytimeLogDialog
+          profile="cramble"
+          mode="edit"
+          initialView="anytime"
+          initialValue={{
+            title: managedActivity.title,
+            description: managedActivity.description,
+            kind: managedActivity.kind,
+            unit: managedActivity.unit,
+            emoji: managedActivity.emoji,
+            color: managedActivity.color,
+          }}
+          kindLocked={hasOpenActivityHistory(game, managedActivity.id)}
+          lifecycleStatus={
+            isHabitArchivedOnDate(game, managedActivity.id)
+              ? 'archived'
+              : getActiveHabitPause(game, managedActivity.id)
+                ? 'paused'
+                : 'active'
+          }
+          existingTitles={allTrackerTitles.filter(
+            (title) => title !== managedActivity.title,
+          )}
+          onClose={() => setManagedActivityId(null)}
+          onChooseScheduled={() => {}}
+          onSubmit={(input) =>
+            onEditOpenActivity(managedActivity.id, input)
+          }
+          onRequestPause={() => setPauseHabitId(managedActivity.id)}
+          onResume={() => onResumeHabit(managedActivity.id)}
+          onArchive={() => onArchiveHabit(managedActivity.id)}
+          onRestore={() => onRestoreHabit(managedActivity.id)}
+          onDelete={() => onDeleteHabit(managedActivity.id)}
+        />
+      ) : null}
       {isPauseTrackingOpen ? (
         <PauseTrackingDialog
           profile="cramble"
@@ -601,7 +707,10 @@ export function CramblePage({
         <PauseTrackingDialog
           profile="cramble"
           currentDate={game.currentDate}
-          habitTitle={catalog.find((quest) => quest.id === pauseHabitId)?.title}
+          habitTitle={
+            catalog.find((quest) => quest.id === pauseHabitId)?.title ??
+            openActivities.find((activity) => activity.id === pauseHabitId)?.title
+          }
           onClose={() => setPauseHabitId(null)}
           onSubmit={(input) => onPauseHabit(pauseHabitId, input)}
         />
@@ -614,6 +723,8 @@ export function CramblePage({
           onClose={() => setIsBackfillOpen(false)}
           onRecord={onBackfill}
           onUndo={onUndoBackfill}
+          onRecordActivity={onBackfillOpenActivity}
+          onUndoActivity={onUndoBackfillOpenActivity}
         />
       ) : null}
       {isExportOpen ? (

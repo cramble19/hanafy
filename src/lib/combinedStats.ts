@@ -200,6 +200,7 @@ function getTrackedDateKeys(
   ;[
     state.dailyCompletions ?? {},
     state.habitOccurrences ?? {},
+    state.openActivityLogs ?? {},
     state.eveningWeeds ?? {},
   ].forEach((datedRecords) => {
     Object.entries(datedRecords).forEach(([dateKey, records]) => {

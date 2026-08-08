@@ -27,11 +27,11 @@ endpoint and generic payload/save helpers support both profiles.
 
 The controllers must not share state, caches, or pending/in-flight refs.
 
-Lifecycle version 2 fields (`habitSettings`, profile/habit pause intervals,
-archive state, reminder intent, deletion tombstones, history epoch, sync
-revision, and backfill audit) live inside the same JSONB snapshot and therefore
-use the serialized cache/pending/POST flow. Legacy snapshots normalize to safe
-active/default lifecycle collections.
+Schema version 3 fields (`openActivities`, `openActivityLogs`, `habitSettings`,
+profile/habit pause intervals, archive state, reminder intent, deletion
+tombstones, history epoch, sync revision, and backfill audit) live inside the
+same JSONB snapshot and therefore use the serialized cache/pending/POST flow.
+Legacy snapshots normalize to safe empty/default collections.
 
 ## Relevant files
 
@@ -150,6 +150,20 @@ remains in the snapshot. Old snapshots without `habitOccurrences` normalize it
 to an empty record, while legacy quota history keeps its original meaning. The
 API applies additive migrations for revision, write-token, history-epoch, and
 paused-status support.
+
+Deadline-free definitions live in `state.openActivities`, with positive logical
+day values in `state.openActivityLogs[date][activityId]`. They use the same full
+snapshot, local cache, pending marker, revision CAS, and profile isolation. They
+do not create `hana_quest_statuses` rows because that projection represents
+scored goal windows; Ledger/export analytics read their snapshot history
+directly. No SQL migration is required.
+
+The API accepts only supported state schema versions (currently 1 through 3),
+and the snapshot upsert also compares the incoming version with the stored one.
+A POST whose schema is older than the current snapshot updates zero rows and
+returns the normal 409 conflict response. This protects version-3 fields from
+an older cached PWA client that does not know how to preserve them and prevents
+an unsupported future version from locking legitimate clients out.
 
 The API rejects the whole POST if the profile is invalid, `startDate` is missing,
 or any quest/weed row is malformed or carries a different profile. Inserts derive

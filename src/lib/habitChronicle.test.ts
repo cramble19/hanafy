@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { HanaGameState, Quest } from '@/types'
+import type { HanaGameState, OpenActivity, Quest } from '@/types'
 import { buildProfileChronicleHtml } from './habitChronicle'
 
 describe('habit chronicle HTML export', () => {
@@ -117,6 +117,45 @@ describe('habit chronicle HTML export', () => {
     expect(html).toContain('class="period open"')
     expect(html).toContain('Personal pause reasons and notes are intentionally excluded')
   })
+
+  it('renders deadline-free activity as factual records with neutral blank days', () => {
+    const activity: OpenActivity = {
+      id: 'open-pages',
+      custom: true,
+      title: 'Pages <read>',
+      description: 'Record pages & keep going.',
+      emoji: '📖',
+      color: '#8ba07b',
+      kind: 'count',
+      unit: 'pages',
+      createdDate: '2026-08-01',
+    }
+    const state = createState({
+      currentDate: '2026-08-04',
+      openActivities: [activity],
+      openActivityLogs: {
+        '2026-08-01': { [activity.id]: 12 },
+        '2026-08-03': { [activity.id]: 8 },
+      },
+    })
+
+    const html = buildProfileChronicleHtml(
+      state,
+      [],
+      'hana',
+      '2026-08-04T12:00:00.000Z',
+    )
+
+    expect(html).toContain('Anytime records')
+    expect(html).toContain('Pages &lt;read&gt;')
+    expect(html).toContain('Record pages &amp; keep going.')
+    expect(html).toContain('20')
+    expect(html).toContain('12 pages')
+    expect(html).toContain('8 pages')
+    expect(html).toContain('Blank days are neutral and omitted')
+    expect(html).toContain('None</strong><span>Rewards')
+    expect(html).not.toContain('class="period missed"')
+  })
 })
 
 function createDailyQuest(
@@ -140,7 +179,7 @@ function createDailyQuest(
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     startDate: '2026-08-01',
     currentDate: '2026-08-01',
     customHabits: [],
@@ -148,6 +187,8 @@ function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
     historyEpoch: 'test-history',
     syncRevision: 1,
     habitSettings: {},
+    openActivities: [],
+    openActivityLogs: {},
     trackingPauses: [],
     backfillAudit: [],
     activeDailyQuests: {},

@@ -1,8 +1,9 @@
 # Custom Habits
 
-Hana and Cramble can each add their own habits from the large **Add habit**
-button at the bottom of the tracker. A habit belongs only to the profile where
-it was created: Hana earns flowers, while Cramble earns renown.
+Hana and Cramble can each add their own tracking items from **Add habit** in the
+bottom dock. The first choice is **Scheduled habit** or **Anytime log**. An item
+belongs only to the profile where it was created: Hana earns flowers and
+Cramble earns renown for scheduled goals, while anytime logs are neutral records.
 
 ## The tracking day
 
@@ -14,6 +15,28 @@ a **4 AM reset** badge as a reminder.
 Existing historical date keys are left unchanged because older records do not
 contain the time of day needed to move them safely. The 4:00 AM rule applies to
 new tracking and future rollovers.
+
+## Anytime logs
+
+An anytime log has no deadline. Use it for something worth recording when it
+happens, without asking the app to expect it every day or every week. Empty days
+are neutral: they never become misses, break a combo, consume a skip/pass, or
+change flowers, renown, and the Today score.
+
+There are two record styles:
+
+- **Done today / Once today** records one yes/no mark for the current tracking
+  day, such as visiting the gym. Press **Undo** to remove a mistaken mark.
+- **Number / Count** stores a non-negative whole-number total for the tracking
+  day, such as pages, sets, or glasses. The plus and minus buttons correct the
+  day's amount one step at a time. An optional unit explains the number.
+
+Anytime logs appear in their own section below scheduled quests, so the opening
+Today score remains about work that is actually due. They have a separate,
+judgment-free Ledger section: once-today logs show recorded-day marks, while
+count logs show amounts by day. The 7, 30, 90, and all-time views report factual
+totals, active days, averages, pace, and the most recent record. Unrecorded days
+are always shown as neutral.
 
 ## Creating a habit
 
@@ -99,10 +122,11 @@ is saved as the selected reason label. No completions, misses, weeds, or
 reminders are recorded during the break. An indefinite pause remains until the
 user presses Resume.
 
-The **Recent day** action can record or undo something during the previous
-three tracking days. It cannot change a future, paused, archived,
-pre-creation, locked, unscheduled, or passed opportunity. These recent days stay
-open rather than becoming unfinished until the correction window closes.
+The **Recent day** action can record or undo a scheduled habit or anytime log
+during the previous three tracking days. It cannot change a future, paused,
+archived, pre-creation, locked, unscheduled, or passed opportunity. These recent
+days stay open rather than becoming unfinished until the correction window
+closes. An empty anytime day remains neutral even after that window closes.
 
 ## Reminders and export
 
@@ -121,8 +145,8 @@ Push infrastructure.
   and shows each habit's full goal-window history. Use the browser's Print action
   to save it as a PDF. Private pause reasons and notes are not printed.
 - **Spreadsheet (.csv)** contains detailed habit, period, occurrence, pause, and
-  correction rows for Excel or Google Sheets. User-entered text is protected
-  against accidental spreadsheet formulas.
+  correction rows plus anytime definitions and dated values for Excel or Google
+  Sheets. User-entered text is protected against accidental spreadsheet formulas.
 - **Complete backup (.json)** stores the whole profile snapshot plus the resolved
   habit definitions and format/version metadata. This is the best preservation
   format, although the app does not yet provide a one-click import screen.
@@ -133,6 +157,7 @@ private. Postgres remains the deployed app's live saved copy.
 
 The database does not use one shared JSON for both people. It stores one current
 JSONB snapshot row for Hana and a separate current row for Cramble. Each snapshot
-contains that profile's custom habits, settings, lifecycle, reminders, pauses,
-correction audit, dated records, and rewards. Built-in definitions originate in
-the app code, which is why the JSON export also embeds the resolved catalog.
+contains that profile's custom habits, anytime definitions and logs, settings,
+lifecycle, reminders, pauses, correction audit, dated records, and rewards.
+Built-in definitions originate in the app code, which is why the JSON export
+also embeds the resolved catalog.

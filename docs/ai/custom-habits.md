@@ -8,6 +8,9 @@ Technical source of truth for user-created habits shared by Hana and Cramble.
   form state.
 - `src/lib/customHabits.ts` owns input validation, id generation, cadence
   formatting, schedule creation, profile copy/colors, and limits.
+- `src/lib/openActivities.ts` owns the separate deadline-free definition,
+  validation, current/recent-day mutations, normalization, and neutral summary
+  helpers. `src/lib/openActivityStats.ts` derives factual range statistics.
 - `src/lib/hanaGame.ts` normalizes definitions and occurrence counts, merges the
   effective catalog, plans cards, computes period progress and rewards, supports
   record/undo, and resets progress.
@@ -23,6 +26,8 @@ Technical source of truth for user-created habits shared by Hana and Cramble.
 - `src/lib/habitLifecycle.ts` owns profile/habit pause intervals, archive and
   restore, permanent custom-habit purge, reminder/cue settings, and correction
   limits.
+- `src/components/AddAnytimeLogDialog.tsx` and `AnytimeLogSection.tsx` implement
+  the shared create/manage flow and Today cards for deadline-free records.
 - `src/components/PauseTrackingDialog.tsx`, `BackfillDialog.tsx`, and
   `TodayHabitControls.tsx` expose recovery controls shared by both themes.
 - `src/components/ExportDataDialog.tsx` chooses between a themed HTML Chronicle,
@@ -52,16 +57,26 @@ type NewHabitInput = {
   cue?: string
   reminderTime?: string | null
 }
+
+type NewOpenActivityInput = {
+  title: string
+  description: string
+  kind: 'check' | 'count'
+  unit?: string | null
+  emoji?: string
+  color?: string
+}
 ```
 
 ## Lifecycle contract
 
-Persisted snapshots normalize to schema version 2 and may contain
-`habitSettings`, `trackingPauses`, `backfillAudit`, `deletedHabitIds`,
-`historyEpoch`, and `syncRevision`. `habitSettings` is keyed by any built-in or
-custom quest id so reminders, pause, archive, and source wording overrides also
-work for built-ins. Permanent deletion removes raw history for either kind and
-retains a tombstone for database cleanup.
+Persisted snapshots normalize to schema version 3 and include
+`openActivities` and `openActivityLogs`; they may also contain `habitSettings`,
+`trackingPauses`, `backfillAudit`, `deletedHabitIds`, `historyEpoch`, and
+`syncRevision`. `habitSettings` is keyed by any built-in, custom quest, or
+anytime id so pause and archive behavior stays shared. Permanent deletion
+removes the definition and raw history and retains a tombstone for conflict
+resurrection protection.
 
 Pause intervals use inclusive `startDate` / `endDate`; `endDate: null` means
 manual resume. `isHabitTrackableOnDate()` is the shared guard for planning,
@@ -87,6 +102,48 @@ before 04:00 are resolved onto the following calendar date within that same
 logical day. The reminder hook also verifies that `game.currentDate` equals the
 current logical key before delivery, preventing a stale-day send during rollover.
 Legacy completion rows have no event time, so they are never bulk-shifted.
+
+## Deadline-free anytime logs
+
+Anytime records are deliberately not a `QuestSchedule` branch. Treating them as
+fake daily habits would create due cards, missed periods, rewards, skips,
+reminders, and misleading success rates. They live beside the quest engine:
+
+```ts
+type OpenActivity = {
+  id: string
+  custom: true
+  title: string
+  description: string
+  emoji: string
+  color: string
+  kind: 'check' | 'count'
+  unit: string | null
+  createdDate: string
+}
+
+openActivities: OpenActivity[]
+openActivityLogs: Record<dateKey, Record<activityId, number>>
+```
+
+A `check` value normalizes to `1`; a `count` value is a positive safe integer
+up to 999,999. Zero is represented by the absence of a value. Mutations use the
+profile's logical `currentDate`, so an action before 04:00 belongs to the prior
+calendar date. Recent-day changes use the same three-day limit and reject
+future, pre-start, pre-creation, paused, and archived dates.
+
+Anytime records never participate in quest planning, Today denominators,
+flowers/renown, pass/skip budgets, reminders, period outcomes, success rates, or
+momentum signals. Their Ledger path instead reports active days, total values,
+average per active day, weekly pace, peak, and latest recorded date. Blank days
+remain neutral. Positive dated values count as tracked dates in Shared Journey,
+but they are excluded from its settled rhythm, trend, and strongest-goal math.
+
+Definition type and unit can change until the first positive record. After
+history exists, controllers reject either change so past quantities keep the
+same meaning. Wording remains editable. Profile/habit pause, archive/restore,
+and permanent deletion reuse `habitLifecycle`; deleting purges every dated
+value. Reset preserves definitions and lifecycle settings but clears logs.
 
 The form exposes two goal patterns:
 
@@ -172,12 +229,14 @@ quests are ordered first and win id collisions; normalized custom definitions
 are appended. Required custom habits are not truncated by the optional rotating
 quest limit.
 
-`parseStoredHanaState()` treats absent `customHabits` and `habitOccurrences`
-fields as empty for old snapshots. It rejects malformed definitions, invalid
-colors/dates, unsafe ids, unsupported schedules, duplicate ids or titles, and
-collisions with the current built-in catalog. Occurrence buckets require a real
-local date and positive safe-integer counts no greater than 100. Rejected or
-unknown definitions cannot earn rewards or produce analytics rows.
+`parseStoredHanaState()` treats absent `customHabits`, `habitOccurrences`,
+`openActivities`, and `openActivityLogs` fields as empty for old snapshots. It
+rejects malformed definitions, invalid colors/dates, unsafe ids, unsupported
+schedules, duplicate ids or titles, and collisions with the current built-in
+catalog. Scheduled occurrence buckets require a real local date and positive
+safe-integer counts no greater than 100; anytime values are normalized against
+their own definition and cap. Rejected or unknown definitions cannot earn
+rewards or produce analytics rows.
 
 ## Period progress and rewards
 
@@ -215,9 +274,11 @@ and reward/cloud derivation branches accordingly.
 
 ## Persistence, reporting, and isolation
 
-No SQL migration is required. Definitions and occurrence counts live in the
-existing JSONB profile snapshot. Derived quest-status rows use the existing
-period columns:
+No SQL migration is required. Scheduled definitions/counts and anytime
+definitions/logs live in the existing JSONB profile snapshot. Anytime records
+are intentionally absent from `hana_quest_statuses`, whose rows represent
+scored goal windows. Derived scheduled quest-status rows use the existing period
+columns:
 
 - `periodKey` and `windowStart` are the inclusive period start;
 - `dueDate` is the inclusive period end;
@@ -245,23 +306,33 @@ cannot replay an old optimistic-lock revision. Deleted built-in tombstones remai
 in the backup so they do not silently reappear after a future restore. The
 current app creates backups but does not import them yet.
 
-The HTML Chronicle includes aggregate and per-habit schedule-aware history for
-active, paused, and archived attempted habits. It omits private pause reasons and
-notes, escapes all user-authored content, contains no remote assets or scripts,
-and can be printed to PDF. Open, skipped, and paused windows remain visibly
-neutral rather than being counted as failures.
+The API rejects unsupported state schemas and any write whose state schema is
+older than the stored snapshot. This prevents an old cached PWA bundle from
+reading a version-3 snapshot, normalizing it through an older model, and
+overwriting the anytime fields. Such a write returns the normal conflict
+response and leaves the newer database snapshot intact.
 
-`resetProfileProgress()` clears `habitOccurrences`, boolean completions, skips,
-weeds, and rewards while preserving `startDate`, `currentDate`, and copied custom
-definitions.
+The CSV includes separate `anytime_activity` and `anytime_log` rows. Backup
+format version 2 carries the complete version-3 state and a resolved anytime
+catalog; older format-version-1 files predate this catalog branch. The HTML
+Chronicle includes aggregate and per-habit schedule-aware history plus a neutral
+Anytime records section for active, paused, and archived items. It omits private
+pause reasons and notes, escapes all user-authored content, contains no remote
+assets or scripts, and can be printed to PDF. Open, skipped, paused, and blank
+anytime days remain visibly neutral rather than being counted as failures.
+
+`resetProfileProgress()` clears `habitOccurrences`, `openActivityLogs`, boolean
+completions, skips, weeds, and rewards while preserving `startDate`,
+`currentDate`, and copied scheduled/anytime definitions.
 
 ## UI and accessibility
 
-The Add habit action is the first full-width item in each sticky bottom dock.
-Hana disables it in Explore mode. The form uses native `<dialog>` behavior for
-focus containment and Escape, restores focus on close, supports backdrop
-dismissal, announces field-specific validation errors, keeps controls at least
-44px tall, and uses profile-scoped Garden/Archive styling.
+The Add habit action is the first item in each sticky bottom dock. Hana disables
+it in Explore mode. It first opens a Scheduled habit / Anytime log chooser.
+Both forms use native `<dialog>` behavior for focus containment and Escape,
+restore focus on close, support backdrop dismissal, announce field-specific
+validation errors, keep controls at least 44px tall, and use profile-scoped
+Garden/Archive styling.
 
 The form uses native-radio Daily / Weekly / Custom schedule choices, reveals the
 day count only for Custom, displays a live cadence sentence, and states the

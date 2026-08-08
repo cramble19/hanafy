@@ -15,6 +15,8 @@ and profile explicitly or through the compatibility wrappers.
 - `src/data/quests.ts` — typed loader for the JSON catalog.
 - `src/lib/hanaGame.ts` — pure game/date/rotation/level helpers.
 - `src/lib/customHabits.ts` — validates and creates user-defined habits.
+- `src/lib/openActivities.ts` — validates and records deadline-free activities.
+- `src/lib/openActivityStats.ts` — derives neutral activity history.
 - `src/lib/hanaCloudSync.ts` — converts local Hana state into database sync rows.
 - `src/lib/hanaStats.ts` — derives user-facing stats from the same normalized rows.
 - `src/App.tsx` — owns Hana's current game state and persistence.
@@ -28,6 +30,9 @@ and profile explicitly or through the compatibility wrappers.
 - `src/pages/CrambleQuestDetailPage.tsx` — contains the shared record-detail analytics plus Cramble's wrapper.
 - `src/components/QuestCard.tsx` and `src/components/QuestSection.tsx` — task UI.
 - `src/components/AddHabitDialog.tsx` — shared custom-habit form.
+- `src/components/AddAnytimeLogDialog.tsx` and
+  `src/components/AnytimeLogSection.tsx` — shared deadline-free create/manage
+  flow and Today cards.
 
 ## Task schema
 
@@ -298,6 +303,8 @@ type HanaGameState = {
   startDate: string | null
   currentDate: string // YYYY-MM-DD
   customHabits: CustomHabitQuest[]
+  openActivities: OpenActivity[]
+  openActivityLogs: Record<string, Record<string, number>>
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>
@@ -321,6 +328,13 @@ schedules.
 `habitOccurrences[dateKey][questId]` stores the number of records made that day
 for a custom `periodTarget`. It supports multiple same-day records such as two
 brushings per day without changing legacy boolean history.
+
+`openActivities` and `openActivityLogs` store deadline-free check/count records.
+They are kept outside the quest schedule and reward engine, so blank days never
+become missed opportunities and logging does not change flowers, skips, Today
+completion, or momentum. Positive values are still factual tracked-day evidence
+for the Shared Journey. The shared Ledger renders their neutral 7/30/90/all-time
+history without success-rate language.
 
 `longTermWindows[questId]` stores the active start date for each long-term quest.
 
@@ -379,7 +393,8 @@ Saved state is normalized on load from both DB snapshots and local cache. The
 previous single `completions[date][quest]` shape and the later
 `weeklyCompletions` shape are migrated into daily/long-term buckets so older
 progress does not crash the app. Snapshots that predate custom occurrence counts
-default `habitOccurrences` to `{}`. Valid legacy `daily` and `quota` custom
+or anytime logs default `habitOccurrences` and `openActivityLogs` to `{}`, and
+`openActivities` to `[]`. Valid legacy `daily` and `quota` custom
 habits retain their boolean completion and per-occurrence capped-reward behavior;
 they are not silently reinterpreted as all-or-nothing period targets.
 
@@ -389,6 +404,9 @@ The database sync stores:
 - daily and long-term quest rows in `hana_quest_statuses`
 - Evening Weed rows in `hana_weed_statuses`
 
+Anytime logs live only in the canonical snapshot and exports; they deliberately
+do not enter the scored quest-status projection.
+
 See `docs/ai/database-sync.md` for the schema and Vercel deployment steps.
 
 ## Dev controls
@@ -397,9 +415,9 @@ The Hana page has local-only temporary controls, rendered behind
 `import.meta.env.DEV`:
 
 - **Next day:** increments `currentDate` by one day to test daily reset and long-term deadlines.
-- **Reset:** clears boolean completions, occurrence counts, skips, weeds, and
-  flowers while preserving custom habit definitions and the current simulated
-  date.
+- **Reset:** clears boolean completions, scheduled occurrence counts, anytime
+  log values, skips, weeds, and flowers while preserving custom definitions and
+  the current simulated date.
 
 They are hidden from production/Vercel builds but remain available during
 `npm run dev`.

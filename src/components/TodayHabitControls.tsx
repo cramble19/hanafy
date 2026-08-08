@@ -9,6 +9,8 @@ import { PAUSE_REASON_OPTIONS } from '@/lib/habitLifecycle'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
 import type { Quest, TrackingPause } from '@/types'
 
+type PausedTrackerItem = Pick<Quest, 'id' | 'title' | 'emoji'>
+
 export function TodayProgressCard({
   profile,
   complete,
@@ -120,7 +122,7 @@ export function PausedHabitsCard({
   onResume,
   onManage,
 }: {
-  habits: Quest[]
+  habits: PausedTrackerItem[]
   onResume: (habitId: string) => void
   onManage: (habitId: string) => void
 }) {
@@ -129,7 +131,7 @@ export function PausedHabitsCard({
     <section className="paused-habits-card">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">Neutral for now</p>
-        <h2 className="mt-1 text-lg font-semibold text-ink">Paused habits</h2>
+        <h2 className="mt-1 text-lg font-semibold text-ink">Paused habits &amp; logs</h2>
       </div>
       <div className="mt-3 space-y-2">
         {habits.map((habit) => (
@@ -139,7 +141,12 @@ export function PausedHabitsCard({
             <button type="button" onClick={() => onManage(habit.id)} aria-label={`Manage ${habit.title}`} className="paused-habit-icon-button">
               <Settings className="size-4" aria-hidden="true" />
             </button>
-            <button type="button" onClick={() => onResume(habit.id)} className="today-utility-button">
+            <button
+              type="button"
+              onClick={() => onResume(habit.id)}
+              aria-label={`Resume ${habit.title}`}
+              className="today-utility-button"
+            >
               <Play className="size-4" aria-hidden="true" /> Resume
             </button>
           </div>

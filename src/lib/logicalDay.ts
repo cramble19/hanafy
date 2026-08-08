@@ -14,6 +14,20 @@ export function getLogicalDayKey(date = new Date()) {
 }
 
 /**
+ * Returns the elapsed milliseconds until the next local 04:00 boundary.
+ * Constructing the next wall-clock instant keeps daylight-saving transitions
+ * calendar-correct instead of assuming every day lasts exactly 24 hours.
+ */
+export function millisecondsUntilNextLogicalDay(date = new Date()) {
+  const nextBoundary = new Date(date)
+  nextBoundary.setHours(LOGICAL_DAY_START_HOUR, 0, 0, 0)
+  if (nextBoundary.getTime() <= date.getTime()) {
+    nextBoundary.setDate(nextBoundary.getDate() + 1)
+  }
+  return Math.max(0, nextBoundary.getTime() - date.getTime())
+}
+
+/**
  * Resolves a reminder's wall-clock instant inside a tracking day. Times before
  * 04:00 occur on the following calendar date but retain the same logical key.
  */

@@ -5,7 +5,7 @@ import type {
   TrackingPause,
 } from '@/types'
 
-export const GAME_STATE_SCHEMA_VERSION = 2 as const
+export const GAME_STATE_SCHEMA_VERSION = 3 as const
 export const MAX_BACKFILL_DAYS = 3
 
 export const PAUSE_REASON_OPTIONS: Array<{
@@ -205,6 +205,9 @@ export function updateHabitWording(
 
 export function hasHabitHistory(state: GameState, habitId: string) {
   if (
+    Object.values(state.openActivityLogs ?? {}).some(
+      (records) => (records[habitId] ?? 0) > 0,
+    ) ||
     Object.values(state.dailyCompletions ?? {}).some(
       (records) => records[habitId] === true,
     ) ||
@@ -242,8 +245,11 @@ export function deleteHabitPermanently(
   habitId: string,
 ): GameState {
   const isCustom = state.customHabits.some((habit) => habit.id === habitId)
+  const isOpenActivity = (state.openActivities ?? []).some(
+    (activity) => activity.id === habitId,
+  )
   const isAlreadyDeleted = state.deletedHabitIds?.includes(habitId) ?? false
-  if (!isCustom && isAlreadyDeleted) return state
+  if (!isCustom && !isOpenActivity && isAlreadyDeleted) return state
 
   const habitSettings = { ...(state.habitSettings ?? {}) }
   delete habitSettings[habitId]
@@ -255,6 +261,10 @@ export function deleteHabitPermanently(
   return {
     ...state,
     customHabits: state.customHabits.filter((habit) => habit.id !== habitId),
+    openActivities: (state.openActivities ?? []).filter(
+      (activity) => activity.id !== habitId,
+    ),
+    openActivityLogs: omitRecordKey(state.openActivityLogs ?? {}, habitId),
     deletedHabitIds: Array.from(
       new Set([...(state.deletedHabitIds ?? []), habitId]),
     ),

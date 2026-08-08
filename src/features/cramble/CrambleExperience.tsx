@@ -52,6 +52,17 @@ import {
   saveProfileStateToDb,
 } from '@/lib/hanaRemoteState'
 import {
+  createOpenActivity,
+  getNewOpenActivityValidationError,
+  hasOpenActivityHistory,
+  incrementOpenActivityCountForDate,
+  OPEN_ACTIVITY_LIMITS,
+  recordOpenActivityForDate,
+  setOpenActivityValueForDate,
+  undoOpenActivityForDate,
+  updateOpenActivityDefinition,
+} from '@/lib/openActivities'
+import {
   CramblePage,
   type CrambleSyncStatus,
 } from '@/pages/CramblePage'
@@ -59,10 +70,11 @@ import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
-import type { HanaGameState } from '@/types'
+import type { HanaGameState, NewOpenActivityInput } from '@/types'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
+import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 
 type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail'
 const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
@@ -444,6 +456,7 @@ export function CrambleExperience({ onBack }: Props) {
   }, [hydrateFromDb])
 
   useEffect(() => {
+    let rolloverTimer: number | null = null
     const syncToToday = () => {
       const current = gameRef.current
       if (!current || !hasHanaStarted(current)) return
@@ -461,19 +474,33 @@ export function CrambleExperience({ onBack }: Props) {
         )
       }
     }
+    const scheduleRollover = () => {
+      if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
+      rolloverTimer = window.setTimeout(() => {
+        syncToToday()
+        scheduleRollover()
+      }, millisecondsUntilNextLogicalDay() + 100)
+    }
     const syncWhenVisible = () => {
-      if (document.visibilityState === 'visible') syncToToday()
+      if (document.visibilityState === 'visible') {
+        syncToToday()
+        scheduleRollover()
+      }
+    }
+    const syncOnFocus = () => {
+      syncToToday()
+      scheduleRollover()
     }
 
     syncToToday()
-    window.addEventListener('focus', syncToToday)
+    scheduleRollover()
+    window.addEventListener('focus', syncOnFocus)
     document.addEventListener('visibilitychange', syncWhenVisible)
-    const intervalId = window.setInterval(syncToToday, 60 * 1000)
 
     return () => {
-      window.removeEventListener('focus', syncToToday)
+      window.removeEventListener('focus', syncOnFocus)
       document.removeEventListener('visibilitychange', syncWhenVisible)
-      window.clearInterval(intervalId)
+      if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
     }
   }, [commitGameState])
 
@@ -701,6 +728,119 @@ export function CrambleExperience({ onBack }: Props) {
     return null
   }
 
+  const addCrambleOpenActivity = (input: NewOpenActivityInput) => {
+    const previous = gameRef.current
+    if (!previous || !hasHanaStarted(previous)) {
+      return "Begin Cramble's First Oath before adding an anytime log."
+    }
+    if (previous.openActivities.length >= OPEN_ACTIVITY_LIMITS.definitions) {
+      return 'This profile has reached its anytime-log limit.'
+    }
+
+    const existingTitles = [
+      ...getQuestCatalog(crambleQuests, previous).map((quest) => quest.title),
+      ...previous.openActivities.map((activity) => activity.title),
+    ]
+    const validationError = getNewOpenActivityValidationError(
+      input,
+      existingTitles,
+    )
+    if (validationError) return validationError
+
+    try {
+      const activity = createOpenActivity(
+        input,
+        'cramble',
+        previous.currentDate,
+        existingTitles,
+      )
+      void commitGameState({
+        ...previous,
+        openActivities: [...previous.openActivities, activity],
+      })
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : 'Could not add this anytime log.'
+    }
+  }
+
+  const editCrambleOpenActivity = (
+    activityId: string,
+    input: NewOpenActivityInput,
+  ) => {
+    const previous = gameRef.current
+    if (!previous) return "Cramble's tracker is not ready."
+    const activity = previous.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (!activity) return 'That anytime log is unavailable.'
+
+    const existingTitles = [
+      ...getQuestCatalog(crambleQuests, previous).map((quest) => quest.title),
+      ...previous.openActivities
+        .filter((candidate) => candidate.id !== activityId)
+        .map((candidate) => candidate.title),
+    ]
+    const validationError = getNewOpenActivityValidationError(
+      input,
+      existingTitles,
+    )
+    if (validationError) return validationError
+
+    const nextUnit = input.kind === 'count' ? input.unit?.trim() || null : null
+    if (
+      hasOpenActivityHistory(previous, activityId) &&
+      (input.kind !== activity.kind || nextUnit !== activity.unit)
+    ) {
+      return 'Record type and unit cannot change after logging begins. Archive this item, then add the revised version with a different name.'
+    }
+
+    try {
+      const updated = updateOpenActivityDefinition(
+        activity,
+        input,
+        existingTitles,
+      )
+      void commitGameState({
+        ...previous,
+        openActivities: previous.openActivities.map((candidate) =>
+          candidate.id === activityId ? updated : candidate,
+        ),
+      })
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : 'Could not update this anytime log.'
+    }
+  }
+
+  const changeCrambleOpenActivity = (
+    activityId: string,
+    delta: 1 | -1,
+  ) => {
+    const previous = gameRef.current
+    if (!previous) return
+    const activity = previous.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (!activity) return
+
+    const nextState =
+      activity.kind === 'check'
+        ? setOpenActivityValueForDate(
+            previous,
+            activityId,
+            previous.currentDate,
+            delta > 0 ? 1 : 0,
+          )
+        : incrementOpenActivityCountForDate(
+            previous,
+            activityId,
+            previous.currentDate,
+            delta,
+          )
+    if (nextState !== previous) void commitGameState(nextState)
+  }
+
   const pauseCrambleHabit = (habitId: string, input: PauseInput) => {
     const previous = gameRef.current
     if (previous) void commitGameState(startHabitPause(previous, habitId, input))
@@ -770,6 +910,30 @@ export function CrambleExperience({ onBack }: Props) {
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
     })
     return null
+  }
+
+  const backfillCrambleOpenActivity = (
+    dateKey: string,
+    activityId: string,
+  ) => {
+    const previous = gameRef.current
+    if (!previous) return "Cramble's tracker is not ready."
+    const result = recordOpenActivityForDate(previous, activityId, dateKey)
+    if (result.error) return result.error
+    void commitGameState(result.state)
+    return result.error
+  }
+
+  const undoBackfillCrambleOpenActivity = (
+    dateKey: string,
+    activityId: string,
+  ) => {
+    const previous = gameRef.current
+    if (!previous) return "Cramble's tracker is not ready."
+    const result = undoOpenActivityForDate(previous, activityId, dateKey)
+    if (result.error) return result.error
+    void commitGameState(result.state)
+    return result.error
   }
 
   const goToNextDay = () => {
@@ -849,6 +1013,14 @@ export function CrambleExperience({ onBack }: Props) {
       onUndoOccurrence={undoQuestOccurrence}
       onAddHabit={addCrambleHabit}
       onEditHabit={editCrambleHabit}
+      onAddOpenActivity={addCrambleOpenActivity}
+      onEditOpenActivity={editCrambleOpenActivity}
+      onIncrementOpenActivity={(activityId) =>
+        changeCrambleOpenActivity(activityId, 1)
+      }
+      onDecrementOpenActivity={(activityId) =>
+        changeCrambleOpenActivity(activityId, -1)
+      }
       onPauseHabit={pauseCrambleHabit}
       onResumeHabit={resumeCrambleHabit}
       onArchiveHabit={archiveCrambleHabit}
@@ -858,6 +1030,8 @@ export function CrambleExperience({ onBack }: Props) {
       onResumeTracking={resumeAllCramble}
       onBackfill={backfillCramble}
       onUndoBackfill={undoBackfillCramble}
+      onBackfillOpenActivity={backfillCrambleOpenActivity}
+      onUndoBackfillOpenActivity={undoBackfillCrambleOpenActivity}
       onSkip={toggleSkip}
       onOpenObservatory={() => setView('observatory')}
       onOpenLedger={() => setView('ledger')}

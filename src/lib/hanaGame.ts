@@ -16,6 +16,10 @@ import {
   MAX_BACKFILL_DAYS,
 } from '@/lib/habitLifecycle'
 import { getLogicalDayKey } from '@/lib/logicalDay'
+import {
+  normalizeOpenActivities,
+  normalizeOpenActivityLogs,
+} from '@/lib/openActivities'
 
 export const FLOWERS_BY_DIFFICULTY: Record<Difficulty, number> = {
   easy: 1,
@@ -95,6 +99,8 @@ export function createInitialHanaState(): HanaGameState {
     historyEpoch: 'initial',
     syncRevision: 0,
     habitSettings: {},
+    openActivities: [],
+    openActivityLogs: {},
     trackingPauses: [],
     backfillAudit: [],
     activeDailyQuests: {},
@@ -132,6 +138,7 @@ export function resetProfileProgress(
       historyEpoch: createEventId('history'),
       syncRevision: state.syncRevision ?? 0,
       habitSettings: { ...(state.habitSettings ?? {}) },
+      openActivities: [...(state.openActivities ?? [])],
     },
     quests,
     options,
@@ -1241,13 +1248,23 @@ function normalizeHanaState(
     typeof value.startDate === 'string' && value.startDate.length > 0
       ? value.startDate
       : null
+  const customHabits = readCustomHabits(value.customHabits, quests)
+  const deletedHabitIds = readStringArray(value.deletedHabitIds).slice(-500)
+  const openActivities = normalizeOpenActivities(
+    value.openActivities,
+    [
+      ...quests.map((quest) => quest.id),
+      ...customHabits.map((habit) => habit.id),
+      ...deletedHabitIds,
+    ],
+  )
 
   const migratedState: HanaGameState = {
     schemaVersion: GAME_STATE_SCHEMA_VERSION,
     startDate,
     currentDate,
-    customHabits: readCustomHabits(value.customHabits, quests),
-    deletedHabitIds: readStringArray(value.deletedHabitIds).slice(-500),
+    customHabits,
+    deletedHabitIds,
     historyEpoch: readTrimmedString(value.historyEpoch, 120) ?? 'legacy',
     syncRevision:
       Number.isInteger(value.syncRevision) &&
@@ -1255,6 +1272,11 @@ function normalizeHanaState(
         ? (value.syncRevision as number)
         : 0,
     habitSettings: readHabitSettings(value.habitSettings),
+    openActivities,
+    openActivityLogs: normalizeOpenActivityLogs(
+      value.openActivityLogs,
+      openActivities,
+    ),
     trackingPauses: readTrackingPauses(value.trackingPauses),
     backfillAudit: readBackfillAudit(value.backfillAudit),
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),

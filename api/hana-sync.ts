@@ -1,5 +1,7 @@
 import { neon } from '@neondatabase/serverless'
 
+const CURRENT_STATE_SCHEMA_VERSION = 3
+
 type ApiRequest = {
   method?: string
   body?: unknown
@@ -35,6 +37,7 @@ type WeedStatus = {
 type SyncPayload = {
   profileId: 'hana' | 'cramble'
   baseRevision: number
+  stateSchemaVersion: number
   writeToken: string
   syncedAt: string
   currentDate: string
@@ -144,6 +147,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         write_token = EXCLUDED.write_token,
         synced_at = EXCLUDED.synced_at
       WHERE hana_state_snapshots.revision = ${payload.baseRevision}
+        AND COALESCE(
+          CASE
+            WHEN jsonb_typeof(hana_state_snapshots.state -> 'schemaVersion') = 'number'
+              THEN (hana_state_snapshots.state ->> 'schemaVersion')::integer
+            ELSE 1
+          END,
+          1
+        ) <= ${payload.stateSchemaVersion}
       RETURNING revision, synced_at
     `]
 
@@ -398,6 +409,7 @@ function parsePayload(body: unknown): SyncPayload | null {
     return null
   }
   const profileId = value.profileId
+  const stateSchemaVersion = readStateSchemaVersion(value.state)
 
   if (
     typeof value.syncedAt !== 'string' ||
@@ -409,6 +421,13 @@ function parsePayload(body: unknown): SyncPayload | null {
     typeof value.currentDate !== 'string' ||
     typeof value.totalFlowers !== 'number' ||
     !isRecord(value.state) ||
+    stateSchemaVersion === null ||
+    !hasRequiredStateShape(
+      value.state,
+      stateSchemaVersion,
+      value.currentDate,
+      value.totalFlowers,
+    ) ||
     typeof value.state.startDate !== 'string' ||
     !Array.isArray(value.questStatuses) ||
     !Array.isArray(value.weedStatuses)
@@ -433,6 +452,7 @@ function parsePayload(body: unknown): SyncPayload | null {
   return {
     profileId,
     baseRevision: value.baseRevision as number,
+    stateSchemaVersion,
     writeToken: value.writeToken,
     syncedAt: value.syncedAt,
     currentDate: value.currentDate,
@@ -446,6 +466,42 @@ function parsePayload(body: unknown): SyncPayload | null {
 function readProfileId(value: string | string[] | undefined) {
   const profileId = Array.isArray(value) ? value[0] : value
   return profileId === 'hana' || profileId === 'cramble' ? profileId : null
+}
+
+function readStateSchemaVersion(state: unknown) {
+  if (!isRecord(state)) return null
+  if (state.schemaVersion === undefined) return 1
+  return Number.isInteger(state.schemaVersion) &&
+    (state.schemaVersion as number) >= 1 &&
+    (state.schemaVersion as number) <= CURRENT_STATE_SCHEMA_VERSION
+    ? (state.schemaVersion as number)
+    : null
+}
+
+function hasRequiredStateShape(
+  state: Record<string, unknown>,
+  schemaVersion: number,
+  currentDate: string,
+  totalFlowers: number,
+) {
+  if (
+    state.currentDate !== currentDate ||
+    state.totalFlowers !== totalFlowers ||
+    !Array.isArray(state.customHabits) ||
+    !isRecord(state.activeDailyQuests) ||
+    !Array.isArray(state.activeLongTermQuestIds) ||
+    !isRecord(state.dailyCompletions) ||
+    !isRecord(state.habitOccurrences) ||
+    !isRecord(state.longTermWindows) ||
+    !isRecord(state.longTermCompletions) ||
+    !isRecord(state.questSkips) ||
+    !isRecord(state.eveningWeeds)
+  ) {
+    return false
+  }
+
+  return schemaVersion < 3 ||
+    (Array.isArray(state.openActivities) && isRecord(state.openActivityLogs))
 }
 
 function readDeletedHabitIds(state: unknown) {

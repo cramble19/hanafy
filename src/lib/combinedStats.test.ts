@@ -14,6 +14,9 @@ describe('combined stats', () => {
       habitOccurrences: {
         '2026-08-04': { [quest.id]: 0 },
       },
+      openActivityLogs: {
+        '2026-08-06': { 'open-gym': 1 },
+      },
       eveningWeeds: {
         '2026-08-05': { 'some-item': false },
         '2026-08-06': {},
@@ -52,9 +55,10 @@ describe('combined stats', () => {
       '2026-08-03',
       '2026-08-04',
       '2026-08-05',
+      '2026-08-06',
       '2026-08-07',
     ])
-    expect(stats.hana.activeDays).toBe(4)
+    expect(stats.hana.activeDays).toBe(5)
     expect(stats.cramble.activeDateKeys).toEqual([
       '2026-08-03',
       '2026-08-07',
@@ -323,6 +327,8 @@ function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
     startDate: '2026-08-01',
     currentDate: '2026-08-10',
     customHabits: [],
+    openActivities: [],
+    openActivityLogs: {},
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},

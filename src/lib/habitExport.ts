@@ -13,6 +13,7 @@ import {
 } from '@/lib/habitLifecycle'
 import type { HanaGameState, Quest } from '@/types'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
+import { getOpenActivityCatalog } from '@/lib/openActivities'
 
 const HEADERS = [
   'profile',
@@ -20,7 +21,11 @@ const HEADERS = [
   'record_type',
   'habit_id',
   'habit_name',
+  'description',
   'cadence',
+  'tracker_type',
+  'activity_kind',
+  'unit',
   'date',
   'period_start',
   'period_end',
@@ -42,7 +47,7 @@ const HEADERS = [
 type CsvRow = Record<(typeof HEADERS)[number], string | number | boolean>
 
 export const PROFILE_BACKUP_FORMAT = 'hanafy-profile-backup' as const
-export const PROFILE_BACKUP_FORMAT_VERSION = 1 as const
+export const PROFILE_BACKUP_FORMAT_VERSION = 2 as const
 
 export type ProfileBackup = {
   format: typeof PROFILE_BACKUP_FORMAT
@@ -66,6 +71,10 @@ export type ProfileBackup = {
   }
   catalog: {
     habits: Array<Quest & {
+      lifecycle: 'active' | 'paused' | 'archived'
+      archivedAt: string | null
+    }>
+    anytimeActivities: Array<ReturnType<typeof getOpenActivityCatalog>[number] & {
       lifecycle: 'active' | 'paused' | 'archived'
       archivedAt: string | null
     }>
@@ -108,7 +117,7 @@ export function buildProfileBackup(
       timeZone: options.timeZone ?? getLocalTimeZone(),
     },
     source: {
-      stateSchemaVersion: state.schemaVersion ?? 2,
+      stateSchemaVersion: state.schemaVersion ?? 3,
       databaseRevision: syncRevision ?? null,
       logicalDate: state.currentDate,
       storedPoints: state.totalFlowers,
@@ -122,6 +131,18 @@ export function buildProfileBackup(
           lifecycle: isHabitArchivedOnDate(state, quest.id)
             ? 'archived'
             : profilePause || getActiveHabitPause(state, quest.id)
+              ? 'paused'
+              : 'active',
+          archivedAt: settings.archivedAt,
+        }
+      }),
+      anytimeActivities: getOpenActivityCatalog(state).map((activity) => {
+        const settings = getHabitSettings(state, activity.id)
+        return {
+          ...activity,
+          lifecycle: isHabitArchivedOnDate(state, activity.id)
+            ? 'archived'
+            : profilePause || getActiveHabitPause(state, activity.id)
               ? 'paused'
               : 'active',
           archivedAt: settings.archivedAt,
@@ -165,7 +186,11 @@ export function buildProfileCsv(
       tracking_day_start: formatTrackingDayStart(),
       habit_id: quest.id,
       habit_name: quest.title,
+      description: quest.description,
       cadence: formatQuestCadence(quest),
+      tracker_type: 'scheduled',
+      activity_kind: '',
+      unit: '',
       difficulty: quest.difficulty,
       cue: settings.cue,
       reminder_time:
@@ -256,6 +281,94 @@ export function buildProfileCsv(
       })
 
     habitAudit.forEach((event) => {
+      rows.push({
+        ...emptyRow(),
+        ...common,
+        record_type: 'backfill_event',
+        date: event.performedDate,
+        status: event.delta === 1 ? 'added' : 'undone',
+        recorded_at: event.recordedAt,
+        backfilled: true,
+        change: event.delta,
+      })
+    })
+  })
+
+  getOpenActivityCatalog(state).forEach((activity) => {
+    const settings = getHabitSettings(state, activity.id)
+    const lifecycle = isHabitArchivedOnDate(state, activity.id)
+      ? 'archived'
+      : getActiveProfilePause(state) || getActiveHabitPause(state, activity.id)
+        ? 'paused'
+        : 'active'
+    const common = {
+      profile: profileId,
+      tracking_day_start: formatTrackingDayStart(),
+      habit_id: activity.id,
+      habit_name: activity.title,
+      description: activity.description,
+      cadence:
+        activity.kind === 'check'
+          ? 'Anytime · Once today'
+          : 'Anytime · Count',
+      tracker_type: 'anytime',
+      activity_kind: activity.kind,
+      unit: activity.unit ?? '',
+      cue: settings.cue,
+      reminder_time:
+        settings.reminder.enabled && settings.reminder.time
+          ? settings.reminder.time
+          : '',
+      lifecycle,
+    }
+
+    rows.push({
+      ...emptyRow(),
+      ...common,
+      record_type: 'anytime_activity',
+      status: lifecycle,
+    })
+
+    settings.pauses.forEach((pause) => {
+      rows.push({
+        ...emptyRow(),
+        ...common,
+        record_type: 'habit_pause',
+        period_start: pause.startDate,
+        period_end: pause.endDate ?? '',
+        status: 'neutral',
+        pause_reason: pause.reason,
+        pause_note: pause.note ?? '',
+        recorded_at: pause.recordedAt,
+      })
+    })
+
+    const activityAudit = (state.backfillAudit ?? []).filter(
+      (event) => event.habitId === activity.id,
+    )
+
+    Object.entries(state.openActivityLogs ?? {})
+      .filter(([, logs]) => (logs[activity.id] ?? 0) > 0)
+      .sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate))
+      .forEach(([dateKey, logs]) => {
+        const dayAudit = activityAudit.filter(
+          (event) => event.performedDate === dateKey,
+        )
+        rows.push({
+          ...emptyRow(),
+          ...common,
+          record_type: 'anytime_log',
+          date: dateKey,
+          record_count:
+            activity.kind === 'check' ? 1 : logs[activity.id],
+          status: 'logged',
+          points_earned: 0,
+          recorded_at: dayAudit.at(-1)?.recordedAt ?? '',
+          backfilled: dayAudit.length > 0,
+        })
+      })
+
+    activityAudit.forEach((event) => {
       rows.push({
         ...emptyRow(),
         ...common,

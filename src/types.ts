@@ -114,6 +114,36 @@ export type CustomHabitQuest = Quest & {
   schedule: QuestSchedule
 }
 
+/**
+ * A deadline-free activity records what happened without creating a due date,
+ * missed state, streak, or reward. `check` is binary for a logical day;
+ * `count` stores a non-negative quantity for that logical day.
+ */
+export type OpenActivityKind = 'check' | 'count'
+
+export type OpenActivity = {
+  id: string
+  custom: true
+  title: string
+  description: string
+  emoji: string
+  color: string
+  kind: OpenActivityKind
+  /** Optional display unit for counted activities, such as pages or sets. */
+  unit: string | null
+  /** Logical creation day. Tracker days run from 04:00 to 03:59 local time. */
+  createdDate: string
+}
+
+export type NewOpenActivityInput = {
+  title: string
+  description: string
+  kind: OpenActivityKind
+  unit?: string | null
+  emoji?: string
+  color?: string
+}
+
 export type GardenWeed = {
   id: string
   emoji: string
@@ -122,7 +152,7 @@ export type GardenWeed = {
 }
 
 export type GameState = {
-  schemaVersion?: 2
+  schemaVersion?: 3
   /** Null means this profile has not started its tracker yet. */
   startDate: string | null
   currentDate: string
@@ -135,6 +165,10 @@ export type GameState = {
   syncRevision?: number
   /** Per-habit lifecycle and reminder intent, shared by built-in and custom habits. */
   habitSettings?: Record<string, HabitSettings>
+  /** Deadline-free definitions. Lifecycle state is stored in habitSettings. */
+  openActivities: OpenActivity[]
+  /** Per-logical-day values. Check activities are 0/1; counts are safe integers. */
+  openActivityLogs: Record<string, Record<string, number>>
   /** Profile-wide neutral intervals. */
   trackingPauses?: TrackingPause[]
   /** Provenance for corrections entered after their performed date. */
