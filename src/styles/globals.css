@@ -4849,6 +4849,12 @@ button.anytime-log-emblem:focus-visible {
   box-shadow: 0 12px 28px -25px rgba(48, 39, 31, 0.72);
 }
 
+/* Hana's direct children share a base stacking context. Lift the picker itself,
+   not only its popover, so later Today cards cannot paint over the menu. */
+.hana-spring-shell > .daily-emotion-picker.daily-emotion-picker-hana {
+  z-index: 28;
+}
+
 .daily-emotion-question {
   min-width: 0;
   font-size: 0.95rem;
