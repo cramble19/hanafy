@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { crambleQuests } from '@/data/crambleQuests'
 import { HabitMomentumBadge } from '@/components/HabitMomentumBadge'
+import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import type { HanaProfileId } from '@/lib/hanaCloudSync'
 import { getLevel, getQuestCatalog } from '@/lib/hanaGame'
@@ -27,11 +28,13 @@ import {
 } from '@/lib/habitLifecycle'
 import { getOpenActivityRangeStats } from '@/lib/openActivityStats'
 import { getOpenActivityCatalog } from '@/lib/openActivities'
+import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
 
 type Props = {
   game: HanaGameState
   onBack: () => void
   onOpenQuest: (questId: string) => void
+  onOpenEmotion: () => void
   onRestoreHabit?: (questId: string) => void
   onDeleteHabit?: (questId: string) => void
 }
@@ -40,6 +43,7 @@ export function CrambleLedgerPage({
   game,
   onBack,
   onOpenQuest,
+  onOpenEmotion,
   onRestoreHabit,
   onDeleteHabit,
 }: Props) {
@@ -50,6 +54,7 @@ export function CrambleLedgerPage({
       profileId="cramble"
       onBack={onBack}
       onOpenQuest={onOpenQuest}
+      onOpenEmotion={onOpenEmotion}
       onRestoreHabit={onRestoreHabit}
       onDeleteHabit={onDeleteHabit}
     />
@@ -67,11 +72,18 @@ export function HabitLedgerPage({
   profileId,
   onBack,
   onOpenQuest,
+  onOpenEmotion,
   onRestoreHabit,
   onDeleteHabit,
 }: HabitLedgerPageProps) {
   const headingRef = usePageHeadingFocus()
   const isCramble = profileId === 'cramble'
+  const currentEmotion = game.dailyEmotions[game.currentDate] ?? null
+  const emotionRecordCount = Object.keys(game.dailyEmotions).filter(
+    (dateKey) =>
+      dateKey <= game.currentDate &&
+      (!game.startDate || dateKey >= game.startDate),
+  ).length
   const level = getLevel(game.totalFlowers)
   const stats = getProfileStats(game, baseQuests, profileId)
   const statByQuestId = new Map(
@@ -486,6 +498,37 @@ export function HabitLedgerPage({
             : 'A gentle record of habits attempted, completed, and skipped. Each mark is information—not judgment.'}
         </p>
       </header>
+
+      <section className="relative z-10 mt-5" aria-label="Daily emotion record">
+        <button
+          type="button"
+          onClick={onOpenEmotion}
+          className="habit-ledger-card ledger-quest-row emotion-ledger-entry flex w-full items-center gap-3 rounded-card border border-border bg-surface p-4 text-left shadow-sm"
+          aria-label={`Open emotion history. ${emotionRecordCount} ${emotionRecordCount === 1 ? 'day' : 'days'} recorded.${currentEmotion ? ` Today's emotion is ${DAILY_EMOTION_LABELS[currentEmotion]}.` : " Today's emotion is not set."}`}
+        >
+          <span className="emotion-ledger-emblem grid size-12 shrink-0 place-items-center rounded-full" aria-hidden="true">
+            <EmotionFaceIcon
+              emotion={currentEmotion ?? 'okay'}
+              profile={profileId}
+              className="size-10"
+            />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-semibold text-ink">
+              Emotion history
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-muted">
+              {emotionRecordCount} {emotionRecordCount === 1 ? 'day' : 'days'} recorded · Blank days stay neutral
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 text-muted">
+            <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink">
+              {currentEmotion ? DAILY_EMOTION_LABELS[currentEmotion] : 'View'}
+            </span>
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </span>
+        </button>
+      </section>
 
       {activityRecords.length ? (
         <section

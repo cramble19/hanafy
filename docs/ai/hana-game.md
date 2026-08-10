@@ -333,7 +333,9 @@ history without success-rate language.
 `dailyEmotions[currentDate]` stores each profile's optional
 Heavy/Low/Okay/Good/Bright selection. It appears below the quote and above Today
 at a glance, uses the 4 AM boundary, changes no flowers or completion math, and
-remains separate from the quest and anytime-log catalogs.
+remains separate from the quest and anytime-log catalogs. Today's face may be
+shown above Hana's unchanged Home emblem. The Ledger routes to a dedicated
+7/30/90-day Emotion history graph where missing dates remain unconnected gaps.
 
 `longTermWindows[questId]` stores the active start date for each long-term quest.
 

@@ -25,7 +25,8 @@ quest lists, saved device data, and database records stay separate.
    target is complete. Partial progress has no penalty, and unused days are not
    treated as individual failures.
 7. Open the Garden or Observatory to see real progress reflected visually.
-8. Open either profile's Ledger to review recent activity.
+8. Open either profile's Ledger to review recent activity and the separate
+   Emotion history graph.
 
 ## What makes it kind
 
@@ -39,8 +40,9 @@ quest lists, saved device data, and database records stay separate.
 - Cramble starts with five fixed lessons. Either person can add only the personal
   habits they actually want.
 - Both profiles can optionally record one neutral daily emotion without changing
-  rewards or streaks. Hana also has only the approved Energy level and Productive
-  day Anytime logs.
+  rewards or streaks. A recorded emotion appears as a small face over that
+  profile's unchanged Home emblem and has its own neutral Ledger graph. Hana also
+  has only the approved Energy level and Productive day Anytime logs.
 - Motion is subtle and respects reduced-motion preferences.
 
 ## Saving and installation

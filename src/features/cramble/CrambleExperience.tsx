@@ -73,6 +73,7 @@ import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
+import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
 import type {
   DailyEmotion,
   HanaGameState,
@@ -85,7 +86,12 @@ import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { setDailyEmotion } from '@/lib/dailyEmotions'
 
-type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail'
+type CrambleView =
+  | 'tracker'
+  | 'observatory'
+  | 'ledger'
+  | 'ledgerDetail'
+  | 'emotionHistory'
 const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
 
 type Props = {
@@ -1067,6 +1073,17 @@ export function CrambleExperience({ onBack }: Props) {
           setSelectedQuestId(questId)
           setView('ledgerDetail')
         }}
+        onOpenEmotion={() => setView('emotionHistory')}
+      />
+    )
+  }
+
+  if (view === 'emotionHistory') {
+    return (
+      <EmotionHistoryPage
+        game={game}
+        profileId="cramble"
+        onBack={() => setView('ledger')}
       />
     )
   }

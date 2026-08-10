@@ -163,7 +163,10 @@ neutral.
 `bright` for each logical tracker day. The compact picker is shared by both
 profiles, but each profile saves its own record. Emotion entries are neutral,
 reward-free, editable during the day, exported, and counted only as factual
-Shared Journey activity.
+Shared Journey activity. Home reads the current logical day's value for each
+profile and overlays only the corresponding face on the existing emblem.
+`EmotionHistoryPage` and `emotionHistory.ts` provide the shared 7/30/90-day
+ordinal Ledger graph; missing dates split the line into neutral gaps.
 
 ## Profile isolation
 

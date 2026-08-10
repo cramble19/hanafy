@@ -6,6 +6,7 @@ type Props = {
   game: HanaGameState
   onBack: () => void
   onOpenQuest: (questId: string) => void
+  onOpenEmotion: () => void
   onRestoreHabit?: (questId: string) => void
   onDeleteHabit?: (questId: string) => void
 }
@@ -14,7 +15,7 @@ type Props = {
  * Hana and Cramble share one period-aware Ledger engine. This wrapper keeps
  * Hana's catalog, copy, colors, and saved profile isolated from Cramble.
  */
-export function StatsPage({ game, onBack, onOpenQuest, onRestoreHabit, onDeleteHabit }: Props) {
+export function StatsPage({ game, onBack, onOpenQuest, onOpenEmotion, onRestoreHabit, onDeleteHabit }: Props) {
   return (
     <HabitLedgerPage
       game={game}
@@ -22,6 +23,7 @@ export function StatsPage({ game, onBack, onOpenQuest, onRestoreHabit, onDeleteH
       profileId="hana"
       onBack={onBack}
       onOpenQuest={onOpenQuest}
+      onOpenEmotion={onOpenEmotion}
       onRestoreHabit={onRestoreHabit}
       onDeleteHabit={onDeleteHabit}
     />

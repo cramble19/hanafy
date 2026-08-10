@@ -40,6 +40,8 @@ an intermediate gate.
   Cramble-skinned create/Today UI.
 - `src/components/DailyEmotionPicker.tsx` stores the shared neutral emotion
   record with Cramble's brass-sigil SVG treatment.
+- `src/pages/EmotionHistoryPage.tsx` renders the shared ordinal Ledger graph;
+  Cramble's route applies archive styling and never treats blank dates as misses.
 - `src/lib/hanaGame.ts` — shared cadence, date, plan, and reward calculations.
 - `src/lib/hanaCloudSync.ts` / `hanaStats.ts` — period-aware serialization and
   reporting.

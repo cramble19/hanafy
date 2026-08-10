@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { quests } from '@/data/quests'
+import { crambleQuests } from '@/data/crambleQuests'
 import {
   createCustomHabitQuest,
   getNewHabitValidationError,
@@ -68,6 +69,7 @@ import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
 import { StatsPage } from '@/pages/StatsPage'
 import { QuestDetailPage } from '@/pages/QuestDetailPage'
+import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
 import type {
@@ -80,6 +82,11 @@ import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { setDailyEmotion } from '@/lib/dailyEmotions'
+import {
+  CRAMBLE_PENDING_STORAGE_KEY,
+  CRAMBLE_QUEST_PLAN_OPTIONS,
+  CRAMBLE_STORAGE_KEY,
+} from '@/lib/crambleGame'
 
 type View =
   | 'home'
@@ -88,6 +95,7 @@ type View =
   | 'garden'
   | 'stats'
   | 'questDetail'
+  | 'emotionHistory'
   | 'cramble'
   | 'together'
 type CloudSyncStatus =
@@ -112,6 +120,9 @@ export default function App() {
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [isExploringHana, setIsExploringHana] = useState(false)
   const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
+  const [homeLogicalDate, setHomeLogicalDate] = useState(() => todayKey())
+  const [homeCrambleEmotion, setHomeCrambleEmotion] =
+    useState<DailyEmotion | null>(null)
   useHabitReminders('hana', hanaGame, quests)
   const hanaGameRef = useRef<HanaGameState | null>(null)
   const pendingDbSaveRef = useRef<HanaGameState | null>(null)
@@ -480,12 +491,13 @@ export default function App() {
   useEffect(() => {
     let rolloverTimer: number | null = null
     const syncToToday = () => {
+      const currentDate = todayKey()
+      setHomeLogicalDate(currentDate)
       const previousState = hanaGameRef.current
       if (!previousState || !hasHanaStarted(previousState)) {
         return
       }
 
-      const currentDate = todayKey()
       if (import.meta.env.DEV && previousState.currentDate > currentDate) {
         return
       }
@@ -525,6 +537,52 @@ export default function App() {
       if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
     }
   }, [commitHanaState])
+
+  useEffect(() => {
+    if (view !== 'home') return undefined
+    let cancelled = false
+
+    const finish = (emotion: DailyEmotion | null) => {
+      if (!cancelled) setHomeCrambleEmotion(emotion)
+    }
+    const readStoredState = (key: string) => {
+      const saved = window.localStorage.getItem(key)
+      return saved
+        ? parseStoredHanaState(
+            saved,
+            crambleQuests,
+            homeLogicalDate,
+            CRAMBLE_QUEST_PLAN_OPTIONS,
+          )
+        : null
+    }
+    const load = async () => {
+      const pending = readStoredState(CRAMBLE_PENDING_STORAGE_KEY)
+      if (pending && hasHanaStarted(pending)) {
+        finish(pending.dailyEmotions[homeLogicalDate] ?? null)
+        return
+      }
+
+      const cached = readStoredState(CRAMBLE_STORAGE_KEY)
+      finish(cached?.dailyEmotions[homeLogicalDate] ?? null)
+      if (import.meta.env.DEV || !navigator.onLine) return
+
+      const remote = await loadHanaStateFromDb('cramble')
+      if (!remote.ok || !remote.snapshot) return
+      const databaseState = parseStoredHanaState(
+        JSON.stringify(remote.snapshot.state),
+        crambleQuests,
+        homeLogicalDate,
+        CRAMBLE_QUEST_PLAN_OPTIONS,
+      )
+      finish(databaseState.dailyEmotions[homeLogicalDate] ?? null)
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [homeLogicalDate, view])
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -1264,6 +1322,7 @@ export default function App() {
           setSelectedQuestId(questId)
           setView('questDetail')
         }}
+        onOpenEmotion={() => setView('emotionHistory')}
       />
     ) : (
       <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
@@ -1275,6 +1334,18 @@ export default function App() {
       <QuestDetailPage
         game={hanaGame}
         questId={selectedQuestId}
+        onBack={() => setView('stats')}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'emotionHistory') {
+    return hanaGame ? (
+      <EmotionHistoryPage
+        game={hanaGame}
+        profileId="hana"
         onBack={() => setView('stats')}
       />
     ) : (
@@ -1301,6 +1372,8 @@ export default function App() {
   return (
     <HomePage
       focusTarget={homeFocusTarget}
+      hanaEmotion={hanaGame?.dailyEmotions[homeLogicalDate] ?? null}
+      crambleEmotion={homeCrambleEmotion}
       onSelectHana={() => {
         setHomeFocusTarget('hana')
         openHana()

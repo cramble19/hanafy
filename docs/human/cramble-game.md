@@ -10,7 +10,9 @@ Choose Cramble on the home screen to open the archive directly.
 
 Below the daily archive quote, **How was today?** records one optional Heavy,
 Low, Okay, Good, or Bright emotion for the 4 AM tracker day. It is editable,
-neutral, reward-free, and stored only in Cramble's profile.
+neutral, reward-free, and stored only in Cramble's profile. Today's selected
+face floats above Cramble's existing Home emblem. The Ledger's Emotion history
+page shows the same record over 7, 30, or 90 days without scores or missed days.
 
 If the tracker has not started, **Begin the First Oath** starts Cramble's own saved record.
 There is no preview mode and nothing is saved before the oath begins.

@@ -3,12 +3,17 @@ import { ChevronRight } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
 import { TogetherMark } from '@/components/icons/TogetherMark'
+import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
+import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
+import type { DailyEmotion } from '@/types'
 
 type Props = {
   onSelectHana: () => void
   onSelectCramble: () => void
   onSelectTogether: () => void
   focusTarget?: 'hana' | 'cramble' | 'together' | null
+  hanaEmotion?: DailyEmotion | null
+  crambleEmotion?: DailyEmotion | null
 }
 
 export function HomePage({
@@ -16,6 +21,8 @@ export function HomePage({
   onSelectCramble,
   onSelectTogether,
   focusTarget = null,
+  hanaEmotion = null,
+  crambleEmotion = null,
 }: Props) {
   const [showPhoto, setShowPhoto] = useState(false)
   const hanaButtonRef = useRef<HTMLButtonElement>(null)
@@ -62,10 +69,17 @@ export function HomePage({
           ref={hanaButtonRef}
           type="button"
           onClick={onSelectHana}
-          aria-label="Open Hana's tracker"
+          aria-label={`Open Hana's tracker${hanaEmotion ? `. Today's emotion: ${DAILY_EMOTION_LABELS[hanaEmotion]}.` : ''}`}
           className="emblem-btn flex flex-col items-center gap-4 outline-none"
         >
           <span className="emblem-wrap">
+            {hanaEmotion ? (
+              <EmotionFaceIcon
+                emotion={hanaEmotion}
+                profile="hana"
+                className="home-emotion-status home-emotion-status-hana"
+              />
+            ) : null}
             <span className="emblem emblem-flower">
               <FlowerMark className="size-20" />
             </span>
@@ -77,10 +91,17 @@ export function HomePage({
           ref={crambleButtonRef}
           type="button"
           onClick={onSelectCramble}
-          aria-label="Open Cramble's tracker"
+          aria-label={`Open Cramble's tracker${crambleEmotion ? `. Today's emotion: ${DAILY_EMOTION_LABELS[crambleEmotion]}.` : ''}`}
           className="emblem-btn flex flex-col items-center gap-4 outline-none"
         >
           <span className="emblem-wrap is-delayed">
+            {crambleEmotion ? (
+              <EmotionFaceIcon
+                emotion={crambleEmotion}
+                profile="cramble"
+                className="home-emotion-status home-emotion-status-cramble"
+              />
+            ) : null}
             <span className="emblem emblem-sun">
               <SunMark className="size-20" />
             </span>

@@ -255,10 +255,32 @@ body {
 
 /* Home chooser emblems (flower = Hana, sun = Cramble) */
 .emblem-wrap {
+  position: relative;
   animation: emblem-float 5s ease-in-out infinite;
 }
 .emblem-wrap.is-delayed {
   animation-delay: 0.9s;
+}
+
+.home-emotion-status {
+  position: absolute;
+  top: -2.45rem;
+  left: 50%;
+  z-index: 2;
+  width: 2.15rem;
+  height: 2.15rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.home-emotion-status-hana {
+  color: #71846a;
+  filter: drop-shadow(0 3px 6px rgba(93, 113, 83, 0.18));
+}
+
+.home-emotion-status-cramble {
+  color: #d7952f;
+  filter: drop-shadow(0 3px 6px rgba(215, 149, 47, 0.2));
 }
 
 .emblem {
@@ -1881,6 +1903,221 @@ select.add-habit-input {
 .ledger-quest-row:focus-visible {
   outline: 2px solid var(--focus, var(--ink));
   outline-offset: 3px;
+}
+
+.emotion-ledger-emblem {
+  color: #71846a;
+  background: rgba(120, 171, 99, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(120, 171, 99, 0.24);
+}
+
+.cramble-archive-shell .emotion-ledger-emblem {
+  color: var(--cramble-brass);
+  background: rgba(214, 166, 83, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(214, 166, 83, 0.28);
+}
+
+.emotion-history-shell {
+  --emotion-accent: #647c59;
+  --emotion-line: #879c79;
+  --emotion-point: #dc91a4;
+}
+
+.emotion-history-shell[data-profile="cramble"] {
+  --emotion-accent: var(--cramble-brass);
+  --emotion-line: #8f87c6;
+  --emotion-point: var(--cramble-brass);
+}
+
+.emotion-history-heading-icon {
+  width: 4rem;
+  height: 4rem;
+  color: var(--emotion-accent);
+  filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--emotion-accent) 18%, transparent));
+}
+
+.emotion-history-range {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  padding: 0.3rem;
+  background: var(--surface);
+}
+
+.emotion-history-range button {
+  min-height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.72rem;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  outline: none;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.emotion-history-range button[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--emotion-accent) 58%, var(--border));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--emotion-accent) 13%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emotion-accent) 12%, transparent);
+}
+
+.emotion-history-range button:active {
+  transform: scale(0.97);
+}
+
+.emotion-history-range button:focus-visible {
+  outline: 2px solid var(--focus, var(--emotion-accent));
+  outline-offset: 2px;
+}
+
+.emotion-history-chart-card {
+  overflow: hidden;
+}
+
+.emotion-history-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.emotion-chart-grid-line,
+.emotion-chart-tick,
+.emotion-chart-line,
+.emotion-chart-point circle,
+.emotion-chart-point path {
+  vector-effect: non-scaling-stroke;
+}
+
+.emotion-chart-grid-line {
+  stroke: color-mix(in srgb, var(--muted) 24%, transparent);
+  stroke-width: 1;
+}
+
+.emotion-chart-tick {
+  stroke: color-mix(in srgb, var(--muted) 46%, transparent);
+  stroke-width: 1;
+}
+
+.emotion-chart-axis-label {
+  fill: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.emotion-chart-date-label {
+  fill: var(--muted);
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+.emotion-chart-line {
+  fill: none;
+  stroke: var(--emotion-line);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  opacity: 0.72;
+}
+
+.emotion-chart-point-halo {
+  fill: color-mix(in srgb, var(--emotion-point) 18%, transparent);
+  stroke: color-mix(in srgb, var(--emotion-point) 38%, transparent);
+  stroke-width: 1;
+}
+
+.emotion-chart-point-core {
+  fill: var(--surface);
+  stroke: var(--emotion-point);
+  stroke-width: 1.5;
+}
+
+.emotion-chart-point-center {
+  fill: var(--emotion-point);
+  stroke: none;
+}
+
+.emotion-chart-point-rune {
+  fill: color-mix(in srgb, var(--cramble-indigo) 16%, var(--surface));
+  stroke: var(--emotion-point);
+  stroke-width: 1.25;
+}
+
+.emotion-chart-point-rays {
+  fill: none;
+  stroke: var(--emotion-point);
+  stroke-linecap: round;
+  stroke-width: 0.8;
+  opacity: 0.8;
+}
+
+.emotion-history-empty {
+  margin: 0.25rem 1rem 0;
+  border: 1px dashed var(--border);
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  font-size: 0.72rem;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+.emotion-history-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.emotion-history-metric {
+  min-width: 0;
+}
+
+.emotion-history-metric-symbol {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--emotion-accent) 38%, var(--border));
+  border-radius: 0.75rem;
+  color: var(--emotion-accent);
+  background: color-mix(in srgb, var(--emotion-accent) 8%, var(--surface));
+}
+
+.emotion-history-metric-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+}
+
+@media (max-width: 360px) {
+  .emotion-history-chart-card {
+    padding-right: 0.15rem;
+    padding-left: 0.15rem;
+  }
+
+  .emotion-history-metrics {
+    gap: 0.4rem;
+  }
+
+  .emotion-history-metric {
+    padding-right: 0.45rem;
+    padding-left: 0.45rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emotion-history-range button {
+    transition: none;
+  }
 }
 
 .ledger-recent-mark {

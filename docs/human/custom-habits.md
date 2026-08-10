@@ -146,7 +146,10 @@ entered from Today rather than the Recent day correction screen.
 Both Hana and Cramble also have a compact **How was today?** emotion picker
 below the daily quote. Heavy, Low, Okay, Good, and Bright are neutral factual
 records, saved separately for each person. A choice can be changed during the
-same 4 AM-to-4 AM tracker day; an empty day remains neutral.
+same 4 AM-to-4 AM tracker day; an empty day remains neutral. When today's
+emotion exists, its small face floats above that person's existing Home emblem.
+The Ledger's **Emotion history** entry opens a neutral 7-, 30-, or 90-day graph
+with Bright at the top and Heavy at the bottom. Missing dates remain gaps.
 
 ## Reminders and export
 
