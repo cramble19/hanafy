@@ -56,8 +56,15 @@ export async function saveHanaStateToDb(
   state: HanaGameState,
   profileId: HanaProfileId = 'hana',
   fetchImpl: FetchLike = fetch,
+  writeToken?: string,
 ): Promise<SaveHanaStateResult> {
-  return saveProfileStateToDb(state, profileId, hanaQuests, fetchImpl)
+  return saveProfileStateToDb(
+    state,
+    profileId,
+    hanaQuests,
+    fetchImpl,
+    writeToken,
+  )
 }
 
 export async function saveProfileStateToDb(
@@ -65,6 +72,7 @@ export async function saveProfileStateToDb(
   profileId: HanaProfileId,
   questCatalog: Quest[],
   fetchImpl: FetchLike = fetch,
+  writeToken?: string,
 ): Promise<SaveHanaStateResult> {
   if (!hasHanaStarted(state)) {
     return {
@@ -76,7 +84,13 @@ export async function saveProfileStateToDb(
     }
   }
 
-  const payload = createProfileCloudSyncPayload(profileId, state, questCatalog)
+  const payload = createProfileCloudSyncPayload(
+    profileId,
+    state,
+    questCatalog,
+    new Date().toISOString(),
+    writeToken,
+  )
   const baseRevision = state.syncRevision ?? 0
 
   try {

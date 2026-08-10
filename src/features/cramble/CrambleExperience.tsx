@@ -81,10 +81,18 @@ import type {
 } from '@/types'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
-import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { setDailyEmotion } from '@/lib/dailyEmotions'
+import {
+  advancePendingProfileSyncRevision,
+  markPendingProfileSyncAttempted,
+  parsePendingProfileSync,
+  queuePendingProfileSync,
+  rebasePendingProfileSync,
+  serializePendingProfileSync,
+  type PendingProfileSync,
+} from '@/lib/profileSync'
 
 type CrambleView =
   | 'tracker'
@@ -92,8 +100,6 @@ type CrambleView =
   | 'ledger'
   | 'ledgerDetail'
   | 'emotionHistory'
-const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
-
 type Props = {
   onBack: () => void
 }
@@ -104,7 +110,7 @@ export function CrambleExperience({ onBack }: Props) {
   const [game, setGame] = useState<HanaGameState | null>(null)
   useHabitReminders('cramble', game, crambleQuests)
   const gameRef = useRef<HanaGameState | null>(null)
-  const pendingDbSaveRef = useRef<HanaGameState | null>(null)
+  const pendingDbSaveRef = useRef<PendingProfileSync | null>(null)
   const isDbSaveInFlightRef = useRef(false)
   const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
@@ -114,6 +120,7 @@ export function CrambleExperience({ onBack }: Props) {
     import.meta.env.DEV ? 'disabled' : 'loading',
   )
   const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null)
+  const [saveConfirmedAt, setSaveConfirmedAt] = useState<number | null>(null)
 
   useEffect(() => {
     gameRef.current = game
@@ -127,10 +134,10 @@ export function CrambleExperience({ onBack }: Props) {
     window.localStorage.removeItem(CRAMBLE_STORAGE_KEY)
   }, [])
 
-  const cachePendingGame = useCallback((state: HanaGameState) => {
+  const cachePendingGame = useCallback((pending: PendingProfileSync) => {
     window.localStorage.setItem(
       CRAMBLE_PENDING_STORAGE_KEY,
-      JSON.stringify(state),
+      serializePendingProfileSync(pending),
     )
   }, [])
 
@@ -138,10 +145,15 @@ export function CrambleExperience({ onBack }: Props) {
     window.localStorage.removeItem(CRAMBLE_PENDING_STORAGE_KEY)
   }, [])
 
-  const clearPendingCacheIfSaved = useCallback((state: HanaGameState) => {
-    const pending = window.localStorage.getItem(CRAMBLE_PENDING_STORAGE_KEY)
-    if (pending === JSON.stringify(state)) {
+  const clearPendingCacheIfSaved = useCallback((writeToken: string) => {
+    const raw = window.localStorage.getItem(CRAMBLE_PENDING_STORAGE_KEY)
+    if (!raw) return
+    try {
+      const pending = JSON.parse(raw) as { writeToken?: unknown }
+      if (pending.writeToken !== writeToken) return
       window.localStorage.removeItem(CRAMBLE_PENDING_STORAGE_KEY)
+    } catch {
+      // Legacy state-only caches do not carry an acknowledgement token.
     }
   }, [])
 
@@ -159,14 +171,14 @@ export function CrambleExperience({ onBack }: Props) {
 
   const readPendingGame = useCallback(() => {
     const saved = window.localStorage.getItem(CRAMBLE_PENDING_STORAGE_KEY)
-    return saved
-      ? parseStoredHanaState(
-          saved,
+    return parsePendingProfileSync(saved, (raw) =>
+      parseStoredHanaState(
+          raw,
           crambleQuests,
           todayKey(),
           CRAMBLE_QUEST_PLAN_OPTIONS,
-        )
-      : null
+        ),
+    )
   }, [])
 
   const createInitialSyncedState = useCallback(
@@ -193,31 +205,87 @@ export function CrambleExperience({ onBack }: Props) {
 
     const runSaveLoop = async () => {
       isDbSaveInFlightRef.current = true
+      let conflictRebases = 0
+      let didSave = false
       try {
         while (pendingDbSaveRef.current) {
-          const stateToSave = pendingDbSaveRef.current
+          const queued = markPendingProfileSyncAttempted(
+            pendingDbSaveRef.current,
+          )
           pendingDbSaveRef.current = null
+          cachePendingGame(queued)
+          const stateToSave = queued.state
           const result = await saveProfileStateToDb(
             stateToSave,
             'cramble',
             crambleQuests,
+            fetch,
+            queued.writeToken,
           )
 
           if (!result.ok) {
-            pendingDbSaveRef.current ??= stateToSave
+            if (result.conflict && conflictRebases < 3) {
+              const remote = await loadHanaStateFromDb('cramble')
+              if (remote.ok && remote.snapshot) {
+                const databaseState = {
+                  ...parseStoredHanaState(
+                    JSON.stringify(remote.snapshot.state),
+                    crambleQuests,
+                    todayKey(),
+                    CRAMBLE_QUEST_PLAN_OPTIONS,
+                  ),
+                  syncRevision: remote.snapshot.revision ?? 0,
+                }
+                const rebased = rebasePendingProfileSync(
+                  queued,
+                  databaseState,
+                  remote.snapshot.revision ?? 0,
+                )
+                if (rebased) {
+                  const stateForToday = syncStateToDate(
+                    rebased.state,
+                    crambleQuests,
+                    todayKey(),
+                    CRAMBLE_QUEST_PLAN_OPTIONS,
+                  )
+                  const recovered = {
+                    ...rebased,
+                    state: {
+                      ...stateForToday,
+                      totalFlowers: recomputeTotalFlowers(
+                        stateForToday,
+                        crambleQuests,
+                      ),
+                    },
+                  }
+                  pendingDbSaveRef.current = recovered
+                  cachePendingGame(recovered)
+                  gameRef.current = recovered.state
+                  setGame(recovered.state)
+                  cacheGame(recovered.state)
+                  conflictRebases += 1
+                  setCloudSyncStatus('syncing')
+                  continue
+                }
+              }
+            }
+
+            pendingDbSaveRef.current ??= queued
+            cachePendingGame(pendingDbSaveRef.current)
             syncConflictRef.current = Boolean(result.conflict)
             setCloudSyncStatus(result.conflict ? 'conflict' : 'error')
             return
           }
 
-          clearPendingCacheIfSaved(stateToSave)
+          clearPendingCacheIfSaved(queued.writeToken)
           const baseRevision = stateToSave.syncRevision ?? 0
-          const pending = pendingDbSaveRef.current as HanaGameState | null
-          if (pending && (pending.syncRevision ?? 0) === baseRevision) {
-            const revisedPending = {
-              ...pending,
-              syncRevision: result.revision,
-            }
+          const pending = pendingDbSaveRef.current
+          if (pending) {
+            const revisedPending = advancePendingProfileSyncRevision(
+              pending,
+              baseRevision,
+              result.revision,
+            )
             pendingDbSaveRef.current = revisedPending
             cachePendingGame(revisedPending)
           }
@@ -232,9 +300,14 @@ export function CrambleExperience({ onBack }: Props) {
             cacheGame(revisedLatest)
           }
           setLastCloudSyncAt(result.syncedAt)
+          didSave = true
+          conflictRebases = 0
         }
         setCloudSyncStatus('synced')
         syncConflictRef.current = false
+        if (didSave) {
+          setSaveConfirmedAt(Date.now())
+        }
       } finally {
         isDbSaveInFlightRef.current = false
       }
@@ -256,11 +329,11 @@ export function CrambleExperience({ onBack }: Props) {
       const hydrationSequence = ++hydrationSequenceRef.current
       const mutationRevision = localMutationRevisionRef.current
       const initialState = createInitialSyncedState()
-      const pendingState = readPendingGame()
+      const pending = readPendingGame()
 
-      if (pendingState && hasHanaStarted(pendingState)) {
-        setGame(pendingState)
-        cacheGame(pendingState)
+      if (pending && hasHanaStarted(pending.state)) {
+        setGame(pending.state)
+        cacheGame(pending.state)
 
         if (import.meta.env.DEV) {
           clearPendingCache()
@@ -268,8 +341,8 @@ export function CrambleExperience({ onBack }: Props) {
           return true
         }
 
-        pendingDbSaveRef.current = pendingState
-        cachePendingGame(pendingState)
+        pendingDbSaveRef.current = pending
+        cachePendingGame(pending)
         if (!navigator.onLine) {
           setCloudSyncStatus('offline')
           return false
@@ -280,7 +353,7 @@ export function CrambleExperience({ onBack }: Props) {
         return !pendingDbSaveRef.current
       }
 
-      if (pendingState) {
+      if (pending) {
         clearPendingCache()
       }
 
@@ -376,8 +449,13 @@ export function CrambleExperience({ onBack }: Props) {
       cacheGame(stateForToday)
 
       if (remote.snapshot.currentDate !== stateForToday.currentDate) {
-        pendingDbSaveRef.current = stateForToday
-        cachePendingGame(stateForToday)
+        const pending = queuePendingProfileSync(
+          chosen.state,
+          stateForToday,
+          null,
+        )
+        pendingDbSaveRef.current = pending
+        cachePendingGame(pending)
         setCloudSyncStatus('syncing')
         await flushQueuedDbSave()
         return !pendingDbSaveRef.current
@@ -402,6 +480,7 @@ export function CrambleExperience({ onBack }: Props) {
 
   const commitGameState = useCallback(
     async (nextState: HanaGameState, silent = false) => {
+      const previousState = gameRef.current ?? nextState
       const stateForToday = syncStateToDate(
         nextState,
         crambleQuests,
@@ -425,8 +504,13 @@ export function CrambleExperience({ onBack }: Props) {
         return true
       }
 
-      pendingDbSaveRef.current = stateForToday
-      cachePendingGame(stateForToday)
+      const pending = queuePendingProfileSync(
+        previousState,
+        stateForToday,
+        pendingDbSaveRef.current,
+      )
+      pendingDbSaveRef.current = pending
+      cachePendingGame(pending)
       if (!navigator.onLine) {
         setCloudSyncStatus('offline')
         return false
@@ -440,31 +524,13 @@ export function CrambleExperience({ onBack }: Props) {
   )
 
   const refreshFromDb = useCallback(async () => {
-    if (syncConflictRef.current) {
-      const localState = gameRef.current
-      const shouldLoadDatabase = window.confirm(
-        'This profile changed on another device. Load the database copy now? Your current local copy will be downloaded as CSV and kept as a JSON recovery backup first.',
-      )
-      if (!shouldLoadDatabase) return false
-      if (localState) {
-        downloadProfileCsv(localState, crambleQuests, 'cramble')
-        window.localStorage.setItem(
-          CRAMBLE_CONFLICT_BACKUP_KEY,
-          JSON.stringify(localState),
-        )
-      }
-      pendingDbSaveRef.current = null
-      clearPendingCache()
-      syncConflictRef.current = false
-      return hydrateFromDb(false)
-    }
     if (pendingDbSaveRef.current || isDbSaveInFlightRef.current) {
       setCloudSyncStatus('syncing')
       await flushQueuedDbSave()
       if (pendingDbSaveRef.current) return false
     }
     return hydrateFromDb(false)
-  }, [clearPendingCache, flushQueuedDbSave, hydrateFromDb])
+  }, [flushQueuedDbSave, hydrateFromDb])
 
   useEffect(() => {
     void hydrateFromDb()
@@ -522,28 +588,35 @@ export function CrambleExperience({ onBack }: Props) {
   useEffect(() => {
     if (import.meta.env.DEV) return undefined
 
-    const refreshSilently = () => void hydrateFromDb(true)
-    const refreshAfterReconnect = async () => {
-      const pendingState = pendingDbSaveRef.current ?? readPendingGame()
-      if (pendingState && hasHanaStarted(pendingState)) {
-        pendingDbSaveRef.current = pendingState
-        cachePendingGame(pendingState)
+    const flushPendingThenRefresh = async () => {
+      const pending = pendingDbSaveRef.current ?? readPendingGame()
+      if (pending && hasHanaStarted(pending.state)) {
+        pendingDbSaveRef.current = pending
+        cachePendingGame(pending)
         setCloudSyncStatus('syncing')
         await flushQueuedDbSave()
       }
       if (!pendingDbSaveRef.current) await hydrateFromDb(true)
     }
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') refreshSilently()
+      if (document.visibilityState === 'visible') {
+        void flushPendingThenRefresh()
+      }
     }
+    const retryTimer = window.setInterval(() => {
+      if (navigator.onLine && pendingDbSaveRef.current) {
+        void flushPendingThenRefresh()
+      }
+    }, 30_000)
 
-    window.addEventListener('focus', refreshSilently)
-    window.addEventListener('online', refreshAfterReconnect)
+    window.addEventListener('focus', flushPendingThenRefresh)
+    window.addEventListener('online', flushPendingThenRefresh)
     document.addEventListener('visibilitychange', refreshWhenVisible)
     return () => {
-      window.removeEventListener('focus', refreshSilently)
-      window.removeEventListener('online', refreshAfterReconnect)
+      window.removeEventListener('focus', flushPendingThenRefresh)
+      window.removeEventListener('online', flushPendingThenRefresh)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.clearInterval(retryTimer)
     }
   }, [
     cachePendingGame,
@@ -604,6 +677,7 @@ export function CrambleExperience({ onBack }: Props) {
     cacheGame(syncedStartedState)
     setLastCloudSyncAt(saveResult.syncedAt)
     setCloudSyncStatus('synced')
+    setSaveConfirmedAt(Date.now())
     syncConflictRef.current = false
   }
 
@@ -1134,6 +1208,8 @@ export function CrambleExperience({ onBack }: Props) {
       onSyncCloud={() => void refreshFromDb()}
       cloudSyncStatus={cloudSyncStatus}
       lastCloudSyncAt={lastCloudSyncAt}
+      hasPendingCloudSave={Boolean(pendingDbSaveRef.current)}
+      saveConfirmedAt={saveConfirmedAt}
       onBack={onBack}
     />
   )

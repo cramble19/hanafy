@@ -5721,3 +5721,144 @@ button.anytime-log-emblem:focus-visible {
     transition: none;
   }
 }
+
+.cloud-sync-notice {
+  position: fixed;
+  z-index: 65;
+  left: 50%;
+  bottom: calc(max(0.8rem, env(safe-area-inset-bottom)) + 4.35rem);
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  box-shadow: 0 18px 46px -24px rgba(29, 31, 35, 0.56);
+  animation: cloud-sync-notice-arrive 180ms ease-out both;
+}
+
+.cloud-sync-notice[data-profile='hana'] {
+  border-color: rgba(120, 171, 99, 0.42);
+  background: rgba(255, 251, 242, 0.97);
+  box-shadow:
+    0 18px 44px -24px rgba(72, 96, 61, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.cloud-sync-notice[data-profile='cramble'] {
+  border-color: rgba(214, 166, 83, 0.52);
+  color: #f4e7ce;
+  background: rgba(33, 33, 40, 0.97);
+  box-shadow:
+    0 22px 52px -24px rgba(0, 0, 0, 0.88),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cloud-sync-notice-saved {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 9999px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.cloud-sync-notice-saved svg,
+.cloud-sync-notice-heading svg {
+  color: var(--success);
+  stroke-width: 2.4;
+}
+
+.cloud-sync-notice-saved[data-profile='cramble'] svg,
+.cloud-sync-notice[data-profile='cramble'] .cloud-sync-notice-heading svg {
+  color: #d6a653;
+}
+
+.cloud-sync-notice-pending {
+  width: min(24rem, calc(100vw - 2rem));
+  border-radius: 1rem;
+  padding: 0.85rem;
+}
+
+.cloud-sync-notice-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.cloud-sync-notice-pending p {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.1rem;
+}
+
+.cloud-sync-notice[data-profile='cramble'] p {
+  color: #c9bda8;
+}
+
+.cloud-sync-notice-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.cloud-sync-notice-actions button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.55rem 0.7rem;
+  color: inherit;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  outline: none;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.cloud-sync-notice-actions button:active {
+  transform: scale(0.98);
+}
+
+.cloud-sync-notice-actions button:focus-visible {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 24%, transparent);
+}
+
+.cloud-sync-notice[data-profile='cramble'] .cloud-sync-notice-actions button {
+  border-color: rgba(214, 166, 83, 0.38);
+  background: rgba(24, 24, 30, 0.8);
+}
+
+@keyframes cloud-sync-notice-arrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 350px) {
+  .cloud-sync-notice-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-sync-notice,
+  .cloud-sync-notice-actions button {
+    animation: none;
+    transition: none;
+  }
+}

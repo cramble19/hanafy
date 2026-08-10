@@ -120,6 +120,28 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const deletedHabitIds = readDeletedHabitIds(payload.state)
     const historyEpoch = readHistoryEpoch(payload.state)
     const syncQueries = [sql`
+      INSERT INTO hana_state_snapshot_history (
+        profile_id,
+        revision,
+        current_date_key,
+        total_flowers,
+        state,
+        write_token,
+        synced_at
+      )
+      SELECT
+        profile_id,
+        revision,
+        current_date_key,
+        total_flowers,
+        state,
+        write_token,
+        synced_at
+      FROM hana_state_snapshots
+      WHERE profile_id = ${payload.profileId}
+        AND revision = ${payload.baseRevision}
+      ON CONFLICT (profile_id, revision) DO NOTHING
+    `, sql`
       INSERT INTO hana_state_snapshots (
         profile_id,
         current_date_key,
@@ -157,6 +179,32 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         ) <= ${payload.stateSchemaVersion}
       RETURNING revision, synced_at
     `]
+
+    // Keep every accepted revision as a recoverable checkpoint. This is
+    // separate from the analytical projections and is never sent to clients.
+    syncQueries.push(sql`
+      INSERT INTO hana_state_snapshot_history (
+        profile_id,
+        revision,
+        current_date_key,
+        total_flowers,
+        state,
+        write_token,
+        synced_at
+      )
+      SELECT
+        profile_id,
+        revision,
+        current_date_key,
+        total_flowers,
+        state,
+        write_token,
+        synced_at
+      FROM hana_state_snapshots
+      WHERE profile_id = ${payload.profileId}
+        AND write_token = ${payload.writeToken}
+      ON CONFLICT (profile_id, revision) DO NOTHING
+    `)
 
     // A deleted built-in remains in source code, so the snapshot carries a
     // tombstone. Remove only those quest projections; other historical rows
@@ -292,14 +340,25 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       )
     })
 
-    const [snapshotRows] = await sql.transaction(syncQueries)
+    const transactionResults = await sql.transaction(syncQueries)
+    const snapshotRows = transactionResults[1]
     if (!snapshotRows.length) {
       const currentRows = await sql`
-        SELECT revision
+        SELECT revision, write_token
         FROM hana_state_snapshots
         WHERE profile_id = ${payload.profileId}
         LIMIT 1
       `
+      if (currentRows[0]?.write_token === payload.writeToken) {
+        res.status(200).json({
+          ok: true,
+          revision: currentRows[0]?.revision,
+          questRows: payload.questStatuses.length,
+          weedRows: payload.weedStatuses.length,
+          idempotent: true,
+        })
+        return
+      }
       res.status(409).json({
         error: 'The profile changed on another device',
         currentRevision:
@@ -357,6 +416,20 @@ async function ensureTables(sql: NeonSql) {
   await sql`
     ALTER TABLE hana_quest_statuses
       ADD COLUMN IF NOT EXISTS history_epoch text NOT NULL DEFAULT 'legacy'
+  `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS hana_state_snapshot_history (
+      profile_id text NOT NULL,
+      revision integer NOT NULL,
+      current_date_key text NOT NULL,
+      total_flowers integer NOT NULL,
+      state jsonb NOT NULL,
+      write_token text NOT NULL,
+      synced_at timestamptz NOT NULL,
+      archived_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (profile_id, revision)
+    )
   `
 
   await sql`

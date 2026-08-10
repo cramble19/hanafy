@@ -78,7 +78,6 @@ import type {
   NewOpenActivityInput,
 } from '@/types'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
-import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { setDailyEmotion } from '@/lib/dailyEmotions'
@@ -87,6 +86,15 @@ import {
   CRAMBLE_QUEST_PLAN_OPTIONS,
   CRAMBLE_STORAGE_KEY,
 } from '@/lib/crambleGame'
+import {
+  advancePendingProfileSyncRevision,
+  markPendingProfileSyncAttempted,
+  parsePendingProfileSync,
+  queuePendingProfileSync,
+  rebasePendingProfileSync,
+  serializePendingProfileSync,
+  type PendingProfileSync,
+} from '@/lib/profileSync'
 
 type View =
   | 'home'
@@ -111,8 +119,6 @@ type CloudSyncStatus =
 type HomeFocusTarget = 'hana' | 'cramble' | 'together' | null
 
 const HANA_PENDING_STORAGE_KEY = 'hana-game/pending-v1'
-const HANA_CONFLICT_BACKUP_KEY = 'hana-game/conflict-backup-v1'
-
 export default function App() {
   const [view, setView] = useState<View>('home')
   const [homeFocusTarget, setHomeFocusTarget] =
@@ -125,7 +131,7 @@ export default function App() {
     useState<DailyEmotion | null>(null)
   useHabitReminders('hana', hanaGame, quests)
   const hanaGameRef = useRef<HanaGameState | null>(null)
-  const pendingDbSaveRef = useRef<HanaGameState | null>(null)
+  const pendingDbSaveRef = useRef<PendingProfileSync | null>(null)
   const isDbSaveInFlightRef = useRef(false)
   const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
@@ -135,6 +141,7 @@ export default function App() {
     import.meta.env.DEV ? 'disabled' : 'loading',
   )
   const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null)
+  const [saveConfirmedAt, setSaveConfirmedAt] = useState<number | null>(null)
 
   useEffect(() => {
     hanaGameRef.current = hanaGame
@@ -148,10 +155,10 @@ export default function App() {
     window.localStorage.removeItem(STORAGE_KEY)
   }, [])
 
-  const cachePendingHanaGame = useCallback((state: HanaGameState) => {
+  const cachePendingHanaGame = useCallback((pending: PendingProfileSync) => {
     window.localStorage.setItem(
       HANA_PENDING_STORAGE_KEY,
-      JSON.stringify(state),
+      serializePendingProfileSync(pending),
     )
   }, [])
 
@@ -159,10 +166,15 @@ export default function App() {
     window.localStorage.removeItem(HANA_PENDING_STORAGE_KEY)
   }, [])
 
-  const clearPendingHanaCacheIfSaved = useCallback((state: HanaGameState) => {
-    const pending = window.localStorage.getItem(HANA_PENDING_STORAGE_KEY)
-    if (pending === JSON.stringify(state)) {
+  const clearPendingHanaCacheIfSaved = useCallback((writeToken: string) => {
+    const raw = window.localStorage.getItem(HANA_PENDING_STORAGE_KEY)
+    if (!raw) return
+    try {
+      const pending = JSON.parse(raw) as { writeToken?: unknown }
+      if (pending.writeToken !== writeToken) return
       window.localStorage.removeItem(HANA_PENDING_STORAGE_KEY)
+    } catch {
+      // Legacy state-only caches do not carry an acknowledgement token.
     }
   }, [])
 
@@ -173,7 +185,9 @@ export default function App() {
 
   const readPendingHanaGame = useCallback(() => {
     const saved = window.localStorage.getItem(HANA_PENDING_STORAGE_KEY)
-    return saved ? parseStoredHanaState(saved, quests) : null
+    return parsePendingProfileSync(saved, (raw) =>
+      parseStoredHanaState(raw, quests),
+    )
   }, [])
 
   const createInitialSyncedState = useCallback(
@@ -199,27 +213,83 @@ export default function App() {
 
     const runSaveLoop = async () => {
       isDbSaveInFlightRef.current = true
+      let conflictRebases = 0
+      let didSave = false
       try {
         while (pendingDbSaveRef.current) {
-          const stateToSave = pendingDbSaveRef.current
+          const queued = markPendingProfileSyncAttempted(
+            pendingDbSaveRef.current,
+          )
           pendingDbSaveRef.current = null
-          const saveResult = await saveHanaStateToDb(stateToSave, 'hana')
+          cachePendingHanaGame(queued)
+          const stateToSave = queued.state
+          const saveResult = await saveHanaStateToDb(
+            stateToSave,
+            'hana',
+            fetch,
+            queued.writeToken,
+          )
 
           if (!saveResult.ok) {
-            pendingDbSaveRef.current ??= stateToSave
+            if (saveResult.conflict && conflictRebases < 3) {
+              const remote = await loadHanaStateFromDb('hana')
+              if (remote.ok && remote.snapshot) {
+                const databaseState = {
+                  ...parseStoredHanaState(
+                    JSON.stringify(remote.snapshot.state),
+                    quests,
+                  ),
+                  syncRevision: remote.snapshot.revision ?? 0,
+                }
+                const rebased = rebasePendingProfileSync(
+                  queued,
+                  databaseState,
+                  remote.snapshot.revision ?? 0,
+                )
+                if (rebased) {
+                  const stateForToday = syncStateToDate(
+                    rebased.state,
+                    quests,
+                    todayKey(),
+                  )
+                  const recovered = {
+                    ...rebased,
+                    state: {
+                      ...stateForToday,
+                      totalFlowers: recomputeTotalFlowers(
+                        stateForToday,
+                        quests,
+                      ),
+                    },
+                  }
+                  pendingDbSaveRef.current = recovered
+                  cachePendingHanaGame(recovered)
+                  hanaGameRef.current = recovered.state
+                  setHanaGame(recovered.state)
+                  cacheHanaGame(recovered.state)
+                  conflictRebases += 1
+                  setCloudSyncStatus('syncing')
+                  continue
+                }
+              }
+            }
+
+            pendingDbSaveRef.current ??= queued
+            cachePendingHanaGame(pendingDbSaveRef.current)
             syncConflictRef.current = Boolean(saveResult.conflict)
             setCloudSyncStatus(saveResult.conflict ? 'conflict' : 'error')
             return
           }
 
-          clearPendingHanaCacheIfSaved(stateToSave)
+          clearPendingHanaCacheIfSaved(queued.writeToken)
           const baseRevision = stateToSave.syncRevision ?? 0
-          const pending = pendingDbSaveRef.current as HanaGameState | null
-          if (pending && (pending.syncRevision ?? 0) === baseRevision) {
-            const revisedPending = {
-              ...pending,
-              syncRevision: saveResult.revision,
-            }
+          const pending = pendingDbSaveRef.current
+          if (pending) {
+            const revisedPending = advancePendingProfileSyncRevision(
+              pending,
+              baseRevision,
+              saveResult.revision,
+            )
             pendingDbSaveRef.current = revisedPending
             cachePendingHanaGame(revisedPending)
           }
@@ -234,10 +304,15 @@ export default function App() {
             cacheHanaGame(revisedLatest)
           }
           setLastCloudSyncAt(saveResult.syncedAt)
+          didSave = true
+          conflictRebases = 0
         }
 
         setCloudSyncStatus('synced')
         syncConflictRef.current = false
+        if (didSave) {
+          setSaveConfirmedAt(Date.now())
+        }
       } finally {
         isDbSaveInFlightRef.current = false
       }
@@ -263,11 +338,11 @@ export default function App() {
       const hydrationSequence = ++hydrationSequenceRef.current
       const mutationRevision = localMutationRevisionRef.current
       const initialState = createInitialSyncedState()
-      const pendingState = readPendingHanaGame()
+      const pending = readPendingHanaGame()
 
-      if (pendingState && hasHanaStarted(pendingState)) {
-        setHanaGame(pendingState)
-        cacheHanaGame(pendingState)
+      if (pending && hasHanaStarted(pending.state)) {
+        setHanaGame(pending.state)
+        cacheHanaGame(pending.state)
 
         if (import.meta.env.DEV) {
           clearPendingHanaCache()
@@ -275,8 +350,8 @@ export default function App() {
           return true
         }
 
-        pendingDbSaveRef.current = pendingState
-        cachePendingHanaGame(pendingState)
+        pendingDbSaveRef.current = pending
+        cachePendingHanaGame(pending)
         if (!navigator.onLine) {
           setCloudSyncStatus('offline')
           return false
@@ -287,7 +362,7 @@ export default function App() {
         return !pendingDbSaveRef.current
       }
 
-      if (pendingState) {
+      if (pending) {
         clearPendingHanaCache()
       }
 
@@ -392,8 +467,13 @@ export default function App() {
       cacheHanaGame(stateForToday)
 
       if (remote.snapshot.currentDate !== stateForToday.currentDate) {
-        pendingDbSaveRef.current = stateForToday
-        cachePendingHanaGame(stateForToday)
+        const pending = queuePendingProfileSync(
+          chosen.state,
+          stateForToday,
+          null,
+        )
+        pendingDbSaveRef.current = pending
+        cachePendingHanaGame(pending)
         setCloudSyncStatus('syncing')
         await flushQueuedDbSave()
         return !pendingDbSaveRef.current
@@ -418,6 +498,7 @@ export default function App() {
 
   const commitHanaState = useCallback(
     async (nextState: HanaGameState, silent = false) => {
+      const previousState = hanaGameRef.current ?? nextState
       const stateForToday = syncStateToDate(nextState, quests, nextState.currentDate)
 
       if (!hasHanaStarted(stateForToday)) {
@@ -437,8 +518,13 @@ export default function App() {
         return true
       }
 
-      pendingDbSaveRef.current = stateForToday
-      cachePendingHanaGame(stateForToday)
+      const pending = queuePendingProfileSync(
+        previousState,
+        stateForToday,
+        pendingDbSaveRef.current,
+      )
+      pendingDbSaveRef.current = pending
+      cachePendingHanaGame(pending)
       if (!navigator.onLine) {
         setCloudSyncStatus('offline')
         return false
@@ -455,24 +541,6 @@ export default function App() {
   )
 
   const refreshHanaFromDb = useCallback(async () => {
-    if (syncConflictRef.current) {
-      const localState = hanaGameRef.current
-      const shouldLoadDatabase = window.confirm(
-        'This profile changed on another device. Load the database copy now? Your current local copy will be downloaded as CSV and kept as a JSON recovery backup first.',
-      )
-      if (!shouldLoadDatabase) return false
-      if (localState) {
-        downloadProfileCsv(localState, quests, 'hana')
-        window.localStorage.setItem(
-          HANA_CONFLICT_BACKUP_KEY,
-          JSON.stringify(localState),
-        )
-      }
-      pendingDbSaveRef.current = null
-      clearPendingHanaCache()
-      syncConflictRef.current = false
-      return hydrateFromDb(false)
-    }
     if (pendingDbSaveRef.current || isDbSaveInFlightRef.current) {
       setCloudSyncStatus('syncing')
       await flushQueuedDbSave()
@@ -482,7 +550,7 @@ export default function App() {
     }
 
     return hydrateFromDb(false)
-  }, [clearPendingHanaCache, flushQueuedDbSave, hydrateFromDb])
+  }, [flushQueuedDbSave, hydrateFromDb])
 
   useEffect(() => {
     void hydrateFromDb()
@@ -589,12 +657,11 @@ export default function App() {
       return undefined
     }
 
-    const refreshSilently = () => void hydrateFromDb(true)
-    const refreshAfterReconnect = async () => {
-      const pendingState = pendingDbSaveRef.current ?? readPendingHanaGame()
-      if (pendingState && hasHanaStarted(pendingState)) {
-        pendingDbSaveRef.current = pendingState
-        cachePendingHanaGame(pendingState)
+    const flushPendingThenRefresh = async () => {
+      const pending = pendingDbSaveRef.current ?? readPendingHanaGame()
+      if (pending && hasHanaStarted(pending.state)) {
+        pendingDbSaveRef.current = pending
+        cachePendingHanaGame(pending)
         setCloudSyncStatus('syncing')
         await flushQueuedDbSave()
       }
@@ -605,18 +672,24 @@ export default function App() {
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
-        refreshSilently()
+        void flushPendingThenRefresh()
       }
     }
+    const retryTimer = window.setInterval(() => {
+      if (navigator.onLine && pendingDbSaveRef.current) {
+        void flushPendingThenRefresh()
+      }
+    }, 30_000)
 
-    window.addEventListener('focus', refreshSilently)
-    window.addEventListener('online', refreshAfterReconnect)
+    window.addEventListener('focus', flushPendingThenRefresh)
+    window.addEventListener('online', flushPendingThenRefresh)
     document.addEventListener('visibilitychange', refreshWhenVisible)
 
     return () => {
-      window.removeEventListener('focus', refreshSilently)
-      window.removeEventListener('online', refreshAfterReconnect)
+      window.removeEventListener('focus', flushPendingThenRefresh)
+      window.removeEventListener('online', flushPendingThenRefresh)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.clearInterval(retryTimer)
     }
   }, [
     cachePendingHanaGame,
@@ -1164,6 +1237,7 @@ export default function App() {
     cacheHanaGame(syncedStartedState)
     setLastCloudSyncAt(saveResult.syncedAt)
     setCloudSyncStatus('synced')
+    setSaveConfirmedAt(Date.now())
     syncConflictRef.current = false
     setView('hana')
   }
@@ -1221,6 +1295,8 @@ export default function App() {
           onSyncCloud={() => void refreshHanaFromDb()}
           cloudSyncStatus={cloudSyncStatus}
           lastCloudSyncAt={lastCloudSyncAt}
+          hasPendingCloudSave={Boolean(pendingDbSaveRef.current)}
+          saveConfirmedAt={saveConfirmedAt}
           onBack={() => {
             setIsExploringHana(false)
             setView('home')
@@ -1293,6 +1369,8 @@ export default function App() {
         onSyncCloud={() => void refreshHanaFromDb()}
         cloudSyncStatus={cloudSyncStatus}
         lastCloudSyncAt={lastCloudSyncAt}
+        hasPendingCloudSave={Boolean(pendingDbSaveRef.current)}
+        saveConfirmedAt={saveConfirmedAt}
         onBack={() => {
           setIsExploringHana(false)
           setView('home')

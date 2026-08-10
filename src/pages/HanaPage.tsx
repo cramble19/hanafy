@@ -17,6 +17,7 @@ import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestInfoDialog } from '@/components/QuestInfoDialog'
+import { CloudSyncNotice } from '@/components/CloudSyncNotice'
 import { QuestSection } from '@/components/QuestSection'
 import { AvailableQuestsSection } from '@/components/AvailableQuestsSection'
 import {
@@ -60,6 +61,7 @@ import {
   getOpenActivityCatalog,
   hasOpenActivityHistory,
 } from '@/lib/openActivities'
+import { downloadProfileJson } from '@/lib/habitExport'
 import type {
   GardenWeed,
   HanaGameState,
@@ -137,6 +139,8 @@ type Props = {
     | 'disabled'
     | 'preview'
   lastCloudSyncAt: string | null
+  hasPendingCloudSave: boolean
+  saveConfirmedAt: number | null
   onBack: () => void
 }
 
@@ -173,6 +177,8 @@ export function HanaPage({
   onSyncCloud,
   cloudSyncStatus,
   lastCloudSyncAt,
+  hasPendingCloudSave,
+  saveConfirmedAt,
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
@@ -537,6 +543,15 @@ export function HanaPage({
         onPause={() => setIsPauseTrackingOpen(true)}
         onBackfill={() => setIsBackfillOpen(true)}
         onExport={() => setIsExportOpen(true)}
+      />
+
+      <CloudSyncNotice
+        profile="hana"
+        status={cloudSyncStatus}
+        hasPendingSave={hasPendingCloudSave}
+        saveConfirmedAt={saveConfirmedAt}
+        onRetry={onSyncCloud}
+        onExportBackup={() => downloadProfileJson(game, quests, 'hana')}
       />
 
       <nav

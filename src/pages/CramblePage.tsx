@@ -19,6 +19,7 @@ import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { QuestInfoDialog } from '@/components/QuestInfoDialog'
+import { CloudSyncNotice } from '@/components/CloudSyncNotice'
 import { QuestSection } from '@/components/QuestSection'
 import {
   PausedHabitsCard,
@@ -67,6 +68,7 @@ import {
   getOpenActivityCatalog,
   hasOpenActivityHistory,
 } from '@/lib/openActivities'
+import { downloadProfileJson } from '@/lib/habitExport'
 
 export type CrambleSyncStatus =
   | 'idle'
@@ -123,6 +125,8 @@ type Props = {
   onSyncCloud: () => void
   cloudSyncStatus: CrambleSyncStatus
   lastCloudSyncAt: string | null
+  hasPendingCloudSave: boolean
+  saveConfirmedAt: number | null
   onBack: () => void
 }
 
@@ -159,6 +163,8 @@ export function CramblePage({
   onSyncCloud,
   cloudSyncStatus,
   lastCloudSyncAt,
+  hasPendingCloudSave,
+  saveConfirmedAt,
   onBack,
 }: Props) {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState(false)
@@ -521,6 +527,17 @@ export function CramblePage({
         onPause={() => setIsPauseTrackingOpen(true)}
         onBackfill={() => setIsBackfillOpen(true)}
         onExport={() => setIsExportOpen(true)}
+      />
+
+      <CloudSyncNotice
+        profile="cramble"
+        status={cloudSyncStatus}
+        hasPendingSave={hasPendingCloudSave}
+        saveConfirmedAt={saveConfirmedAt}
+        onRetry={onSyncCloud}
+        onExportBackup={() =>
+          downloadProfileJson(game, crambleQuests, 'cramble')
+        }
       />
 
       <nav

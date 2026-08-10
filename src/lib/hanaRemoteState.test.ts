@@ -200,6 +200,24 @@ describe('Hana remote state helpers', () => {
       expect.objectContaining({ ok: false, conflict: true }),
     )
   })
+
+  it('reuses the persistent outbox token when a request is retried', async () => {
+    const state = createState({ syncRevision: 3 })
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true, revision: 4 }), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    await saveHanaStateToDb(
+      state,
+      'hana',
+      fetchImpl,
+      'sync-persisted-retry-token',
+    )
+    const request = vi.mocked(fetchImpl).mock.calls[0]?.[1]
+    const body = JSON.parse(String(request?.body)) as { writeToken: string }
+
+    expect(body.writeToken).toBe('sync-persisted-retry-token')
+  })
 })
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {

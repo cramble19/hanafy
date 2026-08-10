@@ -1,4 +1,5 @@
 import type { HanaGameState, Quest } from '@/types'
+import { createProfileSyncToken } from '@/lib/profileSync'
 import {
   addDays,
   flowersForQuest,
@@ -54,10 +55,11 @@ export function createProfileCloudSyncPayload(
   state: HanaGameState,
   quests: Quest[],
   syncedAt = new Date().toISOString(),
+  writeToken = createProfileSyncToken(),
 ): HanaCloudSyncPayload {
   return {
     profileId,
-    writeToken: createSyncToken(),
+    writeToken,
     syncedAt,
     currentDate: state.currentDate,
     totalFlowers: state.totalFlowers,
@@ -67,19 +69,20 @@ export function createProfileCloudSyncPayload(
   }
 }
 
-function createSyncToken() {
-  const randomId = globalThis.crypto?.randomUUID?.() ??
-    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-  return `sync-${randomId}`
-}
-
 export function createHanaCloudSyncPayload(
   profileId: HanaProfileId,
   state: HanaGameState,
   quests: Quest[],
   syncedAt = new Date().toISOString(),
+  writeToken = createProfileSyncToken(),
 ): HanaCloudSyncPayload {
-  return createProfileCloudSyncPayload(profileId, state, quests, syncedAt)
+  return createProfileCloudSyncPayload(
+    profileId,
+    state,
+    quests,
+    syncedAt,
+    writeToken,
+  )
 }
 
 function createQuestStatusRows(
