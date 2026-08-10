@@ -17,6 +17,7 @@ import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
 import { getOpenActivityCatalog } from '@/lib/openActivities'
 import { getQuestCompletionProgress } from '@/lib/questCompletion'
 import { describeQuestCompletionCriteria } from '@/lib/questCompletionRules'
+import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
 
 const HEADERS = [
   'profile',
@@ -33,6 +34,7 @@ const HEADERS = [
   'period_start',
   'period_end',
   'record_count',
+  'record_value',
   'target',
   'status',
   'difficulty',
@@ -53,7 +55,7 @@ const HEADERS = [
 type CsvRow = Record<(typeof HEADERS)[number], string | number | boolean>
 
 export const PROFILE_BACKUP_FORMAT = 'hanafy-profile-backup' as const
-export const PROFILE_BACKUP_FORMAT_VERSION = 3 as const
+export const PROFILE_BACKUP_FORMAT_VERSION = 4 as const
 
 export type ProfileBackup = {
   format: typeof PROFILE_BACKUP_FORMAT
@@ -123,7 +125,7 @@ export function buildProfileBackup(
       timeZone: options.timeZone ?? getLocalTimeZone(),
     },
     source: {
-      stateSchemaVersion: state.schemaVersion ?? 4,
+      stateSchemaVersion: state.schemaVersion ?? 5,
       databaseRevision: syncRevision ?? null,
       logicalDate: state.currentDate,
       storedPoints: state.totalFlowers,
@@ -337,7 +339,9 @@ export function buildProfileCsv(
       cadence:
         activity.kind === 'check'
           ? 'Anytime · Once today'
-          : 'Anytime · Count',
+          : activity.kind === 'rating'
+            ? 'Anytime · Rating out of 5'
+            : 'Anytime · Count',
       tracker_type: 'anytime',
       activity_kind: activity.kind,
       unit: activity.unit ?? '',
@@ -388,6 +392,8 @@ export function buildProfileCsv(
           date: dateKey,
           record_count:
             activity.kind === 'check' ? 1 : logs[activity.id],
+          record_value:
+            activity.kind === 'rating' ? `${logs[activity.id]} of 5` : '',
           status: 'logged',
           points_earned: 0,
           recorded_at: dayAudit.at(-1)?.recordedAt ?? '',
@@ -408,6 +414,22 @@ export function buildProfileCsv(
       })
     })
   })
+
+  Object.entries(state.dailyEmotions ?? {})
+    .sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate))
+    .forEach(([dateKey, emotion]) => {
+      rows.push({
+        ...emptyRow(),
+        profile: profileId,
+        tracking_day_start: formatTrackingDayStart(),
+        record_type: 'daily_emotion',
+        tracker_type: 'emotion',
+        activity_kind: 'emotion',
+        date: dateKey,
+        record_value: `${emotion}:${DAILY_EMOTION_LABELS[emotion]}`,
+        status: 'logged',
+      })
+    })
 
   ;(state.trackingPauses ?? []).forEach((pause) => {
     rows.push({

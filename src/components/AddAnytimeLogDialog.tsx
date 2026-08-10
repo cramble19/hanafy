@@ -19,7 +19,7 @@ import {
 } from '@/lib/openActivities'
 import type {
   NewOpenActivityInput,
-  OpenActivityKind,
+  CreatableOpenActivityKind,
 } from '@/types'
 import type { AnytimeLogProfile } from './AnytimeLogSection'
 
@@ -77,7 +77,7 @@ export function AddAnytimeLogDialog({
   const [description, setDescription] = useState(
     initialValue?.description ?? '',
   )
-  const [kind, setKind] = useState<OpenActivityKind>(
+  const [kind, setKind] = useState<CreatableOpenActivityKind>(
     initialValue?.kind ?? 'check',
   )
   const [unit, setUnit] = useState(initialValue?.unit ?? '')

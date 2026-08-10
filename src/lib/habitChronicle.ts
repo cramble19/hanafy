@@ -517,16 +517,21 @@ function renderOpenActivity({
     lifecycle === 'archived' && archivedAt
       ? ` · since ${formatDateKey(archivedAt)}`
       : ''
-  const total =
-    activity.kind === 'check'
-      ? stats.activeDays
+  const total = activity.kind === 'check'
+    ? stats.activeDays
+    : activity.kind === 'rating'
+      ? stats.averagePerActiveDay
       : stats.total
   const totalLabel = activity.kind === 'check'
     ? 'Logged days'
-    : activity.unit || 'Total'
+    : activity.kind === 'rating'
+      ? 'Average / 5'
+      : activity.unit || 'Total'
   const average = activity.kind === 'check'
     ? `${formatNumber(stats.weeklyPace)}/wk`
-    : `${formatNumber(stats.averagePerActiveDay)}${activity.unit ? ` ${activity.unit}` : ''}`
+    : activity.kind === 'rating'
+      ? `${formatNumber(stats.activeDays)} rated days`
+      : `${formatNumber(stats.averagePerActiveDay)}${activity.unit ? ` ${activity.unit}` : ''}`
   return `<article class="habit anytime ${lifecycle}" style="--habit:${safeColor(activity.color)}">
     <header class="habit-head">
       <div class="habit-title">
@@ -539,10 +544,10 @@ function renderOpenActivity({
       <span class="lifecycle">${escapeHtml(lifecycle + archivedLabel)}</span>
     </header>
     <div class="habit-stats">
-      ${habitStat(activity.kind === 'check' ? 'Once today' : 'Count', 'Record type')}
+      ${habitStat(activity.kind === 'check' ? 'Once today' : activity.kind === 'rating' ? 'Rating 1-5' : 'Count', 'Record type')}
       ${habitStat(formatNumber(total), totalLabel)}
       ${habitStat(formatNumber(stats.activeDays), 'Active days')}
-      ${habitStat(average, activity.kind === 'check' ? 'Pace' : 'Avg / active day')}
+      ${habitStat(average, activity.kind === 'check' ? 'Pace' : activity.kind === 'rating' ? 'History' : 'Avg / active day')}
       ${habitStat(stats.lastLoggedDate ? formatDateKey(stats.lastLoggedDate) : '—', 'Last recorded')}
       ${habitStat('None', 'Rewards')}
     </div>
@@ -566,6 +571,8 @@ function renderOpenActivityDays(stats: OpenActivityRangeStats) {
         <strong>Recorded</strong>
         <span>${stats.activity.kind === 'check'
           ? 'Yes'
+          : stats.activity.kind === 'rating'
+            ? `${formatNumber(day.count)} / 5`
           : `${formatNumber(day.count)}${stats.activity.unit ? ` ${escapeHtml(stats.activity.unit)}` : ''}`}</span>
       </li>`,
     )

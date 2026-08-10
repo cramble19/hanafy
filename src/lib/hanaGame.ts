@@ -24,6 +24,7 @@ import {
   normalizeOpenActivities,
   normalizeOpenActivityLogs,
 } from '@/lib/openActivities'
+import { normalizeDailyEmotions } from '@/lib/dailyEmotions'
 import {
   getDefaultQuestCompletionCriteria,
   normalizeQuestCompletionCriteria,
@@ -109,6 +110,7 @@ export function createInitialHanaState(): HanaGameState {
     questActivations: {},
     openActivities: [],
     openActivityLogs: {},
+    dailyEmotions: {},
     trackingPauses: [],
     backfillAudit: [],
     activeDailyQuests: {},
@@ -450,7 +452,7 @@ export function syncActiveQuestPlan(
     questActivations: ensureQuestActivations(state, catalog),
     openActivities: ensureHanaDefaultOpenActivities(
       state.openActivities ?? [],
-      state.startDate ?? state.currentDate,
+      state.currentDate,
       state.deletedHabitIds ?? [],
       quests,
     ),
@@ -1333,7 +1335,7 @@ function normalizeHanaState(
   )
   const openActivities = ensureHanaDefaultOpenActivities(
     normalizedOpenActivities,
-    startDate ?? currentDate,
+    currentDate,
     deletedHabitIds,
     quests,
   )
@@ -1357,6 +1359,7 @@ function normalizeHanaState(
       value.openActivityLogs,
       openActivities,
     ),
+    dailyEmotions: normalizeDailyEmotions(value.dailyEmotions),
     trackingPauses: readTrackingPauses(value.trackingPauses),
     backfillAudit: readBackfillAudit(value.backfillAudit),
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),
@@ -1422,51 +1425,37 @@ function ensureHanaDefaultOpenActivities(
   quests: Quest[],
 ) {
   if (!quests.some((quest) => quest.id === 'morning-dew')) return activities
+  const retiredDefaultIds = new Set([
+    'custom-hana-kind-moment',
+    'custom-hana-music-moment',
+    'custom-hana-mindful-treat',
+  ])
   const deleted = new Set(deletedHabitIds)
-  const ids = new Set(activities.map((activity) => activity.id))
+  const retainedActivities = activities.filter(
+    (activity) => !retiredDefaultIds.has(activity.id),
+  )
+  const ids = new Set(retainedActivities.map((activity) => activity.id))
   const titles = new Set(
-    activities.map((activity) => activity.title.toLocaleLowerCase()),
+    retainedActivities.map((activity) => activity.title.toLocaleLowerCase()),
   )
   const defaults: OpenActivity[] = [
     {
-      id: 'custom-hana-kind-moment',
-      custom: true,
-      title: 'Kind Moment',
-      description: 'Record a warm thought, message, or small act of connection.',
-      emoji: '💌',
-      color: '#d98ba0',
-      kind: 'check',
-      unit: null,
-      createdDate,
-    },
-    {
-      id: 'custom-hana-music-moment',
-      custom: true,
-      title: 'Music Moment',
-      description: 'Record a song played, hummed, practiced, or enjoyed.',
-      emoji: '🎻',
-      color: '#9e8fd0',
-      kind: 'check',
-      unit: null,
-      createdDate,
-    },
-    {
       id: 'custom-hana-energy-check-in',
       custom: true,
-      title: 'Energy Check-in',
-      description: 'Notice and record your energy without judging it.',
-      emoji: '🔋',
-      color: '#e7a53c',
-      kind: 'count',
-      unit: 'energy point',
+      title: 'Energy level',
+      description: 'How was your energy today?',
+      emoji: '⚡',
+      color: '#9fb683',
+      kind: 'rating',
+      unit: null,
       createdDate,
     },
     {
-      id: 'custom-hana-mindful-treat',
+      id: 'custom-hana-productive-day',
       custom: true,
-      title: 'Mindful Treat',
-      description: 'Record a small treat enjoyed slowly and without pressure.',
-      emoji: '🍮',
+      title: 'Had a productive day',
+      description: 'Log it when today felt meaningfully productive to you.',
+      emoji: '✨',
       color: '#d98ba0',
       kind: 'check',
       unit: null,
@@ -1474,6 +1463,19 @@ function ensureHanaDefaultOpenActivities(
     },
   ]
   return defaults.reduce<OpenActivity[]>((result, activity) => {
+    const existingIndex = result.findIndex(
+      (candidate) => candidate.id === activity.id,
+    )
+    if (existingIndex >= 0) {
+      const existing = result[existingIndex]
+      titles.delete(existing.title.toLocaleLowerCase())
+      result[existingIndex] = {
+        ...activity,
+        createdDate: existing.createdDate,
+      }
+      titles.add(activity.title.toLocaleLowerCase())
+      return result
+    }
     const titleKey = activity.title.toLocaleLowerCase()
     if (
       deleted.has(activity.id) ||
@@ -1486,7 +1488,7 @@ function ensureHanaDefaultOpenActivities(
     titles.add(titleKey)
     result.push(activity)
     return result
-  }, [...activities])
+  }, [...retainedActivities])
 }
 
 function readCustomHabits(value: unknown, baseQuests: Quest[]) {

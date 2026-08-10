@@ -94,6 +94,7 @@ type GameState = {
   customHabits: CustomHabitQuest[]
   openActivities: OpenActivity[]
   openActivityLogs: Record<string, Record<string, number>>
+  dailyEmotions: Record<string, DailyEmotion>
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>
@@ -150,12 +151,19 @@ or weeks. See
 [custom-habits.md](custom-habits.md).
 
 Deadline-free records are a separate first-class model. `openActivities` stores
-`check` (one mark per logical day) and `count` definitions, while
+`check` (one mark per logical day), `count`, and the built-in `rating` definition,
+while
 `openActivityLogs[date][activityId]` stores the positive daily value. They are
 not quest schedules: they create no due period, miss, reward, skip/pass,
 reminder, or Today-score entry. Their positive dated values count as Shared
 Journey tracked days, and their own Ledger views treat every blank day as
 neutral.
+
+`dailyEmotions[date]` stores at most one of `heavy`, `low`, `okay`, `good`, or
+`bright` for each logical tracker day. The compact picker is shared by both
+profiles, but each profile saves its own record. Emotion entries are neutral,
+reward-free, editable during the day, exported, and counted only as factual
+Shared Journey activity.
 
 ## Profile isolation
 

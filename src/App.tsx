@@ -70,11 +70,16 @@ import { StatsPage } from '@/pages/StatsPage'
 import { QuestDetailPage } from '@/pages/QuestDetailPage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
-import type { HanaGameState, NewOpenActivityInput } from '@/types'
+import type {
+  DailyEmotion,
+  HanaGameState,
+  NewOpenActivityInput,
+} from '@/types'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
+import { setDailyEmotion } from '@/lib/dailyEmotions'
 
 type View =
   | 'home'
@@ -877,6 +882,29 @@ export default function App() {
     if (nextState !== previousState) void commitHanaState(nextState)
   }
 
+  const setHanaOpenActivityRating = (activityId: string, rating: number) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const activity = previousState.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (activity?.kind !== 'rating') return
+    const nextState = setOpenActivityValueForDate(
+      previousState,
+      activityId,
+      previousState.currentDate,
+      rating,
+    )
+    if (nextState !== previousState) void commitHanaState(nextState)
+  }
+
+  const setHanaEmotion = (emotion: DailyEmotion) => {
+    const previousState = hanaGameRef.current
+    if (!previousState || getActiveProfilePause(previousState)) return
+    const nextState = setDailyEmotion(previousState, emotion)
+    if (nextState !== previousState) void commitHanaState(nextState)
+  }
+
   const pauseHanaHabit = (habitId: string, input: PauseInput) => {
     const previousState = hanaGameRef.current
     if (previousState) void commitHanaState(startHabitPause(previousState, habitId, input))
@@ -1112,6 +1140,8 @@ export default function App() {
           onDecrementOpenActivity={(activityId) =>
             changeHanaOpenActivity(activityId, -1)
           }
+          onSetOpenActivityRating={setHanaOpenActivityRating}
+          onSetDailyEmotion={setHanaEmotion}
           onPauseHabit={pauseHanaHabit}
           onResumeHabit={resumeHanaHabit}
           onArchiveHabit={archiveHanaHabit}
@@ -1182,6 +1212,8 @@ export default function App() {
         onDecrementOpenActivity={(activityId) =>
           changeHanaOpenActivity(activityId, -1)
         }
+        onSetOpenActivityRating={setHanaOpenActivityRating}
+        onSetDailyEmotion={setHanaEmotion}
         onPauseHabit={pauseHanaHabit}
         onResumeHabit={resumeHanaHabit}
         onArchiveHabit={archiveHanaHabit}

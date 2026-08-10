@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { AddAnytimeLogDialog } from '@/components/AddAnytimeLogDialog'
 import { AnytimeLogSection } from '@/components/AnytimeLogSection'
+import { DailyEmotionPicker } from '@/components/DailyEmotionPicker'
 import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
@@ -57,7 +58,11 @@ import {
   getSkipProgress,
   visibleQuestsForState,
 } from '@/lib/hanaGame'
-import type { HanaGameState, NewOpenActivityInput } from '@/types'
+import type {
+  DailyEmotion,
+  HanaGameState,
+  NewOpenActivityInput,
+} from '@/types'
 import {
   getOpenActivityCatalog,
   hasOpenActivityHistory,
@@ -91,6 +96,8 @@ type Props = {
   ) => string | null
   onIncrementOpenActivity: (activityId: string) => void
   onDecrementOpenActivity: (activityId: string) => void
+  onSetOpenActivityRating: (activityId: string, rating: number) => void
+  onSetDailyEmotion: (emotion: DailyEmotion) => void
   onPauseHabit: (habitId: string, input: PauseInput) => void
   onResumeHabit: (habitId: string) => void
   onArchiveHabit: (habitId: string) => void
@@ -131,6 +138,8 @@ export function CramblePage({
   onEditOpenActivity,
   onIncrementOpenActivity,
   onDecrementOpenActivity,
+  onSetOpenActivityRating,
+  onSetDailyEmotion,
   onPauseHabit,
   onResumeHabit,
   onArchiveHabit,
@@ -316,6 +325,13 @@ export function CramblePage({
         <p className="mt-2 text-xs font-medium text-muted">The Sunward Archive</p>
       </section>
 
+      <DailyEmotionPicker
+        profile="cramble"
+        value={game.dailyEmotions[game.currentDate] ?? null}
+        disabled={Boolean(activeProfilePause)}
+        onChange={onSetDailyEmotion}
+      />
+
       <TodayProgressCard
         profile="cramble"
         complete={todayComplete}
@@ -353,6 +369,7 @@ export function CramblePage({
             todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
             onIncrement={onIncrementOpenActivity}
             onDecrement={onDecrementOpenActivity}
+            onSetRating={onSetOpenActivityRating}
             onManage={setManagedActivityId}
           />
         </main>
@@ -630,7 +647,7 @@ export function CramblePage({
           }
         />
       ) : null}
-      {managedActivity ? (
+      {managedActivity && managedActivity.kind !== 'rating' ? (
         <AddAnytimeLogDialog
           profile="cramble"
           mode="edit"

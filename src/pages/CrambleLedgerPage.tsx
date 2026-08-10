@@ -19,7 +19,7 @@ import {
   getHabitMomentumSignal,
   getProfileStats,
 } from '@/lib/hanaStats'
-import type { HanaGameState, Quest } from '@/types'
+import type { HanaGameState, OpenActivityKind, Quest } from '@/types'
 import {
   isHabitArchivedOnDate,
   isHabitGraduatedOnDate,
@@ -150,7 +150,7 @@ export function HabitLedgerPage({
     recent: getOpenActivityRangeStats(
       game,
       activity.id,
-      activity.kind === 'check' ? 14 : 7,
+      activity.kind === 'count' ? 7 : 14,
     ),
     history: getOpenActivityRangeStats(game, activity.id, 'all'),
     isArchived: isHabitArchivedOnDate(game, activity.id),
@@ -310,13 +310,17 @@ export function HabitLedgerPage({
     const totalLabel =
       activity.kind === 'check'
         ? `${history?.activeDays ?? 0} active ${history?.activeDays === 1 ? 'day' : 'days'}`
+        : activity.kind === 'rating'
+          ? `${formatOpenAmount(history?.averagePerActiveDay ?? 0, 1)} / 5 average`
         : `${formatOpenAmount(history?.total ?? 0)}${activity.unit ? ` ${activity.unit}` : ''}`
     const lastLogged = history?.lastLoggedDate
       ? history.lastLoggedDate === game.currentDate
         ? 'Today'
         : formatShortDate(history.lastLoggedDate)
       : 'Not yet'
-    const peak = Math.max(1, recent?.peakCount ?? 0)
+    const peak = activity.kind === 'rating'
+      ? 5
+      : Math.max(1, recent?.peakCount ?? 0)
 
     return (
       <div key={activity.id} className="ledger-quest-row-wrap">
@@ -348,6 +352,8 @@ export function HabitLedgerPage({
                   <span className="mt-1 block text-xs text-muted">
                     {activity.kind === 'count'
                       ? `${history?.activeDays ?? 0} active ${(history?.activeDays ?? 0) === 1 ? 'day' : 'days'} · `
+                      : activity.kind === 'rating'
+                        ? `${history?.activeDays ?? 0} ${(history?.activeDays ?? 0) === 1 ? 'day rated' : 'days rated'} · `
                       : ''}
                     Last logged {lastLogged}
                     {isPaused ? ' · Paused' : isArchived ? ' · Archived' : ''}
@@ -775,15 +781,15 @@ function formatShortDate(dateKey: string) {
   })
 }
 
-function formatOpenAmount(value: number) {
+function formatOpenAmount(value: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 0,
+    maximumFractionDigits,
   }).format(value)
 }
 
 function getOpenActivityStripLabel(
   days: Array<{ dateKey: string; count: number; active: boolean }>,
-  kind: 'check' | 'count',
+  kind: OpenActivityKind,
   unit?: string | null,
 ) {
   if (!days.length) return 'No activity days are available in this view. Blank days are neutral.'
@@ -792,5 +798,7 @@ function getOpenActivityStripLabel(
   const range = `${formatShortDate(days[0].dateKey)} through ${formatShortDate(days.at(-1)!.dateKey)}`
   return kind === 'check'
     ? `${range}. Logged on ${activeDays} of ${days.length} days. Unlogged days are neutral.`
+    : kind === 'rating'
+      ? `${range}. Rated on ${activeDays} of ${days.length} days, averaging ${activeDays ? (total / activeDays).toFixed(1) : '0'} out of 5. Unrated days are neutral.`
     : `${range}. ${formatOpenAmount(total)}${unit ? ` ${unit}` : ' total'} across ${activeDays} active days. Unlogged days are neutral.`
 }

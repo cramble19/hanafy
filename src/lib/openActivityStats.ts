@@ -106,6 +106,7 @@ export function normalizeLogCount(
     return 0
   }
   if (kind === 'check') return 1
+  if (kind === 'rating') return Math.min(5, Math.floor(value))
   return Math.floor(value)
 }
 

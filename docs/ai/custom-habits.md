@@ -70,8 +70,8 @@ type NewOpenActivityInput = {
 
 ## Lifecycle contract
 
-Persisted snapshots normalize to schema version 4 and include
-`openActivities` and `openActivityLogs`; they may also contain `habitSettings`,
+Persisted snapshots normalize to schema version 5 and include
+`openActivities`, `openActivityLogs`, and `dailyEmotions`; they may also contain `habitSettings`,
 `questActivations`, finite criteria/graduation state, `trackingPauses`,
 `backfillAudit`, `deletedHabitIds`, `historyEpoch`, and
 `syncRevision`. `habitSettings` is keyed by any built-in, custom quest, or
@@ -124,7 +124,7 @@ type OpenActivity = {
   description: string
   emoji: string
   color: string
-  kind: 'check' | 'count'
+  kind: 'check' | 'count' | 'rating'
   unit: string | null
   createdDate: string
 }
@@ -134,10 +134,23 @@ openActivityLogs: Record<dateKey, Record<activityId, number>>
 ```
 
 A `check` value normalizes to `1`; a `count` value is a positive safe integer
-up to 999,999. Zero is represented by the absence of a value. Mutations use the
+up to 999,999. The built-in Hana energy record uses `rating`, bounded from 1 to
+5; the add-anytime form intentionally continues to expose only check and count.
+Zero is represented by the absence of a value. Mutations use the
 profile's logical `currentDate`, so an action before 04:00 belongs to the prior
 calendar date. Recent-day changes use the same three-day limit and reject
 future, pre-start, pre-creation, paused, and archived dates.
+Rating records are entered only from Today rather than Recent day.
+
+Hana's only code-seeded anytime definitions are **Energy level** (rating 1-5)
+and **Had a productive day** (check). Earlier unapproved defaults are removed
+during normalization, including their dated values. Existing Energy Check-in
+values are preserved and clamped into the 1-5 range during migration.
+
+Daily emotion tracking is separate from anytime definitions:
+`dailyEmotions[dateKey]` stores one of `heavy | low | okay | good | bright`.
+It uses the same 04:00 day boundary, has no reward or missed state, and counts
+as a tracked day in Shared Journey.
 
 Anytime records never participate in quest planning, Today denominators,
 flowers/renown, pass/skip budgets, reminders, period outcomes, success rates, or
@@ -315,13 +328,14 @@ current app creates backups but does not import them yet.
 
 The API rejects unsupported state schemas and any write whose state schema is
 older than the stored snapshot. This prevents an old cached PWA bundle from
-reading a version-3 snapshot, normalizing it through an older model, and
+reading a version-5 snapshot, normalizing it through an older model, and
 overwriting the anytime fields. Such a write returns the normal conflict
 response and leaves the newer database snapshot intact.
 
-The CSV includes separate `anytime_activity` and `anytime_log` rows. Backup
-format version 2 carries the complete version-3 state and a resolved anytime
-catalog; older format-version-1 files predate this catalog branch. The HTML
+The CSV includes separate `anytime_activity`, `anytime_log`, and
+`daily_emotion` rows. Backup format version 4 carries the complete version-5
+state and a resolved anytime catalog; earlier formats predate one or more of
+the anytime, quest-completion, and emotion branches. The HTML
 Chronicle includes aggregate and per-habit schedule-aware history plus a neutral
 Anytime records section for active, paused, and archived items. It omits private
 pause reasons and notes, escapes all user-authored content, contains no remote

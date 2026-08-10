@@ -8,7 +8,11 @@ roads, oaths, and quiet acts of courage.
 
 Choose Cramble on the home screen to open the archive directly.
 
-After unlocking, **Begin the First Oath** starts Cramble's own saved record.
+Below the daily archive quote, **How was today?** records one optional Heavy,
+Low, Okay, Good, or Bright emotion for the 4 AM tracker day. It is editable,
+neutral, reward-free, and stored only in Cramble's profile.
+
+If the tracker has not started, **Begin the First Oath** starts Cramble's own saved record.
 There is no preview mode and nothing is saved before the oath begins.
 
 ## The habit game

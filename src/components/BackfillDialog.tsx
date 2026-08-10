@@ -78,6 +78,7 @@ export function BackfillDialog({
   const eligibleActivities = selectedDate
     ? getOpenActivityCatalog(game).filter(
         (activity) =>
+          activity.kind !== 'rating' &&
           !getOpenActivityDateValidationError(
             game,
             activity.id,

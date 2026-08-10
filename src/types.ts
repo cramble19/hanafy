@@ -158,9 +158,11 @@ export type CustomHabitQuest = Quest & {
 /**
  * A deadline-free activity records what happened without creating a due date,
  * missed state, streak, or reward. `check` is binary for a logical day;
- * `count` stores a non-negative quantity for that logical day.
+ * `count` stores a non-negative quantity, and `rating` stores a bounded
+ * one-to-five value for that logical day.
  */
-export type OpenActivityKind = 'check' | 'count'
+export type OpenActivityKind = 'check' | 'count' | 'rating'
+export type CreatableOpenActivityKind = Exclude<OpenActivityKind, 'rating'>
 
 export type OpenActivity = {
   id: string
@@ -179,11 +181,13 @@ export type OpenActivity = {
 export type NewOpenActivityInput = {
   title: string
   description: string
-  kind: OpenActivityKind
+  kind: CreatableOpenActivityKind
   unit?: string | null
   emoji?: string
   color?: string
 }
+
+export type DailyEmotion = 'heavy' | 'low' | 'okay' | 'good' | 'bright'
 
 export type GardenWeed = {
   id: string
@@ -212,6 +216,8 @@ export type GameState = {
   openActivities: OpenActivity[]
   /** Per-logical-day values. Check activities are 0/1; counts are safe integers. */
   openActivityLogs: Record<string, Record<string, number>>
+  /** One optional neutral emotion record per 04:00-to-04:00 tracker day. */
+  dailyEmotions: Record<string, DailyEmotion>
   /** Profile-wide neutral intervals. */
   trackingPauses?: TrackingPause[]
   /** Provenance for corrections entered after their performed date. */

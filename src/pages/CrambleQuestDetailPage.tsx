@@ -495,12 +495,20 @@ function OpenActivityDetailPage({
   const totalValue =
     activity.kind === 'check'
       ? String(stats.activeDays)
-      : formatOpenAmount(stats.total)
-  const totalLabel = activity.kind === 'check' ? 'Days logged' : 'Total logged'
+      : activity.kind === 'rating'
+        ? formatOpenAmount(stats.averagePerActiveDay, 1)
+        : formatOpenAmount(stats.total)
+  const totalLabel = activity.kind === 'check'
+    ? 'Days logged'
+    : activity.kind === 'rating'
+      ? 'Average rating'
+      : 'Total logged'
   const totalNote =
     activity.kind === 'check'
       ? 'recorded days only'
-      : activity.unit || 'counted items'
+      : activity.kind === 'rating'
+        ? 'out of 5'
+        : activity.unit || 'counted items'
   const middleValue =
     activity.kind === 'check'
       ? stats.lastLoggedDate === game.currentDate
@@ -509,7 +517,11 @@ function OpenActivityDetailPage({
           ? formatDate(stats.lastLoggedDate, { month: 'short', day: 'numeric' })
           : '—'
       : String(stats.activeDays)
-  const middleLabel = activity.kind === 'check' ? 'Last logged' : 'Active days'
+  const middleLabel = activity.kind === 'check'
+    ? 'Last logged'
+    : activity.kind === 'rating'
+      ? 'Days rated'
+      : 'Active days'
   const middleNote =
     activity.kind === 'check'
       ? 'most recent entry'
@@ -517,12 +529,24 @@ function OpenActivityDetailPage({
   const thirdValue =
     activity.kind === 'check'
       ? formatPace(stats.weeklyPace)
-      : formatOpenAmount(stats.averagePerActiveDay, 1)
-  const thirdLabel = activity.kind === 'check' ? 'Weekly pace' : 'Average'
+      : activity.kind === 'rating'
+        ? stats.lastLoggedDate === game.currentDate
+          ? 'Today'
+          : stats.lastLoggedDate
+            ? formatDate(stats.lastLoggedDate, { month: 'short', day: 'numeric' })
+            : '—'
+        : formatOpenAmount(stats.averagePerActiveDay, 1)
+  const thirdLabel = activity.kind === 'check'
+    ? 'Weekly pace'
+    : activity.kind === 'rating'
+      ? 'Last rated'
+      : 'Average'
   const thirdNote =
     activity.kind === 'check'
       ? 'logged days per week'
-      : `${activity.unit || 'items'} per active day`
+      : activity.kind === 'rating'
+        ? 'most recent entry'
+        : `${activity.unit || 'items'} per active day`
 
   return (
     <div
@@ -548,7 +572,7 @@ function OpenActivityDetailPage({
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-faint">
-              Anytime · {activity.kind === 'check' ? 'Once today' : 'Count'}
+              Anytime · {activity.kind === 'check' ? 'Once today' : activity.kind === 'rating' ? 'Rating 1-5' : 'Count'}
               {lifecycleStatus === 'active' ? '' : ` · ${capitalize(lifecycleStatus)}`}
             </p>
             <h1
@@ -637,10 +661,10 @@ function OpenActivityDetailPage({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">
-                {activity.kind === 'check' ? 'Recorded days' : 'Amounts by day'}
+                {activity.kind === 'check' ? 'Recorded days' : activity.kind === 'rating' ? 'Energy ratings' : 'Amounts by day'}
               </p>
               <h2 className="mt-1 text-xl font-semibold text-ink">
-                {activity.kind === 'check' ? 'When it happened' : 'Daily activity'}
+                {activity.kind === 'check' ? 'When it happened' : activity.kind === 'rating' ? 'Energy by day' : 'Daily activity'}
               </h2>
             </div>
             <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">
@@ -654,6 +678,8 @@ function OpenActivityDetailPage({
           <p className="mt-2 text-xs leading-5 text-muted">
             {activity.kind === 'check'
               ? 'A filled mark means it was logged. An empty mark is simply an unrecorded day.'
+              : activity.kind === 'rating'
+                ? 'Each bar is a rating from 1 to 5. Unrated days remain neutral.'
               : `Each bar is the ${activity.unit || 'amount'} recorded that day. Empty spaces remain neutral.`}
           </p>
 
@@ -749,7 +775,9 @@ function OpenCheckDay({
 }
 
 function OpenCountChart({ stats }: { stats: OpenActivityRangeStats }) {
-  const maximum = Math.max(1, stats.peakCount)
+  const maximum = stats.activity.kind === 'rating'
+    ? 5
+    : Math.max(1, stats.peakCount)
   const chartWidth = Math.max(300, stats.days.length * 18)
 
   return (
@@ -823,6 +851,8 @@ function OpenActivityEntryStrip({ stats }: { stats: OpenActivityRangeStats }) {
             <strong className="mt-1 block text-sm text-ink">
               {stats.activity.kind === 'check'
                 ? 'Logged'
+                : stats.activity.kind === 'rating'
+                  ? `${formatOpenAmount(day.count)} / 5`
                 : `${formatOpenAmount(day.count)}${stats.activity.unit ? ` ${stats.activity.unit}` : ''}`}
             </strong>
           </li>
@@ -851,6 +881,8 @@ function OpenActivityScreenReaderEntries({
             })}
             : {stats.activity.kind === 'check'
               ? 'logged'
+              : stats.activity.kind === 'rating'
+                ? `${formatOpenAmount(day.count)} out of 5`
               : `${formatOpenAmount(day.count)}${stats.activity.unit ? ` ${stats.activity.unit}` : ''}`}
           </li>
         ))
@@ -1173,6 +1205,9 @@ function getOpenActivityInsight(stats: OpenActivityRangeStats) {
         : 'this view'
     return `${stats.activeDays} ${stats.activeDays === 1 ? 'day carries' : 'days carry'} a log in this view. The most recent was ${last}.`
   }
+  if (stats.activity.kind === 'rating') {
+    return `${stats.activeDays} ${stats.activeDays === 1 ? 'day has' : 'days have'} an energy rating in this view, averaging ${formatOpenAmount(stats.averagePerActiveDay, 1)} out of 5.`
+  }
   return `${formatOpenAmount(stats.total)}${stats.activity.unit ? ` ${stats.activity.unit}` : ''} were recorded across ${stats.activeDays} active ${stats.activeDays === 1 ? 'day' : 'days'}, averaging ${formatOpenAmount(stats.averagePerActiveDay, 1)} per active day.`
 }
 
@@ -1180,6 +1215,8 @@ function getOpenChartSummary(stats: OpenActivityRangeStats) {
   const dateRange = `${formatDate(stats.rangeStart, { month: 'long', day: 'numeric', year: 'numeric' })} through ${formatDate(stats.rangeEnd, { month: 'long', day: 'numeric', year: 'numeric' })}`
   return stats.activity.kind === 'check'
     ? `${dateRange}. Logged on ${stats.activeDays} of ${stats.days.length} days. Empty days are neutral.`
+    : stats.activity.kind === 'rating'
+      ? `${dateRange}. Rated on ${stats.activeDays} of ${stats.days.length} days, averaging ${formatOpenAmount(stats.averagePerActiveDay, 1)} out of 5. Unrated days are neutral.`
     : `${dateRange}. ${formatOpenAmount(stats.total)}${stats.activity.unit ? ` ${stats.activity.unit}` : ' total'} across ${stats.activeDays} active days. Peak daily amount ${formatOpenAmount(stats.peakCount)}. Empty days are neutral.`
 }
 

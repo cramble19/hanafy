@@ -297,6 +297,7 @@ type HanaGameState = {
   customHabits: CustomHabitQuest[]
   openActivities: OpenActivity[]
   openActivityLogs: Record<string, Record<string, number>>
+  dailyEmotions: Record<string, DailyEmotion>
   activeDailyQuests: Record<string, string[]>
   activeLongTermQuestIds: string[]
   dailyCompletions: Record<string, Record<string, boolean>>
@@ -321,12 +322,18 @@ schedules.
 for a custom `periodTarget`. It supports multiple same-day records such as two
 brushings per day without changing legacy boolean history.
 
-`openActivities` and `openActivityLogs` store deadline-free check/count records.
+`openActivities` and `openActivityLogs` store deadline-free check/count records
+plus Hana's bounded 1-5 Energy level rating.
 They are kept outside the quest schedule and reward engine, so blank days never
 become missed opportunities and logging does not change flowers, skips, Today
 completion, or momentum. Positive values are still factual tracked-day evidence
 for the Shared Journey. The shared Ledger renders their neutral 7/30/90/all-time
 history without success-rate language.
+
+`dailyEmotions[currentDate]` stores each profile's optional
+Heavy/Low/Okay/Good/Bright selection. It appears below the quote and above Today
+at a glance, uses the 4 AM boundary, changes no flowers or completion math, and
+remains separate from the quest and anytime-log catalogs.
 
 `longTermWindows[questId]` stores the active start date for each long-term quest.
 

@@ -38,6 +38,9 @@ quest lists, saved device data, and database records stay separate.
   quests leave Today after their finite chapter blooms, while history remains.
 - Cramble starts with five fixed lessons. Either person can add only the personal
   habits they actually want.
+- Both profiles can optionally record one neutral daily emotion without changing
+  rewards or streaks. Hana also has only the approved Energy level and Productive
+  day Anytime logs.
 - Motion is subtle and respects reduced-motion preferences.
 
 ## Saving and installation

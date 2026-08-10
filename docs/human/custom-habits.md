@@ -135,6 +135,19 @@ archived, pre-creation, locked, unscheduled, or passed opportunity. These recent
 days stay open rather than becoming unfinished until the correction window
 closes. An empty anytime day remains neutral even after that window closes.
 
+Hana begins with only two built-in Anytime logs:
+
+- **Energy level** — choose a rating from 1 to 5 for the current tracker day.
+- **Had a productive day** — log it once when the day felt meaningfully productive.
+
+Neither affects flowers, streaks, or Today completion. Energy ratings are
+entered from Today rather than the Recent day correction screen.
+
+Both Hana and Cramble also have a compact **How was today?** emotion picker
+below the daily quote. Heavy, Low, Okay, Good, and Bright are neutral factual
+records, saved separately for each person. A choice can be changed during the
+same 4 AM-to-4 AM tracker day; an empty day remains neutral.
+
 ## Reminders and export
 
 Reminder intent is stored with the profile and is suppressed as soon as the
@@ -152,7 +165,7 @@ Push infrastructure.
   and shows each habit's full goal-window history. Use the browser's Print action
   to save it as a PDF. Private pause reasons and notes are not printed.
 - **Spreadsheet (.csv)** contains detailed habit, period, occurrence, pause, and
-  correction rows plus anytime definitions and dated values for Excel or Google
+  correction rows plus anytime definitions, dated values, and emotion records for Excel or Google
   Sheets. User-entered text is protected against accidental spreadsheet formulas.
 - **Complete backup (.json)** stores the whole profile snapshot plus the resolved
   habit definitions and format/version metadata. This is the best preservation

@@ -721,6 +721,7 @@ function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
     customHabits: [],
     openActivities: [],
     openActivityLogs: {},
+    dailyEmotions: {},
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},

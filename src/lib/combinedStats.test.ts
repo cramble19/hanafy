@@ -17,6 +17,9 @@ describe('combined stats', () => {
       openActivityLogs: {
         '2026-08-06': { 'open-gym': 1 },
       },
+      dailyEmotions: {
+        '2026-08-08': 'okay',
+      },
       eveningWeeds: {
         '2026-08-05': { 'some-item': false },
         '2026-08-06': {},
@@ -57,8 +60,9 @@ describe('combined stats', () => {
       '2026-08-05',
       '2026-08-06',
       '2026-08-07',
+      '2026-08-08',
     ])
-    expect(stats.hana.activeDays).toBe(5)
+    expect(stats.hana.activeDays).toBe(6)
     expect(stats.cramble.activeDateKeys).toEqual([
       '2026-08-03',
       '2026-08-07',
@@ -68,8 +72,9 @@ describe('combined stats', () => {
     expect(stats.sharedActiveDateKeys).toEqual([
       '2026-08-03',
       '2026-08-07',
+      '2026-08-08',
     ])
-    expect(stats.sharedActiveDays).toBe(2)
+    expect(stats.sharedActiveDays).toBe(3)
   })
 
   it('settles only completed or missed windows beyond the correction grace', () => {
@@ -329,6 +334,7 @@ function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
     customHabits: [],
     openActivities: [],
     openActivityLogs: {},
+    dailyEmotions: {},
     activeDailyQuests: {},
     activeLongTermQuestIds: [],
     dailyCompletions: {},

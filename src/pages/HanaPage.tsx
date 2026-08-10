@@ -12,6 +12,7 @@ import { EveningWeeds } from '@/components/EveningWeeds'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { AddAnytimeLogDialog } from '@/components/AddAnytimeLogDialog'
 import { AnytimeLogSection } from '@/components/AnytimeLogSection'
+import { DailyEmotionPicker } from '@/components/DailyEmotionPicker'
 import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
@@ -62,6 +63,7 @@ import {
 import type {
   GardenWeed,
   HanaGameState,
+  DailyEmotion,
   NewOpenActivityInput,
 } from '@/types'
 
@@ -97,6 +99,8 @@ type Props = {
   ) => string | null
   onIncrementOpenActivity: (activityId: string) => void
   onDecrementOpenActivity: (activityId: string) => void
+  onSetOpenActivityRating: (activityId: string, rating: number) => void
+  onSetDailyEmotion: (emotion: DailyEmotion) => void
   onPauseHabit: (habitId: string, input: PauseInput) => void
   onResumeHabit: (habitId: string) => void
   onArchiveHabit: (habitId: string) => void
@@ -146,6 +150,8 @@ export function HanaPage({
   onEditOpenActivity,
   onIncrementOpenActivity,
   onDecrementOpenActivity,
+  onSetOpenActivityRating,
+  onSetDailyEmotion,
   onPauseHabit,
   onResumeHabit,
   onArchiveHabit,
@@ -331,6 +337,13 @@ export function HanaPage({
         </p>
       </section>
 
+      <DailyEmotionPicker
+        profile="hana"
+        value={game.dailyEmotions[game.currentDate] ?? null}
+        disabled={Boolean(activeProfilePause)}
+        onChange={onSetDailyEmotion}
+      />
+
       <TodayProgressCard
         profile="hana"
         complete={todayComplete}
@@ -364,6 +377,7 @@ export function HanaPage({
             todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
             onIncrement={onIncrementOpenActivity}
             onDecrement={onDecrementOpenActivity}
+            onSetRating={onSetOpenActivityRating}
             onManage={setManagedActivityId}
           />
           <AvailableQuestsSection
@@ -650,7 +664,7 @@ export function HanaPage({
           }
         />
       ) : null}
-      {managedActivity ? (
+      {managedActivity && managedActivity.kind !== 'rating' ? (
         <AddAnytimeLogDialog
           profile="hana"
           mode="edit"

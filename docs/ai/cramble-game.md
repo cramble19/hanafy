@@ -38,6 +38,8 @@ an intermediate gate.
 - `src/lib/openActivities.ts` / `src/components/AddAnytimeLogDialog.tsx` /
   `src/components/AnytimeLogSection.tsx` — shared deadline-free records and
   Cramble-skinned create/Today UI.
+- `src/components/DailyEmotionPicker.tsx` stores the shared neutral emotion
+  record with Cramble's brass-sigil SVG treatment.
 - `src/lib/hanaGame.ts` — shared cadence, date, plan, and reward calculations.
 - `src/lib/hanaCloudSync.ts` / `hanaStats.ts` — period-aware serialization and
   reporting.

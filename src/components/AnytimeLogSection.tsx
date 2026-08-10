@@ -13,6 +13,7 @@ export type AnytimeLogSectionProps = {
   disabled?: boolean
   onIncrement: (activityId: string) => void
   onDecrement: (activityId: string) => void
+  onSetRating: (activityId: string, rating: number) => void
   onManage?: (activityId: string) => void
 }
 
@@ -23,6 +24,7 @@ export function AnytimeLogSection({
   disabled = false,
   onIncrement,
   onDecrement,
+  onSetRating,
   onManage,
 }: AnytimeLogSectionProps) {
   const titleId = useId()
@@ -58,6 +60,7 @@ export function AnytimeLogSection({
               disabled={disabled}
               onIncrement={onIncrement}
               onDecrement={onDecrement}
+              onSetRating={onSetRating}
               onManage={onManage}
             />
           ))}
@@ -85,6 +88,7 @@ type CardProps = {
   disabled: boolean
   onIncrement: (activityId: string) => void
   onDecrement: (activityId: string) => void
+  onSetRating: (activityId: string, rating: number) => void
   onManage?: (activityId: string) => void
 }
 
@@ -95,16 +99,18 @@ function AnytimeLogCard({
   disabled,
   onIncrement,
   onDecrement,
+  onSetRating,
   onManage,
 }: CardProps) {
   const count = Number.isSafeInteger(todayCount) ? Math.max(0, todayCount) : 0
   const checked = activity.kind === 'check' && count > 0
+  const isRating = activity.kind === 'rating'
   const unit = activity.unit?.trim() || 'times'
   const countLabel = `${count} ${unit} today`
 
   return (
     <article className={`anytime-log-card anytime-log-card-${profile}`}>
-      {onManage ? (
+      {onManage && !isRating ? (
         <button
           type="button"
           className="anytime-log-emblem anytime-log-manage"
@@ -141,6 +147,10 @@ function AnytimeLogCard({
           <span className="anytime-log-today-count" aria-live="polite" aria-atomic="true">
             {countLabel}
           </span>
+        ) : isRating ? (
+          <span className="anytime-log-today-count" aria-live="polite" aria-atomic="true">
+            {count > 0 ? `Energy logged: ${Math.min(5, count)} of 5` : 'Choose 1 to 5'}
+          </span>
         ) : (
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {checked ? `${activity.title} logged today.` : `${activity.title} not logged today.`}
@@ -172,6 +182,28 @@ function AnytimeLogCard({
             'Log today'
           )}
         </button>
+      ) : activity.kind === 'rating' ? (
+        <div
+          className="anytime-log-rating"
+          role="group"
+          aria-label={`${activity.title} out of five`}
+        >
+          {[1, 2, 3, 4, 5].map((rating) => (
+            <button
+              key={rating}
+              type="button"
+              onClick={() => onSetRating(activity.id, rating)}
+              disabled={disabled}
+              aria-pressed={count === rating}
+              aria-label={`Rate ${activity.title} ${rating} out of 5`}
+            >
+              {rating}
+            </button>
+          ))}
+          <span className="anytime-log-rating-scale" aria-hidden="true">
+            <small>Very low</small><small>Very high</small>
+          </span>
+        </div>
       ) : (
         <div className="anytime-log-stepper" role="group" aria-label={`Today's ${activity.title} count`}>
           <button

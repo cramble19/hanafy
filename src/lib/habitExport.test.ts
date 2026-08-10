@@ -105,7 +105,7 @@ describe('CSV habit export', () => {
       .split('\r\n')
       .find((row) => row.includes('"period"') && row.includes('"legacy-quota"'))
 
-    expect(periodRow).toContain('"3","3","completed","easy","3"')
+    expect(periodRow).toContain('"3","","3","completed","easy","3"')
   })
 
   it('exports every backfill add and undo event even when the final count is zero', () => {
@@ -236,6 +236,25 @@ describe('CSV habit export', () => {
     expect(csv).not.toContain('"completed"')
     expect(csv).not.toContain('"missed"')
   })
+
+  it('exports the optional daily emotion as a neutral profile record', () => {
+    const state = {
+      ...createStartedHanaState('2026-08-01'),
+      currentDate: '2026-08-03',
+      dailyEmotions: {
+        '2026-08-02': 'bright' as const,
+      },
+    }
+
+    const emotionRow = buildProfileCsv(state, [], 'hana')
+      .split('\r\n')
+      .find((row) => row.includes('"daily_emotion"'))
+
+    expect(emotionRow).toContain('"emotion","emotion"')
+    expect(emotionRow).toContain('"2026-08-02"')
+    expect(emotionRow).toContain('"bright:Bright"')
+    expect(emotionRow).toContain('"logged"')
+  })
 })
 
 describe('JSON profile backup', () => {
@@ -274,7 +293,7 @@ describe('JSON profile backup', () => {
     })
 
     expect(backup.format).toBe('hanafy-profile-backup')
-    expect(backup.formatVersion).toBe(3)
+    expect(backup.formatVersion).toBe(4)
     expect(backup.profile).toEqual({
       id: 'cramble',
       name: 'Cramble',

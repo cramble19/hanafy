@@ -219,6 +219,10 @@ function getTrackedDateKeys(
     })
   })
 
+  Object.keys(state.dailyEmotions ?? {}).forEach((dateKey) => {
+    if (isDateInRange(dateKey, rangeStart, rangeEnd)) dates.add(dateKey)
+  })
+
   Object.values(state.questSkips ?? {}).forEach((skipEvents) => {
     Object.entries(skipEvents).forEach(([eventKey, isSkipped]) => {
       if (!isSkipped) return

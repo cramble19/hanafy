@@ -36,6 +36,7 @@ import {
 import {
   archiveHabit,
   deleteHabitPermanently,
+  getActiveProfilePause,
   hasHabitHistory,
   isHabitGraduatedOnDate,
   restoreHabit,
@@ -72,12 +73,17 @@ import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
-import type { HanaGameState, NewOpenActivityInput } from '@/types'
+import type {
+  DailyEmotion,
+  HanaGameState,
+  NewOpenActivityInput,
+} from '@/types'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
+import { setDailyEmotion } from '@/lib/dailyEmotions'
 
 type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail'
 const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
@@ -863,6 +869,32 @@ export function CrambleExperience({ onBack }: Props) {
     if (nextState !== previous) void commitGameState(nextState)
   }
 
+  const setCrambleOpenActivityRating = (
+    activityId: string,
+    rating: number,
+  ) => {
+    const previous = gameRef.current
+    if (!previous) return
+    const activity = previous.openActivities.find(
+      (candidate) => candidate.id === activityId,
+    )
+    if (activity?.kind !== 'rating') return
+    const nextState = setOpenActivityValueForDate(
+      previous,
+      activityId,
+      previous.currentDate,
+      rating,
+    )
+    if (nextState !== previous) void commitGameState(nextState)
+  }
+
+  const setCrambleEmotion = (emotion: DailyEmotion) => {
+    const previous = gameRef.current
+    if (!previous || getActiveProfilePause(previous)) return
+    const nextState = setDailyEmotion(previous, emotion)
+    if (nextState !== previous) void commitGameState(nextState)
+  }
+
   const pauseCrambleHabit = (habitId: string, input: PauseInput) => {
     const previous = gameRef.current
     if (previous) void commitGameState(startHabitPause(previous, habitId, input))
@@ -1064,6 +1096,8 @@ export function CrambleExperience({ onBack }: Props) {
       onDecrementOpenActivity={(activityId) =>
         changeCrambleOpenActivity(activityId, -1)
       }
+      onSetOpenActivityRating={setCrambleOpenActivityRating}
+      onSetDailyEmotion={setCrambleEmotion}
       onPauseHabit={pauseCrambleHabit}
       onResumeHabit={resumeCrambleHabit}
       onArchiveHabit={archiveCrambleHabit}

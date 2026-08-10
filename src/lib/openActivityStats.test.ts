@@ -183,6 +183,7 @@ function createState(
     habitOccurrences: {},
     openActivities: [activity],
     openActivityLogs: logs,
+    dailyEmotions: {},
     longTermWindows: {},
     longTermCompletions: {},
     questSkips: {},

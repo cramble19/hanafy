@@ -298,17 +298,20 @@ export function recordOpenActivityForDate(
   )
   if (!activity) return { state, error: 'That anytime log is unavailable.' }
 
-  const nextState =
-    activity.kind === 'check'
-      ? setOpenActivityValueForDate(state, activityId, dateKey, 1)
-      : incrementOpenActivityCountForDate(state, activityId, dateKey, 1)
+  const nextState = activity.kind === 'check'
+    ? setOpenActivityValueForDate(state, activityId, dateKey, 1)
+    : activity.kind === 'count'
+      ? incrementOpenActivityCountForDate(state, activityId, dateKey, 1)
+      : state
   if (nextState === state) {
     return {
       state,
       error:
         activity.kind === 'check'
           ? 'This activity is already logged for that day.'
-          : 'That daily count cannot be increased further.',
+          : activity.kind === 'count'
+            ? 'That daily count cannot be increased further.'
+            : 'Ratings can only be entered from Today.',
     }
   }
 
@@ -334,10 +337,9 @@ export function undoOpenActivityForDate(
     return { state, error: 'There is no activity log to undo on that day.' }
   }
 
-  const nextState =
-    activity.kind === 'check'
-      ? setOpenActivityValueForDate(state, activityId, dateKey, 0)
-      : incrementOpenActivityCountForDate(state, activityId, dateKey, -1)
+  const nextState = activity.kind === 'check' || activity.kind === 'rating'
+    ? setOpenActivityValueForDate(state, activityId, dateKey, 0)
+    : incrementOpenActivityCountForDate(state, activityId, dateKey, -1)
   if (nextState === state) {
     return { state, error: 'Could not undo that activity log.' }
   }
@@ -443,14 +445,15 @@ export function normalizeOpenActivityLogs(
       const validLogs = Object.entries(logs).reduce<Record<string, number>>(
         (dateResult, [activityId, count]) => {
           const activity = activityById.get(activityId)
+          const normalizedValue = activity
+            ? normalizeStoredOpenActivityValue(activity, count)
+            : 0
           if (
             activity &&
             dateKey >= activity.createdDate &&
-            typeof count === 'number' &&
-            isValidOpenActivityValue(activity, count) &&
-            count > 0
+            normalizedValue > 0
           ) {
-            dateResult[activityId] = count
+            dateResult[activityId] = normalizedValue
           }
           return dateResult
         },
@@ -474,7 +477,12 @@ function readOpenActivity(value: unknown): OpenActivity | null {
   const emoji = readTrimmedString(value.emoji, OPEN_ACTIVITY_LIMITS.emoji)
   const color = readTrimmedString(value.color, 7)
   const createdDate = isDateKey(value.createdDate) ? value.createdDate : null
-  const kind = value.kind === 'check' || value.kind === 'count' ? value.kind : null
+  const kind =
+    value.kind === 'check' ||
+    value.kind === 'count' ||
+    value.kind === 'rating'
+      ? value.kind
+      : null
   const unit = value.unit === null
     ? null
     : readTrimmedString(value.unit, OPEN_ACTIVITY_LIMITS.unit)
@@ -509,7 +517,24 @@ function readOpenActivity(value: unknown): OpenActivity | null {
 function isValidOpenActivityValue(activity: OpenActivity, value: number) {
   return Number.isSafeInteger(value) &&
     value >= 0 &&
-    value <= (activity.kind === 'count' ? OPEN_ACTIVITY_LIMITS.dailyCount : 1)
+    value <= (
+      activity.kind === 'count'
+        ? OPEN_ACTIVITY_LIMITS.dailyCount
+        : activity.kind === 'rating'
+          ? 5
+          : 1
+    )
+}
+
+function normalizeStoredOpenActivityValue(
+  activity: OpenActivity,
+  value: unknown,
+) {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    return 0
+  }
+  if (activity.kind === 'rating') return Math.min(5, value)
+  return isValidOpenActivityValue(activity, value) ? value : 0
 }
 
 function createOpenActivityId(profile: OpenActivityProfile) {
@@ -540,7 +565,11 @@ function appendOpenActivityAudit(
 }
 
 function isValidOpenActivityId(value: string) {
-  return value.startsWith('open-') && value.length <= 120 && !value.includes(':')
+  return (
+    (value.startsWith('open-') || value.startsWith('custom-hana-')) &&
+    value.length <= 120 &&
+    !value.includes(':')
+  )
 }
 
 function getDefaultOpenActivityEmoji(

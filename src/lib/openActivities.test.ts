@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { quests } from '@/data/quests'
 import {
   archiveHabit,
   createDefaultHabitSettings,
@@ -125,6 +126,26 @@ describe('deadline-free anytime logs', () => {
         OPEN_ACTIVITY_LIMITS.dailyCount + 1,
       ),
     ).toBe(state)
+  })
+
+  it('stores a bounded one-to-five rating without changing rewards', () => {
+    const activity: OpenActivity = {
+      id: 'custom-hana-energy-check-in',
+      custom: true,
+      title: 'Energy level',
+      description: 'How was your energy today?',
+      emoji: '⚡',
+      color: '#9fb683',
+      kind: 'rating',
+      unit: null,
+      createdDate: '2026-08-01',
+    }
+    const state = withActivity(activity, { totalFlowers: 9 })
+    const rated = setOpenActivityValue(state, activity.id, 4)
+
+    expect(getOpenActivityValue(rated, activity.id)).toBe(4)
+    expect(rated.totalFlowers).toBe(9)
+    expect(setOpenActivityValue(rated, activity.id, 6)).toBe(rated)
   })
 
   it('allows recent-day correction but rejects old, future, pre-start, and neutral days', () => {
@@ -304,7 +325,7 @@ describe('deadline-free anytime logs', () => {
       [],
       '2026-08-08',
     )
-    expect(legacy.schemaVersion).toBe(4)
+    expect(legacy.schemaVersion).toBe(5)
     expect(legacy.openActivities).toEqual([])
     expect(legacy.openActivityLogs).toEqual({})
     expect(legacy.dailyCompletions['2026-08-07']?.legacy).toBe(true)
@@ -345,6 +366,55 @@ describe('deadline-free anytime logs', () => {
     expect(normalized.openActivityLogs).toEqual({
       '2026-08-05': { [count.id]: 7 },
       '2026-08-06': { [check.id]: 1 },
+    })
+  })
+
+  it('removes unapproved Hana defaults and migrates energy to a five-point rating', () => {
+    const oldDefaults: OpenActivity[] = [
+      ['custom-hana-kind-moment', 'Kind Moment', 'check'],
+      ['custom-hana-music-moment', 'Music Moment', 'check'],
+      ['custom-hana-energy-check-in', 'Energy Check-in', 'count'],
+      ['custom-hana-mindful-treat', 'Mindful Treat', 'check'],
+    ].map(([id, title, kind]) => ({
+      id,
+      custom: true,
+      title,
+      description: `${title} description`,
+      emoji: '•',
+      color: '#9fb683',
+      kind: kind as OpenActivity['kind'],
+      unit: kind === 'count' ? 'energy point' : null,
+      createdDate: '2026-08-01',
+    }))
+    const migrated = parseStoredHanaState(
+      JSON.stringify({
+        ...createStartedHanaState('2026-08-01'),
+        schemaVersion: 4,
+        currentDate: '2026-08-10',
+        openActivities: oldDefaults,
+        openActivityLogs: {
+          '2026-08-09': Object.fromEntries(
+            oldDefaults.map((activity) => [activity.id, activity.kind === 'count' ? 9 : 1]),
+          ),
+        },
+      }),
+      quests,
+      '2026-08-10',
+    )
+
+    expect(migrated.openActivities.map(({ id }) => id)).toEqual([
+      'custom-hana-energy-check-in',
+      'custom-hana-productive-day',
+    ])
+    expect(migrated.openActivities[0]).toEqual(
+      expect.objectContaining({
+        title: 'Energy level',
+        kind: 'rating',
+        createdDate: '2026-08-01',
+      }),
+    )
+    expect(migrated.openActivityLogs).toEqual({
+      '2026-08-09': { 'custom-hana-energy-check-in': 5 },
     })
   })
 })

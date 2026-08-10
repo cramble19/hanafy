@@ -27,7 +27,7 @@ endpoint and generic payload/save helpers support both profiles.
 
 The controllers must not share state, caches, or pending/in-flight refs.
 
-Schema version 4 fields (`openActivities`, `openActivityLogs`, `habitSettings`,
+Schema version 5 fields (`openActivities`, `openActivityLogs`, `dailyEmotions`, `habitSettings`,
 `questActivations`, finite completion criteria and graduation history,
 profile/habit pause intervals, archive state, reminder intent, deletion
 tombstones, history epoch, sync revision, and backfill audit) live inside the

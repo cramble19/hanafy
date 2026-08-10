@@ -4638,6 +4638,58 @@ button.anytime-log-emblem:focus-visible {
   text-overflow: ellipsis;
 }
 
+.anytime-log-rating {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.anytime-log-rating button {
+  min-width: 0;
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  outline: none;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.anytime-log-rating button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--success) 64%, var(--border));
+  color: #fffdf7;
+  background: #647c59;
+}
+
+.anytime-log-rating button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.anytime-log-rating button:focus-visible {
+  outline: 2px solid var(--focus, var(--success));
+  outline-offset: 2px;
+}
+
+.anytime-log-rating button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.anytime-log-rating-scale {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  color: var(--faint);
+  font-size: 0.62rem;
+}
+
 .anytime-log-empty {
   margin-top: 0.75rem;
   border: 1px dashed var(--border);
@@ -4765,6 +4817,242 @@ button.anytime-log-emblem:focus-visible {
   border-color: rgba(214, 166, 83, 0.44);
   color: var(--cramble-brass);
   background: #1d1e23;
+}
+
+.anytime-log-section-cramble .anytime-log-rating button {
+  border-color: rgba(214, 166, 83, 0.38);
+  color: var(--cramble-brass);
+  background: #1d1e23;
+}
+
+.anytime-log-section-cramble .anytime-log-rating button[aria-pressed='true'] {
+  border-color: var(--cramble-brass);
+  color: #15161a;
+  background: var(--cramble-brass);
+}
+
+/* Minimal once-per-tracker-day emotion record. */
+.daily-emotion-picker {
+  position: relative;
+  z-index: 28;
+  display: flex;
+  min-height: 3.6rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 1.15rem;
+  padding: 0.45rem 0.55rem 0.45rem 0.9rem;
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 12px 28px -25px rgba(48, 39, 31, 0.72);
+}
+
+.daily-emotion-question {
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.daily-emotion-trigger {
+  display: inline-flex;
+  min-width: 6.3rem;
+  min-height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.35rem 0.55rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  outline: none;
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.daily-emotion-trigger:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.daily-emotion-trigger:focus-visible,
+.daily-emotion-option:focus-visible {
+  outline: 2px solid var(--focus, var(--success));
+  outline-offset: 2px;
+}
+
+.daily-emotion-trigger:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.daily-emotion-trigger-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.daily-emotion-chevron {
+  width: 0.9rem;
+  height: 0.9rem;
+  transition: transform 150ms ease;
+}
+
+.daily-emotion-trigger[aria-expanded='true'] .daily-emotion-chevron {
+  transform: rotate(180deg);
+}
+
+.daily-emotion-popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: 0;
+  z-index: 46;
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+  padding: 0.65rem;
+  background: var(--surface);
+  box-shadow: 0 22px 48px -24px rgba(31, 27, 24, 0.58);
+}
+
+.daily-emotion-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.daily-emotion-option {
+  display: flex;
+  min-width: 0;
+  min-height: 4.35rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border: 1px solid transparent;
+  border-radius: 0.85rem;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.62rem;
+  font-weight: 700;
+  outline: none;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.daily-emotion-option:active {
+  transform: scale(0.96);
+}
+
+.daily-emotion-option[data-selected='true'] {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+}
+
+.daily-emotion-option-icon {
+  width: 2.65rem;
+  height: 2.65rem;
+}
+
+.emotion-face-ring,
+.emotion-face-expression,
+.emotion-face-ornament {
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.emotion-face-ornament {
+  opacity: 0.62;
+}
+
+.emotion-face-fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.daily-emotion-popover > p {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.45rem;
+  color: var(--faint);
+  font-size: 0.66rem;
+  text-align: center;
+}
+
+.daily-emotion-picker-hana {
+  border-color: rgba(195, 153, 126, 0.42);
+  background:
+    radial-gradient(circle at 94% 0%, rgba(239, 176, 192, 0.1), transparent 48%),
+    var(--surface);
+}
+
+.daily-emotion-picker-hana .daily-emotion-trigger-icon,
+.daily-emotion-picker-hana .daily-emotion-option-icon {
+  color: #788d6e;
+}
+
+.daily-emotion-picker-cramble {
+  border-color: rgba(214, 166, 83, 0.4);
+  background:
+    linear-gradient(115deg, rgba(214, 166, 83, 0.045), transparent 48%),
+    var(--surface);
+  box-shadow:
+    0 16px 34px -25px rgba(0, 0, 0, 0.92),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.24);
+}
+
+.daily-emotion-picker-cramble .daily-emotion-question {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.02em;
+}
+
+.daily-emotion-picker-cramble .daily-emotion-trigger,
+.daily-emotion-picker-cramble .daily-emotion-popover {
+  border-color: rgba(214, 166, 83, 0.48);
+  background: #1d1e23;
+}
+
+.daily-emotion-picker-cramble .daily-emotion-trigger-icon,
+.daily-emotion-picker-cramble .daily-emotion-option-icon {
+  color: var(--cramble-brass);
+}
+
+.daily-emotion-picker-cramble .daily-emotion-option[data-selected='true'] {
+  border-color: rgba(214, 166, 83, 0.65);
+  color: var(--cramble-brass);
+  background: rgba(91, 82, 128, 0.3);
+}
+
+@media (max-width: 360px) {
+  .daily-emotion-picker {
+    padding-left: 0.75rem;
+  }
+
+  .daily-emotion-trigger {
+    min-width: 5.7rem;
+  }
+
+  .daily-emotion-options {
+    gap: 0.15rem;
+  }
+
+  .daily-emotion-option-icon {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-emotion-trigger,
+  .daily-emotion-chevron,
+  .daily-emotion-option,
+  .anytime-log-rating button {
+    transition: none;
+  }
 }
 
 /* Add-to-tracker chooser and anytime-log form. */
