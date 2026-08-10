@@ -8,10 +8,14 @@ import type {
   QuestSchedule,
   PauseReason,
   TrackingPause,
+  OpenActivity,
   Weekday,
 } from '@/types'
 import {
+  createDefaultHabitCompletionState,
   GAME_STATE_SCHEMA_VERSION,
+  isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   isHabitTrackableOnDate,
   MAX_BACKFILL_DAYS,
 } from '@/lib/habitLifecycle'
@@ -20,6 +24,10 @@ import {
   normalizeOpenActivities,
   normalizeOpenActivityLogs,
 } from '@/lib/openActivities'
+import {
+  getDefaultQuestCompletionCriteria,
+  normalizeQuestCompletionCriteria,
+} from '@/lib/questCompletionRules'
 
 export const FLOWERS_BY_DIFFICULTY: Record<Difficulty, number> = {
   easy: 1,
@@ -29,7 +37,6 @@ export const FLOWERS_BY_DIFFICULTY: Record<Difficulty, number> = {
 
 const LEVEL_REQUIREMENTS = [0, 5, 12, 22, 35, 52, 74, 100]
 const WEEDS_PER_WILTED_FLOWER = 3
-const SPRING_MEMORY_QUEST_ID = 'remember-cramble'
 export const WEEKLY_SKIP_LIMIT = 3
 export const PERIOD_TARGET_LIMITS = {
   target: 100,
@@ -99,6 +106,7 @@ export function createInitialHanaState(): HanaGameState {
     historyEpoch: 'initial',
     syncRevision: 0,
     habitSettings: {},
+    questActivations: {},
     openActivities: [],
     openActivityLogs: {},
     trackingPauses: [],
@@ -137,7 +145,16 @@ export function resetProfileProgress(
       deletedHabitIds: [...(state.deletedHabitIds ?? [])],
       historyEpoch: createEventId('history'),
       syncRevision: state.syncRevision ?? 0,
-      habitSettings: { ...(state.habitSettings ?? {}) },
+      habitSettings: Object.fromEntries(
+        Object.entries(state.habitSettings ?? {}).map(([habitId, settings]) => [
+          habitId,
+          {
+            ...settings,
+            completion: createDefaultHabitCompletionState(),
+          },
+        ]),
+      ),
+      questActivations: { ...(state.questActivations ?? {}) },
       openActivities: [...(state.openActivities ?? [])],
     },
     quests,
@@ -380,6 +397,16 @@ export function getBackfillValidationError(
   if (quest.createdDate && dateKey < quest.createdDate) {
     return 'That date is before this habit was created.'
   }
+  if (quest.catalogState === 'legacy') {
+    return 'This earlier quest chapter is available only in the Ledger.'
+  }
+  const activationDate = state.questActivations?.[quest.id]
+  if (
+    state.questActivations !== undefined &&
+    (!activationDate || dateKey < activationDate)
+  ) {
+    return 'This quest had not been added on that date.'
+  }
   if (!isHabitTrackableOnDate(state, quest.id, dateKey)) {
     return 'This habit was paused or archived on that date.'
   }
@@ -418,25 +445,30 @@ export function syncActiveQuestPlan(
   options: QuestPlanOptions = {},
 ) {
   const catalog = getQuestCatalog(quests, state)
-  const level = getLevel(state.totalFlowers)
-  const dailyIds = selectDailyQuestIds(catalog, state, level)
-  const activeDailyQuests = state.activeDailyQuests ?? {}
-  const activeLongTermQuestIds = state.activeLongTermQuestIds ?? []
-  const existingDailyIds = activeDailyQuests[state.currentDate] ?? []
-  const validExistingDailyIds = existingDailyIds.filter((questId) =>
-    dailyIds.includes(questId),
-  )
-  const nextDailyIds = fillIds(validExistingDailyIds, dailyIds, dailyIds.length)
+  const plannedState: HanaGameState = {
+    ...state,
+    questActivations: ensureQuestActivations(state, catalog),
+    openActivities: ensureHanaDefaultOpenActivities(
+      state.openActivities ?? [],
+      state.startDate ?? state.currentDate,
+      state.deletedHabitIds ?? [],
+      quests,
+    ),
+  }
+  const dailyIds = selectDailyQuestIds(catalog, plannedState)
+  const activeDailyQuests = plannedState.activeDailyQuests ?? {}
+  const activeLongTermQuestIds = plannedState.activeLongTermQuestIds ?? []
+  const nextDailyIds = dailyIds
 
-  const longTermIds = selectLongTermQuestIds(catalog, state, level)
+  const longTermIds = selectLongTermQuestIds(catalog, plannedState)
   const expiredLongTermIds = options.rotateExpiredLongTerm
     ? activeLongTermQuestIds.filter((questId) => {
         const quest = catalog.find((item) => item.id === questId)
-        const windowStart = state.longTermWindows[questId]
+        const windowStart = plannedState.longTermWindows[questId]
         return Boolean(
           quest &&
             windowStart &&
-            isAfterLongTermDeadline(state.currentDate, windowStart, quest),
+            isAfterLongTermDeadline(plannedState.currentDate, windowStart, quest),
         )
       })
     : []
@@ -450,10 +482,10 @@ export function syncActiveQuestPlan(
   const nextLongTermIds = fillIds(
     validExistingLongTermIds,
     orderedLongTermIds,
-    longTermQuestCount(level),
+    orderedLongTermIds.length,
   )
 
-  const nextWindows = { ...state.longTermWindows }
+  const nextWindows = { ...plannedState.longTermWindows }
   nextLongTermIds.forEach((questId) => {
     const quest = catalog.find((item) => item.id === questId)
     if (!quest) {
@@ -463,17 +495,17 @@ export function syncActiveQuestPlan(
     const currentStart = nextWindows[questId]
     if (
       !currentStart ||
-      isAfterLongTermDeadline(state.currentDate, currentStart, quest)
+      isAfterLongTermDeadline(plannedState.currentDate, currentStart, quest)
     ) {
-      nextWindows[questId] = state.currentDate
+      nextWindows[questId] = plannedState.currentDate
     }
   })
 
   return {
-    ...state,
+    ...plannedState,
     activeDailyQuests: {
       ...activeDailyQuests,
-      [state.currentDate]: nextDailyIds,
+      [plannedState.currentDate]: nextDailyIds,
     },
     activeLongTermQuestIds: nextLongTermIds,
     longTermWindows: nextWindows,
@@ -494,6 +526,52 @@ export function syncStateToDate(
     },
     quests,
     options,
+  )
+}
+
+function ensureQuestActivations(state: HanaGameState, catalog: Quest[]) {
+  const stored = readActivationRecord(state.questActivations)
+  if (Object.keys(stored).length) return stored
+
+  const questById = new Map(catalog.map((quest) => [quest.id, quest]))
+  const previouslyActive = new Set([
+    ...(state.activeDailyQuests?.[state.currentDate] ?? []),
+    ...(state.activeLongTermQuestIds ?? []),
+    ...(state.customHabits ?? []).map((quest) => quest.id),
+  ])
+  const migratedIds = Array.from(previouslyActive)
+    .map((questId) => {
+      const quest = questById.get(questId)
+      return quest?.catalogState === 'legacy' && quest.supersededBy
+        ? quest.supersededBy
+        : questId
+    })
+    .filter((questId) => {
+      const quest = questById.get(questId)
+      return Boolean(quest && quest.catalogState !== 'legacy')
+    })
+
+  const isHanaCatalog = catalog.some((quest) => quest.id === 'morning-dew')
+  const defaultIds = isHanaCatalog
+    ? ['morning-dew', 'flower-breath', 'any-physical-effort']
+    : catalog
+        .filter(
+          (quest) =>
+            quest.catalogState !== 'legacy' &&
+            !quest.custom &&
+            (quest.minLevel ?? 1) <= 1,
+        )
+        .map((quest) => quest.id)
+  const selectedIds = migratedIds.length
+    ? isHanaCatalog
+      ? [...defaultIds, ...migratedIds]
+      : migratedIds
+    : defaultIds
+  return Object.fromEntries(
+    Array.from(new Set(selectedIds)).map((questId) => [
+      questId,
+      state.startDate ?? state.currentDate,
+    ]),
   )
 }
 
@@ -715,6 +793,52 @@ export function getSkipWeekKey(dateKey: string) {
   return formatDateKey(sunday)
 }
 
+export function isQuestActivatedOnDate(
+  state: HanaGameState,
+  questId: string,
+  dateKey = state.currentDate,
+) {
+  const activationDate = state.questActivations?.[questId]
+  return Boolean(activationDate && activationDate <= dateKey)
+}
+
+export function getAvailableQuestsForState(
+  quests: Quest[],
+  state: HanaGameState,
+) {
+  const level = getLevel(state.totalFlowers)
+  return getQuestCatalog(quests, state).filter(
+    (quest) =>
+      quest.catalogState !== 'legacy' &&
+      !quest.custom &&
+      (quest.minLevel ?? 1) <= level &&
+      !state.questActivations?.[quest.id] &&
+      !isHabitArchivedOnDate(state, quest.id, state.currentDate) &&
+      !isHabitGraduatedOnDate(state, quest.id, state.currentDate),
+  )
+}
+
+export function activateQuest(
+  state: HanaGameState,
+  quest: Quest,
+): HanaGameState {
+  if (
+    quest.catalogState === 'legacy' ||
+    quest.custom ||
+    (quest.minLevel ?? 1) > getLevel(state.totalFlowers) ||
+    state.questActivations?.[quest.id]
+  ) {
+    return state
+  }
+  return {
+    ...state,
+    questActivations: {
+      ...(state.questActivations ?? {}),
+      [quest.id]: addDays(state.currentDate, 1),
+    },
+  }
+}
+
 export function hasValidQuestSchedule(quest: Quest) {
   const schedule = quest.schedule
   if (!schedule) {
@@ -906,6 +1030,14 @@ export function getSkipEventKey(state: HanaGameState, quest: Quest) {
     return `longTerm:${quest.id}:${state.longTermWindows[quest.id] ?? state.currentDate}`
   }
 
+  if (
+    quest.schedule?.kind === 'periodTarget' ||
+    quest.schedule?.kind === 'quota'
+  ) {
+    const progress = getQuestScheduleProgress(state, quest)
+    return `daily:${quest.id}:${progress.periodStart}`
+  }
+
   return `daily:${quest.id}:${state.currentDate}`
 }
 
@@ -922,17 +1054,13 @@ export function getSkipProgress(state: HanaGameState) {
 }
 
 export function getSkippedIdsForState(quests: Quest[], state: HanaGameState) {
-  const weekKey = getSkipWeekKey(state.currentDate)
-  const skipsThisWeek = state.questSkips?.[weekKey] ?? {}
-
   return visibleQuestsForState(quests, state)
     .daily.concat(visibleQuestsForState(quests, state).longTerm)
     .reduce<Record<string, boolean>>((result, quest) => {
-      result[quest.id] =
-        quest.schedule?.kind === 'quota' ||
-        quest.schedule?.kind === 'periodTarget'
-          ? false
-          : Boolean(skipsThisWeek[getSkipEventKey(state, quest)])
+      const skipKey = getSkipEventKey(state, quest)
+      result[quest.id] = Object.values(state.questSkips ?? {}).some(
+        (skips) => skips[skipKey] === true,
+      )
       return result
     }, {})
 }
@@ -974,72 +1102,30 @@ export function getQuestDurationDays(quest: Quest) {
   return quest.durationDays ?? 7
 }
 
-function dailyQuestCount(level: number) {
-  if (level >= 8) {
-    return 5
-  }
-  if (level >= 5) {
-    return 4
-  }
-  if (level >= 2) {
-    return 3
-  }
-  return 2
-}
-
-function longTermQuestCount(level: number) {
-  if (level >= 6) {
-    return 3
-  }
-  if (level >= 3) {
-    return 2
-  }
-  return 1
-}
-
 function selectDailyQuestIds(
   quests: Quest[],
   state: HanaGameState,
-  level: number,
 ) {
   const unlockedDailyQuests = quests.filter(
     (quest) =>
       quest.group === 'daily' &&
-      (quest.minLevel ?? 1) <= level &&
+      quest.catalogState !== 'legacy' &&
+      isQuestActivatedOnDate(state, quest.id) &&
       isQuestScheduledForDate(state, quest),
   )
-  const springMemoryQuestIds = unlockedDailyQuests
-    .filter((quest) => quest.id === SPRING_MEMORY_QUEST_ID)
-    .map((quest) => quest.id)
-  const regularDailyQuests = unlockedDailyQuests.filter(
-    (quest) => quest.id !== SPRING_MEMORY_QUEST_ID,
-  )
-  const requiredQuestIds = regularDailyQuests
-    .filter((quest) => quest.required)
-    .map((quest) => quest.id)
-  const optionalQuestIds = regularDailyQuests
-    .filter((quest) => !quest.required)
-    .map((quest) => quest.id)
-  const limit = dailyQuestCount(level)
-  const optionalSlots = Math.max(0, limit - requiredQuestIds.length)
-
-  return [
-    ...springMemoryQuestIds,
-    ...requiredQuestIds,
-    ...pickRotating(optionalQuestIds, state.currentDate, optionalSlots),
-  ]
+  return unlockedDailyQuests.map((quest) => quest.id)
 }
 
 function selectLongTermQuestIds(
   quests: Quest[],
   state: HanaGameState,
-  level: number,
 ) {
   return quests
     .filter(
       (quest) =>
         quest.group === 'longTerm' &&
-        (quest.minLevel ?? 1) <= level &&
+        quest.catalogState !== 'legacy' &&
+        isQuestActivatedOnDate(state, quest.id) &&
         isHabitTrackableOnDate(state, quest.id, state.currentDate),
     )
     .map((quest) => quest.id)
@@ -1079,15 +1165,6 @@ function idsToQuests(quests: Quest[], ids: string[]) {
     .filter((quest): quest is Quest => Boolean(quest))
 }
 
-function pickRotating<T>(items: T[], seed: string, count: number) {
-  if (items.length <= count) {
-    return items
-  }
-
-  const start = hashSeed(seed) % items.length
-  return Array.from({ length: count }, (_, index) => items[(start + index) % items.length])
-}
-
 function flowersRequiredForLevel(level: number) {
   if (level <= 1) {
     return 0
@@ -1103,10 +1180,6 @@ function flowersRequiredForLevel(level: number) {
     required += 18 + nextLevel * 4
   }
   return required
-}
-
-function hashSeed(seed: string) {
-  return seed.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
 }
 
 function isAfterLongTermDeadline(
@@ -1250,13 +1323,19 @@ function normalizeHanaState(
       : null
   const customHabits = readCustomHabits(value.customHabits, quests)
   const deletedHabitIds = readStringArray(value.deletedHabitIds).slice(-500)
-  const openActivities = normalizeOpenActivities(
+  const normalizedOpenActivities = normalizeOpenActivities(
     value.openActivities,
     [
       ...quests.map((quest) => quest.id),
       ...customHabits.map((habit) => habit.id),
       ...deletedHabitIds,
     ],
+  )
+  const openActivities = ensureHanaDefaultOpenActivities(
+    normalizedOpenActivities,
+    startDate ?? currentDate,
+    deletedHabitIds,
+    quests,
   )
 
   const migratedState: HanaGameState = {
@@ -1272,6 +1351,7 @@ function normalizeHanaState(
         ? (value.syncRevision as number)
         : 0,
     habitSettings: readHabitSettings(value.habitSettings),
+    questActivations: readActivationRecord(value.questActivations),
     openActivities,
     openActivityLogs: normalizeOpenActivityLogs(
       value.openActivityLogs,
@@ -1335,6 +1415,80 @@ function normalizeHanaState(
   return syncActiveQuestPlan(migratedState, catalog, options)
 }
 
+function ensureHanaDefaultOpenActivities(
+  activities: OpenActivity[],
+  createdDate: string,
+  deletedHabitIds: string[],
+  quests: Quest[],
+) {
+  if (!quests.some((quest) => quest.id === 'morning-dew')) return activities
+  const deleted = new Set(deletedHabitIds)
+  const ids = new Set(activities.map((activity) => activity.id))
+  const titles = new Set(
+    activities.map((activity) => activity.title.toLocaleLowerCase()),
+  )
+  const defaults: OpenActivity[] = [
+    {
+      id: 'custom-hana-kind-moment',
+      custom: true,
+      title: 'Kind Moment',
+      description: 'Record a warm thought, message, or small act of connection.',
+      emoji: '💌',
+      color: '#d98ba0',
+      kind: 'check',
+      unit: null,
+      createdDate,
+    },
+    {
+      id: 'custom-hana-music-moment',
+      custom: true,
+      title: 'Music Moment',
+      description: 'Record a song played, hummed, practiced, or enjoyed.',
+      emoji: '🎻',
+      color: '#9e8fd0',
+      kind: 'check',
+      unit: null,
+      createdDate,
+    },
+    {
+      id: 'custom-hana-energy-check-in',
+      custom: true,
+      title: 'Energy Check-in',
+      description: 'Notice and record your energy without judging it.',
+      emoji: '🔋',
+      color: '#e7a53c',
+      kind: 'count',
+      unit: 'energy point',
+      createdDate,
+    },
+    {
+      id: 'custom-hana-mindful-treat',
+      custom: true,
+      title: 'Mindful Treat',
+      description: 'Record a small treat enjoyed slowly and without pressure.',
+      emoji: '🍮',
+      color: '#d98ba0',
+      kind: 'check',
+      unit: null,
+      createdDate,
+    },
+  ]
+  return defaults.reduce<OpenActivity[]>((result, activity) => {
+    const titleKey = activity.title.toLocaleLowerCase()
+    if (
+      deleted.has(activity.id) ||
+      ids.has(activity.id) ||
+      titles.has(titleKey)
+    ) {
+      return result
+    }
+    ids.add(activity.id)
+    titles.add(titleKey)
+    result.push(activity)
+    return result
+  }, [...activities])
+}
+
 function readCustomHabits(value: unknown, baseQuests: Quest[]) {
   if (!Array.isArray(value)) {
     return []
@@ -1380,6 +1534,14 @@ function readCustomHabit(value: unknown): CustomHabitQuest | null {
       ? value.difficulty
       : null
   const schedule = readQuestSchedule(value.schedule)
+  const completionCriteria =
+    normalizeQuestCompletionCriteria(value.completionCriteria) ??
+    (difficulty && schedule
+      ? getDefaultQuestCompletionCriteria(
+          difficulty,
+          schedule.kind === 'periodTarget' || schedule.kind === 'quota',
+        )
+      : null)
 
   if (
     !id ||
@@ -1391,7 +1553,8 @@ function readCustomHabit(value: unknown): CustomHabitQuest | null {
     !color?.match(/^#[0-9a-f]{6}$/i) ||
     !createdDate ||
     !difficulty ||
-    !schedule
+    !schedule ||
+    !completionCriteria
   ) {
     return null
   }
@@ -1407,6 +1570,8 @@ function readCustomHabit(value: unknown): CustomHabitQuest | null {
     required: true,
     minLevel: 1,
     schedule,
+    completionCriteria,
+    journeyRole: 'growth',
     custom: true,
     createdDate,
   }
@@ -1592,6 +1757,23 @@ function readStringArray(value: unknown) {
   return value.filter((item): item is string => typeof item === 'string')
 }
 
+function readActivationRecord(value: unknown) {
+  if (!isRecord(value)) return {}
+  return Object.entries(value).reduce<Record<string, string>>(
+    (result, [questId, activationDate]) => {
+      if (
+        questId &&
+        questId.length <= 120 &&
+        isDateKey(activationDate)
+      ) {
+        result[questId] = activationDate
+      }
+      return result
+    },
+    {},
+  )
+}
+
 function readHabitSettings(value: unknown) {
   if (!isRecord(value)) return {}
 
@@ -1616,11 +1798,55 @@ function readHabitSettings(value: unknown) {
         },
         archivedAt: isDateKey(item.archivedAt) ? item.archivedAt : null,
         pauses: readTrackingPauses(item.pauses),
+        completion: readHabitCompletionState(item.completion),
       }
       return result
     },
     {},
   )
+}
+
+function readHabitCompletionState(value: unknown) {
+  const defaults = createDefaultHabitCompletionState()
+  if (!isRecord(value)) return defaults
+  const history = Array.isArray(value.history)
+    ? value.history
+        .map(readGraduationEvent)
+        .filter((event): event is NonNullable<typeof event> => Boolean(event))
+        .slice(-50)
+    : []
+  return {
+    cycleStartedOn: isDateKey(value.cycleStartedOn)
+      ? value.cycleStartedOn
+      : null,
+    graduation: readGraduationEvent(value.graduation),
+    history,
+  }
+}
+
+function readGraduationEvent(value: unknown) {
+  if (!isRecord(value)) return null
+  const id = readTrimmedString(value.id, 120)
+  const achievedDate = isDateKey(value.achievedDate)
+    ? value.achievedDate
+    : null
+  const effectiveDate = isDateKey(value.effectiveDate)
+    ? value.effectiveDate
+    : null
+  const recordedAt = readTrimmedString(value.recordedAt, 80)
+  const criterionSnapshot = normalizeQuestCompletionCriteria(
+    value.criterionSnapshot,
+  )
+  if (
+    !id ||
+    !achievedDate ||
+    !effectiveDate ||
+    !recordedAt ||
+    !criterionSnapshot
+  ) {
+    return null
+  }
+  return { id, achievedDate, effectiveDate, recordedAt, criterionSnapshot }
 }
 
 function readTrackingPauses(value: unknown): TrackingPause[] {

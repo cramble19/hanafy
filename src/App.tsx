@@ -10,6 +10,7 @@ import {
 } from '@/lib/customHabits'
 import {
   addDays,
+  activateQuest,
   createInitialHanaState,
   createStartedHanaState,
   getQuestCatalog,
@@ -34,7 +35,9 @@ import {
   deleteHabitPermanently,
   getActiveProfilePause,
   hasHabitHistory,
+  isHabitGraduatedOnDate,
   restoreHabit,
+  restoreGraduatedHabit,
   resumeHabitTracking,
   resumeProfileTracking,
   startHabitPause,
@@ -65,13 +68,13 @@ import { HanaPage } from '@/pages/HanaPage'
 import { GardenPage } from '@/pages/GardenPage'
 import { StatsPage } from '@/pages/StatsPage'
 import { QuestDetailPage } from '@/pages/QuestDetailPage'
-import { CrambleGatePage } from '@/pages/CrambleGatePage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
 import type { HanaGameState, NewOpenActivityInput } from '@/types'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
+import { reconcileQuestGraduation } from '@/lib/questCompletion'
 
 type View =
   | 'home'
@@ -80,7 +83,6 @@ type View =
   | 'garden'
   | 'stats'
   | 'questDetail'
-  | 'crambleGate'
   | 'cramble'
   | 'together'
 type CloudSyncStatus =
@@ -578,7 +580,14 @@ export default function App() {
       totalFlowers: recomputeTotalFlowers(nextState, catalog),
     }
 
-    void commitHanaState(withUpdatedFlowers)
+    void commitHanaState(
+      reconcileQuestGraduation(
+        withUpdatedFlowers,
+        quests,
+        'hana',
+        quest,
+      ),
+    )
   }
 
   const undoHanaOccurrence = (id: string) => {
@@ -598,10 +607,18 @@ export default function App() {
       return
     }
 
-    void commitHanaState({
+    const withUpdatedFlowers = {
       ...nextState,
       totalFlowers: recomputeTotalFlowers(nextState, catalog),
-    })
+    }
+    void commitHanaState(
+      reconcileQuestGraduation(
+        withUpdatedFlowers,
+        quests,
+        'hana',
+        quest,
+      ),
+    )
   }
 
   const toggleWeed = (id: string) => {
@@ -639,16 +656,15 @@ export default function App() {
     const quest = getQuestCatalog(quests, previousState).find(
       (item) => item.id === id,
     )
-    if (
-      !quest ||
-      quest.schedule?.kind === 'quota' ||
-      quest.schedule?.kind === 'periodTarget'
-    ) {
+    if (!quest) {
       return
     }
 
-    const weekKey = getSkipWeekKey(previousState.currentDate)
     const skipKey = getSkipEventKey(previousState, quest)
+    const storedWeekKey = Object.entries(previousState.questSkips ?? {}).find(
+      ([, skips]) => skips[skipKey] === true,
+    )?.[0]
+    const weekKey = storedWeekKey ?? getSkipWeekKey(previousState.currentDate)
     const skipsThisWeek = previousState.questSkips?.[weekKey] ?? {}
     const isSkipped = Boolean(skipsThisWeek[skipKey])
     const skipProgress = getSkipProgress(previousState)
@@ -691,6 +707,10 @@ export default function App() {
     const withHabit: HanaGameState = {
       ...previousState,
       customHabits: [...previousState.customHabits, customHabit],
+      questActivations: {
+        ...(previousState.questActivations ?? {}),
+        [customHabit.id]: addDays(previousState.currentDate, 1),
+      },
     }
     void commitHanaState(
       updateHabitPreferences(withHabit, customHabit.id, {
@@ -874,7 +894,22 @@ export default function App() {
 
   const restoreHanaHabit = (habitId: string) => {
     const previousState = hanaGameRef.current
-    if (previousState) void commitHanaState(restoreHabit(previousState, habitId))
+    if (!previousState) return
+    void commitHanaState(
+      isHabitGraduatedOnDate(previousState, habitId)
+        ? restoreGraduatedHabit(previousState, habitId)
+        : restoreHabit(previousState, habitId),
+    )
+  }
+
+  const activateHanaQuest = (habitId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const quest = getQuestCatalog(quests, previousState).find(
+      (candidate) => candidate.id === habitId,
+    )
+    if (!quest) return
+    void commitHanaState(activateQuest(previousState, quest))
   }
 
   const deleteHanaHabit = (habitId: string) => {
@@ -906,10 +941,18 @@ export default function App() {
     if (!quest) return 'That habit is unavailable.'
     const result = recordQuestCompletionForDate(previousState, quest, dateKey)
     if (result.error) return result.error
-    void commitHanaState({
+    const withUpdatedFlowers = {
       ...result.state,
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    })
+    }
+    void commitHanaState(
+      reconcileQuestGraduation(
+        withUpdatedFlowers,
+        quests,
+        'hana',
+        quest,
+      ),
+    )
     return null
   }
 
@@ -921,10 +964,18 @@ export default function App() {
     if (!quest) return 'That habit is unavailable.'
     const result = undoQuestCompletionForDate(previousState, quest, dateKey)
     if (result.error) return result.error
-    void commitHanaState({
+    const withUpdatedFlowers = {
       ...result.state,
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    })
+    }
+    void commitHanaState(
+      reconcileQuestGraduation(
+        withUpdatedFlowers,
+        quests,
+        'hana',
+        quest,
+      ),
+    )
     return null
   }
 
@@ -1073,6 +1124,7 @@ export default function App() {
           onBackfillOpenActivity={backfillHanaOpenActivity}
           onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
           onSkip={toggleSkip}
+          onActivateQuest={activateHanaQuest}
           onToggleWeed={toggleWeed}
           onOpenGarden={() => setView('garden')}
           onOpenLedger={() => setView('stats')}
@@ -1142,6 +1194,7 @@ export default function App() {
         onBackfillOpenActivity={backfillHanaOpenActivity}
         onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
         onSkip={toggleSkip}
+        onActivateQuest={activateHanaQuest}
         onToggleWeed={toggleWeed}
         onOpenGarden={() => setView('garden')}
         onOpenLedger={() => setView('stats')}
@@ -1197,15 +1250,6 @@ export default function App() {
     )
   }
 
-  if (view === 'crambleGate') {
-    return (
-      <CrambleGatePage
-        onBack={() => setView('home')}
-        onUnlock={() => setView('cramble')}
-      />
-    )
-  }
-
   if (view === 'cramble') {
     return <CrambleExperience onBack={() => setView('home')} />
   }
@@ -1231,7 +1275,7 @@ export default function App() {
       }}
       onSelectCramble={() => {
         setHomeFocusTarget('cramble')
-        setView('crambleGate')
+        setView('cramble')
       }}
       onSelectTogether={() => {
         setHomeFocusTarget('together')

@@ -17,6 +17,7 @@ import {
   getNewHabitValidationError,
   resolveHabitPeriodPreset,
   type HabitFrequency,
+  type HabitCompletionStyle,
   type HabitPeriodPreset,
   type HabitProfile,
   type NewHabitInput,
@@ -95,6 +96,10 @@ export function AddHabitDialog({
   const [difficulty, setDifficulty] = useState<Difficulty>(
     initialValue?.difficulty ?? 'easy',
   )
+  const [completionStyle, setCompletionStyle] =
+    useState<HabitCompletionStyle>(
+      initialValue?.completionStyle ?? 'forgiving',
+    )
   const [cue, setCue] = useState(initialValue?.cue ?? '')
   const [reminderEnabled, setReminderEnabled] = useState(
     Boolean(initialValue?.reminderTime),
@@ -155,6 +160,7 @@ export function AddHabitDialog({
       periodLength,
       periodUnit,
       difficulty,
+      completionStyle,
       cue,
       reminderTime: reminderEnabled ? reminderTime : null,
     }
@@ -365,6 +371,48 @@ export function AddHabitDialog({
                   Finish every repetition in the window.
                 </span>
               </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="add-habit-label">How this quest ends</legend>
+            <div className="add-habit-pattern-grid mt-2">
+              <button
+                type="button"
+                aria-pressed={completionStyle === 'forgiving'}
+                disabled={rulesLocked}
+                onClick={() => {
+                  setCompletionStyle('forgiving')
+                  clearError()
+                }}
+                className={`add-habit-pattern text-left ${completionStyle === 'forgiving' ? 'is-selected' : ''}`}
+              >
+                <span className="block font-semibold text-ink">
+                  Forgiving game path
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-faint">
+                  Finish through a shorter combo or a steady total. A miss never
+                  erases total progress.
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={completionStyle === 'total'}
+                disabled={rulesLocked}
+                onClick={() => {
+                  setCompletionStyle('total')
+                  clearError()
+                }}
+                className={`add-habit-pattern text-left ${completionStyle === 'total' ? 'is-selected' : ''}`}
+              >
+                <span className="block font-semibold text-ink">
+                  Total successes only
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-faint">
+                  Every successful goal period moves the chapter forward and
+                  nothing resets.
+                </span>
+              </button>
             </div>
           </fieldset>
 

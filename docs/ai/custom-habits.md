@@ -70,9 +70,10 @@ type NewOpenActivityInput = {
 
 ## Lifecycle contract
 
-Persisted snapshots normalize to schema version 3 and include
+Persisted snapshots normalize to schema version 4 and include
 `openActivities` and `openActivityLogs`; they may also contain `habitSettings`,
-`trackingPauses`, `backfillAudit`, `deletedHabitIds`, `historyEpoch`, and
+`questActivations`, finite criteria/graduation state, `trackingPauses`,
+`backfillAudit`, `deletedHabitIds`, `historyEpoch`, and
 `syncRevision`. `habitSettings` is keyed by any built-in, custom quest, or
 anytime id so pause and archive behavior stays shared. Permanent deletion
 removes the definition and raw history and retains a tombstone for conflict
@@ -80,8 +81,14 @@ resurrection protection.
 
 Pause intervals use inclusive `startDate` / `endDate`; `endDate: null` means
 manual resume. `isHabitTrackableOnDate()` is the shared guard for planning,
-recording, backfill, and reminders. Paused and archived windows are neutral in
+recording, backfill, and reminders. Paused, archived, graduated, and skipped
+windows are neutral in
 analytics and excluded from success/momentum denominators.
+
+Every scheduled custom quest is a finite chapter. The forgiving path completes
+through either a difficulty-scaled combo or a steady total; the total-only path
+never resets. A multi-record period contributes one success only when its whole
+target is met. New custom quests begin on the next 04:00 tracker day.
 
 Rule edits are allowed only before a custom habit has a completion, occurrence,
 skip, or earlier presented day. After that boundary, cadence and difficulty are
@@ -226,8 +233,8 @@ record from the current date when one exists; the UI labels this **Undo one**.
 
 `getQuestCatalog(baseQuests, state)` is the central merge boundary. Built-in
 quests are ordered first and win id collisions; normalized custom definitions
-are appended. Required custom habits are not truncated by the optional rotating
-quest limit.
+are appended. New custom scheduled habits receive an activation date for the
+next tracker day. There is no rotating quest limit.
 
 `parseStoredHanaState()` treats absent `customHabits`, `habitOccurrences`,
 `openActivities`, and `openActivityLogs` fields as empty for old snapshots. It

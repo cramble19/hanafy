@@ -15,7 +15,9 @@ import { AnytimeLogSection } from '@/components/AnytimeLogSection'
 import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
+import { QuestInfoDialog } from '@/components/QuestInfoDialog'
 import { QuestSection } from '@/components/QuestSection'
+import { AvailableQuestsSection } from '@/components/AvailableQuestsSection'
 import {
   PausedHabitsCard,
   ProfilePauseBanner,
@@ -29,10 +31,11 @@ import { HanaLedgerIcon } from '@/components/icons/HanaLedgerIcon'
 import {
   displayDate,
   getLongTermCheckedIds,
-  getLongTermQuestStatus,
+  getAvailableQuestsForState,
   getLevelProgress,
   getQuestCatalog,
   getQuestScheduleProgress,
+  isQuestActivatedOnDate,
   getSkippedIdsForState,
   getSkipProgress,
   getSpringArcProgress,
@@ -49,12 +52,9 @@ import {
   getHabitSettings,
   hasHabitHistory,
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   type PauseInput,
 } from '@/lib/habitLifecycle'
-import {
-  getHabitMomentumSignal,
-  getHabitRangeStats,
-} from '@/lib/hanaStats'
 import {
   getOpenActivityCatalog,
   hasOpenActivityHistory,
@@ -115,6 +115,7 @@ type Props = {
     activityId: string,
   ) => string | null
   onSkip: (id: string) => void
+  onActivateQuest: (id: string) => void
   onToggleWeed: (id: string) => void
   onOpenGarden: () => void
   onOpenLedger: () => void
@@ -157,6 +158,7 @@ export function HanaPage({
   onBackfillOpenActivity,
   onUndoBackfillOpenActivity,
   onSkip,
+  onActivateQuest,
   onToggleWeed,
   onOpenGarden,
   onOpenLedger,
@@ -175,25 +177,11 @@ export function HanaPage({
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [infoQuestId, setInfoQuestId] = useState<string | null>(null)
   const catalog = getQuestCatalog(quests, game)
   const openActivities = getOpenActivityCatalog(game)
   const levelProgress = getLevelProgress(game.totalFlowers)
   const visibleQuests = visibleQuestsForState(catalog, game)
-  const momentumById = Object.fromEntries(
-    catalog.map((quest) => {
-      const history = getHabitRangeStats(
-        game,
-        quests,
-        'hana',
-        quest.id,
-        'all',
-      )
-      return [
-        quest.id,
-        history ? getHabitMomentumSignal(history, 'hana') : null,
-      ]
-    }),
-  )
   const dailyProgressById = Object.fromEntries(
     visibleQuests.daily.map((quest) => [
       quest.id,
@@ -223,7 +211,10 @@ export function HanaPage({
   const activeProfilePause = getActiveProfilePause(game)
   const pausedHabits = catalog.filter(
     (quest) =>
+      quest.catalogState !== 'legacy' &&
+      isQuestActivatedOnDate(game, quest.id) &&
       !isHabitArchivedOnDate(game, quest.id) &&
+      !isHabitGraduatedOnDate(game, quest.id) &&
       Boolean(getActiveHabitPause(game, quest.id)),
   )
   const pausedOpenActivities = openActivities.filter(
@@ -244,8 +235,18 @@ export function HanaPage({
     ...catalog.map((quest) => quest.title),
     ...openActivities.map((activity) => activity.title),
   ]
-  const cueById = Object.fromEntries(
-    catalog.map((quest) => [quest.id, getHabitSettings(game, quest.id).cue]),
+  const infoQuest = catalog.find((quest) => quest.id === infoQuestId)
+  const availableQuests = getAvailableQuestsForState(catalog, game)
+  const pendingQuests = catalog.filter(
+    (quest) =>
+      quest.catalogState !== 'legacy' &&
+      Boolean(game.questActivations?.[quest.id]) &&
+      (game.questActivations?.[quest.id] ?? '') > game.currentDate,
+  )
+  const questsReadyToAdd = [...availableQuests, ...pendingQuests].sort(
+    (first, second) =>
+      (first.minLevel ?? 1) - (second.minLevel ?? 1) ||
+      first.title.localeCompare(second.title),
   )
   const todayTotal = visibleQuests.daily.length + visibleQuests.longTerm.length
   const todayComplete =
@@ -254,23 +255,6 @@ export function HanaPage({
   const springArc = getSpringArcProgress(game)
   const seasonalQuote = getSeasonalQuote(game.currentDate)
   const showDevControls = import.meta.env.DEV
-  const dailyMetaById = visibleQuests.daily.reduce<Record<string, string>>(
-    (result, quest) => {
-      const progress = dailyProgressById[quest.id]
-      if (progress.label || quest.custom) {
-        result[quest.id] = progress.label ?? 'Daily'
-      }
-      return result
-    },
-    {},
-  )
-  const longTermMetaById = Object.fromEntries(
-    visibleQuests.longTerm.map((quest) => [
-      quest.id,
-      getLongTermQuestStatus(game, quest).label,
-    ]),
-  )
-
   const resetWithConfirmation = () => {
     if (window.confirm("Reset Hana's flowers and checked quests?")) {
       onReset()
@@ -362,28 +346,17 @@ export function HanaPage({
             quests={visibleQuests.daily}
             checkedIds={dailyCheckedIds}
             skippedIds={skippedIds}
-            canSkip={skipProgress.remaining > 0}
-            metaById={dailyMetaById}
             periodProgressById={periodProgressById}
-            momentumById={momentumById}
-            cueById={cueById}
-            onManage={setManagedHabitId}
+            onOpenInfo={setInfoQuestId}
             onToggle={onToggle}
-            onUndoOccurrence={onUndoOccurrence}
-            onSkip={onSkip}
           />
           <QuestSection
             title="Long Term Quests"
             quests={visibleQuests.longTerm}
             checkedIds={longTermCheckedIds}
             skippedIds={skippedIds}
-            canSkip={skipProgress.remaining > 0}
-            metaById={longTermMetaById}
-            momentumById={momentumById}
-            cueById={cueById}
-            onManage={setManagedHabitId}
+            onOpenInfo={setInfoQuestId}
             onToggle={onToggle}
-            onSkip={onSkip}
           />
           <AnytimeLogSection
             profile="hana"
@@ -392,6 +365,12 @@ export function HanaPage({
             onIncrement={onIncrementOpenActivity}
             onDecrement={onDecrementOpenActivity}
             onManage={setManagedActivityId}
+          />
+          <AvailableQuestsSection
+            quests={questsReadyToAdd}
+            activationDates={game.questActivations ?? {}}
+            currentDate={game.currentDate}
+            onAdd={onActivateQuest}
           />
         </main>
       ) : null}
@@ -434,7 +413,8 @@ export function HanaPage({
             />
           </div>
           <p className="mt-2 text-xs text-faint">
-            New gentle quests unlock as Hana collects flowers.
+            New gentle quests become available as Hana collects flowers. Hana
+            adds them only when she feels ready.
           </p>
         </div>
 
@@ -644,6 +624,30 @@ export function HanaPage({
           onArchive={() => onArchiveHabit(managedQuest.id)}
           onRestore={() => onRestoreHabit(managedQuest.id)}
           onDelete={() => onDeleteHabit(managedQuest.id)}
+        />
+      ) : null}
+      {infoQuest ? (
+        <QuestInfoDialog
+          profile="hana"
+          game={game}
+          baseQuests={quests}
+          quest={infoQuest}
+          checked={
+            infoQuest.group === 'longTerm'
+              ? Boolean(longTermCheckedIds[infoQuest.id])
+              : Boolean(dailyCheckedIds[infoQuest.id])
+          }
+          skipped={Boolean(skippedIds[infoQuest.id])}
+          canSkip={skipProgress.remaining > 0}
+          periodProgress={periodProgressById[infoQuest.id]}
+          onClose={() => setInfoQuestId(null)}
+          onManage={() => setManagedHabitId(infoQuest.id)}
+          onSkip={() => onSkip(infoQuest.id)}
+          onUndoOccurrence={
+            infoQuest.schedule?.kind === 'periodTarget'
+              ? () => onUndoOccurrence(infoQuest.id)
+              : undefined
+          }
         />
       ) : null}
       {managedActivity ? (

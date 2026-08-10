@@ -179,7 +179,7 @@ function createDailyQuest(
 
 function createState(overrides: Partial<HanaGameState> = {}): HanaGameState {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     startDate: '2026-08-01',
     currentDate: '2026-08-01',
     customHabits: [],

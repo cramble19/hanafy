@@ -6,9 +6,7 @@ roads, oaths, and quiet acts of courage.
 
 ## Opening the archive
 
-Choose Cramble on the home screen and enter the static password `hana`. The
-archive locks again after returning home, so opening Cramble begins at the gate
-each time.
+Choose Cramble on the home screen to open the archive directly.
 
 After unlocking, **Begin the First Oath** starts Cramble's own saved record.
 There is no preview mode and nothing is saved before the oath begins.
@@ -91,5 +89,5 @@ Cramble has his own quest catalog, start date, progress, local device cache,
 database profile, save queue, Observatory, and Ledger. Opening or changing
 Cramble does not reuse Hana's flower quests or alter her saved garden.
 
-The password is only a friendly client-side gate. It is not account security and
-does not encrypt the data or protect the database API.
+There is no account sign-in yet. Profile separation does not encrypt local data
+or protect the database API.

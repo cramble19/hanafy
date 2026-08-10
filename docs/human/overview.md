@@ -16,7 +16,7 @@ quest lists, saved device data, and database records stay separate.
 
 1. Choose Hana or Cramble on the home screen.
 2. Hana can explore first or start her Health Overhaul when she is ready.
-3. Cramble enters the static password, `hana`, then begins the First Oath.
+3. Cramble opens directly, then begins the First Oath if the profile is new.
 4. Complete or pass the quests due today, or add a personal goal done once or
    several times in a chosen number of days or weeks.
 5. Tap a custom period goal to record +1; several records can happen on the same
@@ -33,8 +33,11 @@ quest lists, saved device data, and database records stay separate.
 - Counted period goals never subtract points for partial progress.
 - Three weekly skips make difficult days easier to handle.
 - Missing a day is never framed as failure; the next page simply begins.
-- Hana's built-in quests unlock gradually; Cramble starts with five fixed
-  lessons. Either person can add only the personal habits they actually want.
+- Hana's built-in quests unlock gradually into Available quests. Nothing is
+  auto-added: she chooses when to add one, with no fixed slot limit. Scheduled
+  quests leave Today after their finite chapter blooms, while history remains.
+- Cramble starts with five fixed lessons. Either person can add only the personal
+  habits they actually want.
 - Motion is subtle and respects reduced-motion preferences.
 
 ## Saving and installation
@@ -47,9 +50,7 @@ quest lists, saved device data, and database records stay separate.
 
 ## Privacy boundary
 
-There is no account system yet. Cramble's password is a friendly entry gate, not
-strong security: it is part of the browser code and does not encrypt local data
-or protect the database endpoint. Hana and Cramble are separated by app state and
+There is no account system yet. Hana and Cramble are separated by app state and
 database profile, not by authenticated user accounts.
 
 ## Not included yet

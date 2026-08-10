@@ -1,10 +1,15 @@
 import type { CustomHabitQuest, Difficulty, Quest, QuestSchedule } from '@/types'
 import { PERIOD_TARGET_LIMITS } from '@/lib/hanaGame'
+import {
+  getDefaultQuestCompletionCriteria,
+  getTotalOnlyCompletionCriteria,
+} from '@/lib/questCompletionRules'
 
 export type HabitProfile = 'hana' | 'cramble'
 export type HabitFrequency = 'oncePerPeriod' | 'timesPerPeriod'
 export type HabitPeriodUnit = 'days' | 'weeks'
 export type HabitPeriodPreset = 'daily' | 'weekly' | 'custom'
+export type HabitCompletionStyle = 'forgiving' | 'total'
 
 export type NewHabitInput = {
   title: string
@@ -14,6 +19,7 @@ export type NewHabitInput = {
   periodLength: number
   periodUnit: HabitPeriodUnit
   difficulty: Difficulty
+  completionStyle?: HabitCompletionStyle
   cue?: string
   reminderTime?: string | null
 }
@@ -56,6 +62,12 @@ export function getNewHabitValidationError(
   }
   if (!['easy', 'medium', 'hard'].includes(input.difficulty)) {
     return 'Choose an objective difficulty.'
+  }
+  if (
+    input.completionStyle !== undefined &&
+    !['forgiving', 'total'].includes(input.completionStyle)
+  ) {
+    return 'Choose how this quest chapter ends.'
   }
   if ((input.cue?.trim().length ?? 0) > CUSTOM_HABIT_LIMITS.cue) {
     return `Keep the cue within ${CUSTOM_HABIT_LIMITS.cue} characters.`
@@ -114,6 +126,7 @@ export function updateCustomHabitQuest(
     description: input.description.trim(),
     difficulty: input.difficulty,
     schedule: createSchedule(input),
+    completionCriteria: createCompletionCriteria(input),
   }
 }
 
@@ -146,6 +159,11 @@ export function habitInputFromQuest(
     periodLength: isWeeklyPeriod ? 1 : periodDays,
     periodUnit: isWeeklyPeriod ? 'weeks' : 'days',
     difficulty: quest.difficulty,
+    completionStyle: quest.completionCriteria?.paths.some(
+      (path) => path.kind === 'combo',
+    )
+      ? 'forgiving'
+      : 'total',
     cue: preferences.cue ?? '',
     reminderTime: preferences.reminderTime ?? null,
   }
@@ -157,7 +175,9 @@ export function hasSameHabitScoringRules(
 ) {
   return (
     quest.difficulty === input.difficulty &&
-    JSON.stringify(quest.schedule) === JSON.stringify(createSchedule(input))
+    JSON.stringify(quest.schedule) === JSON.stringify(createSchedule(input)) &&
+    JSON.stringify(quest.completionCriteria) ===
+      JSON.stringify(createCompletionCriteria(input))
   )
 }
 
@@ -184,6 +204,8 @@ export function createCustomHabitQuest(
     required: true,
     minLevel: 1,
     schedule: createSchedule(input),
+    completionCriteria: createCompletionCriteria(input),
+    journeyRole: 'growth',
     custom: true,
     createdDate,
   }
@@ -206,6 +228,16 @@ function createSchedule(input: NewHabitInput): QuestSchedule {
     periodDays: getHabitPeriodDays(input),
     anchor: 'questStart',
   }
+}
+
+function createCompletionCriteria(input: NewHabitInput) {
+  const periodBased =
+    input.periodUnit !== 'days' ||
+    input.periodLength !== 1 ||
+    input.frequency === 'timesPerPeriod'
+  return input.completionStyle === 'total'
+    ? getTotalOnlyCompletionCriteria(input.difficulty, periodBased)
+    : getDefaultQuestCompletionCriteria(input.difficulty, periodBased)
 }
 
 export function getHabitPeriodDays(

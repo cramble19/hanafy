@@ -244,7 +244,7 @@ describe('custom habits', () => {
     expect(recomputeTotalFlowers(undone, [])).toBe(0)
   })
 
-  it('ignores stale saved skips for period goals', () => {
+  it('recognizes a saved neutral skip for the current period goal', () => {
     const habit = customHabit('custom-hana-unskippable')
     const state = stateWithCustomHabits('2026-08-06', [habit], {
       questSkips: {
@@ -254,7 +254,7 @@ describe('custom habits', () => {
       },
     })
 
-    expect(getSkippedIdsForState([], state)[habit.id]).toBe(false)
+    expect(getSkippedIdsForState([], state)[habit.id]).toBe(true)
   })
 
   it('completes a weekly period target and starts fresh on Sunday', () => {

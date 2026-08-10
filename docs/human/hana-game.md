@@ -87,18 +87,16 @@ levels up and sees more progress in the garden.
 The tasks are stored in one editable file: `src/data/hanaTasks.json`.
 
 The app does **not** show every task at once. That would feel like homework.
-Instead, Hana starts with a small active set:
+Hana begins with three gentle foundation quests. As she levels up, later quests
+appear under **Available quests**, but they are never added automatically. She
+adds one only when she feels ready, and it begins with the next 4 AM tracker
+day. There is no slot limit and adding never swaps out an existing quest.
 
-- **2 daily quests**
-- **1 long-term quest**
-
-The special Spring memory quest **Remember Cramble** appears daily as a tiny
-bonus quest and does not replace the core water/sun/iron habit slots.
-
-As Hana levels up, a few more quests unlock slowly.
-
-Daily task choices are planned for the day, so checking one task will not make a
-different task suddenly swap out.
+Every scheduled quest has a finite journey, such as a short combo or a steady
+number of successful periods. Once either path is complete, the quest leaves
+Today on the next tracker day and moves to **Bloomed Skills** in the Ledger.
+Past records and earned flowers stay intact, and the quest can be restored for
+a fresh journey later.
 
 Daily and long-term quests work differently:
 
@@ -106,8 +104,8 @@ Daily and long-term quests work differently:
 - **Long-term quests** have their own personal deadline. For example, Badminton
   can be completed within 4 days, while harder willpower quests like improving
   sleep get around 10 days.
-- Once a long-term quest is completed, it stays complete for that challenge
-  window. After the deadline passes, a fresh window starts.
+- A long-term quest can earn one success per challenge window. Its full quest
+  journey ends after the completion criterion is reached.
 
 ## Adding a personal habit
 

@@ -81,7 +81,7 @@ reward is earned after the second record.
 
 Partial progress has no penalty and creates no reward debt. Flexible goals are
 judged once for the whole period, so every unused day is not turned into a
-separate miss. These goals also do not use Hana's skips or Cramble's passes.
+separate miss. A skip or pass can make the current whole period neutral.
 
 ## Saving and separation
 
@@ -99,7 +99,7 @@ their original saved history and rewards.
 
 ## Editing and lifecycle
 
-Use the settings button on a habit card to manage it. Any habit can change its
+Use the `i` button on a Today card, then choose Settings. Any habit can change its
 name, completion description, cue, and reminder. User-added habits can also
 change frequency, target, and difficulty until they have records or an older due
 day. Built-in scoring rules are fixed. Once history exists, scoring rules lock so
@@ -113,6 +113,13 @@ Archived habits appear in the Ledger and can be restored. Any habit can be
 deleted permanently; a typed-name confirmation removes its records, settings,
 and rewards. Built-in habits receive a database tombstone so they cannot
 reappear after reload.
+
+Each scheduled habit also has a finite quest journey. Easy daily habits usually
+bloom after a 3-period combo or 5 total successes; medium and hard chapters take
+longer. Period goals use shorter window-based paths. Pauses and skips are
+neutral, while only a finalized miss restarts the combo. Once either path is
+complete, the quest leaves Today on the next tracker day and remains in the
+Ledger as a completed chapter with all history and rewards intact.
 
 ## Recovery and recent corrections
 

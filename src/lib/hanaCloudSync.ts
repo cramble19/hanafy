@@ -8,6 +8,7 @@ import {
 } from '@/lib/hanaGame'
 import {
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   isHabitPausedOnDate,
 } from '@/lib/habitLifecycle'
 
@@ -102,7 +103,8 @@ function createQuestStatusRows(
     const resolvedStatus =
       status === 'pending' &&
       (isHabitPausedOnDate(state, questId, dateKey) ||
-        isHabitArchivedOnDate(state, questId, dateKey))
+        isHabitArchivedOnDate(state, questId, dateKey) ||
+        isHabitGraduatedOnDate(state, questId, dateKey))
         ? 'paused'
         : status
     const flowersEarned =
@@ -289,6 +291,16 @@ function createQuestStatusRows(
       if (parsedSkip.group === 'daily') {
         const scheduleKind = questById.get(parsedSkip.questId)?.schedule?.kind
         if (scheduleKind === 'quota' || scheduleKind === 'periodTarget') {
+          const rowKey = makeRowKey(
+            profileId,
+            'daily',
+            parsedSkip.questId,
+            parsedSkip.periodKey,
+          )
+          const existing = rows.get(rowKey)
+          if (existing?.status !== 'completed' && existing) {
+            rows.set(rowKey, { ...existing, status: 'skipped', flowersEarned: 0 })
+          }
           return
         }
         const rowKey = makeRowKey(
@@ -341,7 +353,8 @@ function isWindowNeutral(
   ) {
     if (
       isHabitPausedOnDate(state, questId, dateKey) ||
-      isHabitArchivedOnDate(state, questId, dateKey)
+      isHabitArchivedOnDate(state, questId, dateKey) ||
+      isHabitGraduatedOnDate(state, questId, dateKey)
     ) {
       return true
     }

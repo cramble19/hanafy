@@ -304,7 +304,7 @@ describe('deadline-free anytime logs', () => {
       [],
       '2026-08-08',
     )
-    expect(legacy.schemaVersion).toBe(3)
+    expect(legacy.schemaVersion).toBe(4)
     expect(legacy.openActivities).toEqual([])
     expect(legacy.openActivityLogs).toEqual({})
     expect(legacy.dailyCompletions['2026-08-07']?.legacy).toBe(true)

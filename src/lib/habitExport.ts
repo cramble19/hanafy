@@ -10,10 +10,13 @@ import {
   getActiveProfilePause,
   getHabitSettings,
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
 } from '@/lib/habitLifecycle'
 import type { HanaGameState, Quest } from '@/types'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
 import { getOpenActivityCatalog } from '@/lib/openActivities'
+import { getQuestCompletionProgress } from '@/lib/questCompletion'
+import { describeQuestCompletionCriteria } from '@/lib/questCompletionRules'
 
 const HEADERS = [
   'profile',
@@ -37,6 +40,9 @@ const HEADERS = [
   'cue',
   'reminder_time',
   'lifecycle',
+  'completion_criteria',
+  'completion_progress',
+  'graduated_on',
   'pause_reason',
   'pause_note',
   'recorded_at',
@@ -47,7 +53,7 @@ const HEADERS = [
 type CsvRow = Record<(typeof HEADERS)[number], string | number | boolean>
 
 export const PROFILE_BACKUP_FORMAT = 'hanafy-profile-backup' as const
-export const PROFILE_BACKUP_FORMAT_VERSION = 2 as const
+export const PROFILE_BACKUP_FORMAT_VERSION = 3 as const
 
 export type ProfileBackup = {
   format: typeof PROFILE_BACKUP_FORMAT
@@ -71,7 +77,7 @@ export type ProfileBackup = {
   }
   catalog: {
     habits: Array<Quest & {
-      lifecycle: 'active' | 'paused' | 'archived'
+      lifecycle: 'active' | 'paused' | 'archived' | 'graduated' | 'legacy'
       archivedAt: string | null
     }>
     anytimeActivities: Array<ReturnType<typeof getOpenActivityCatalog>[number] & {
@@ -117,7 +123,7 @@ export function buildProfileBackup(
       timeZone: options.timeZone ?? getLocalTimeZone(),
     },
     source: {
-      stateSchemaVersion: state.schemaVersion ?? 3,
+      stateSchemaVersion: state.schemaVersion ?? 4,
       databaseRevision: syncRevision ?? null,
       logicalDate: state.currentDate,
       storedPoints: state.totalFlowers,
@@ -130,6 +136,10 @@ export function buildProfileBackup(
           ...quest,
           lifecycle: isHabitArchivedOnDate(state, quest.id)
             ? 'archived'
+            : isHabitGraduatedOnDate(state, quest.id)
+              ? 'graduated'
+              : quest.catalogState === 'legacy'
+                ? 'legacy'
             : profilePause || getActiveHabitPause(state, quest.id)
               ? 'paused'
               : 'active',
@@ -176,8 +186,18 @@ export function buildProfileCsv(
 
   catalog.forEach((quest) => {
     const settings = getHabitSettings(state, quest.id)
+    const completion = getQuestCompletionProgress(
+      state,
+      baseQuests,
+      profileId,
+      quest,
+    )
     const lifecycle = isHabitArchivedOnDate(state, quest.id)
       ? 'archived'
+      : isHabitGraduatedOnDate(state, quest.id)
+        ? 'graduated'
+        : quest.catalogState === 'legacy'
+          ? 'legacy'
       : getActiveProfilePause(state) || getActiveHabitPause(state, quest.id)
         ? 'paused'
         : 'active'
@@ -198,6 +218,13 @@ export function buildProfileCsv(
           ? settings.reminder.time
           : '',
       lifecycle,
+      completion_criteria: describeQuestCompletionCriteria(
+        completion.criteria,
+      ),
+      completion_progress: completion.paths
+        .map((path) => `${path.kind}:${path.current}/${path.target}`)
+        .join(' | '),
+      graduated_on: settings.completion.graduation?.effectiveDate ?? '',
     }
 
     rows.push({

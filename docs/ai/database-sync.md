@@ -27,11 +27,13 @@ endpoint and generic payload/save helpers support both profiles.
 
 The controllers must not share state, caches, or pending/in-flight refs.
 
-Schema version 3 fields (`openActivities`, `openActivityLogs`, `habitSettings`,
+Schema version 4 fields (`openActivities`, `openActivityLogs`, `habitSettings`,
+`questActivations`, finite completion criteria and graduation history,
 profile/habit pause intervals, archive state, reminder intent, deletion
 tombstones, history epoch, sync revision, and backfill audit) live inside the
 same JSONB snapshot and therefore use the serialized cache/pending/POST flow.
-Legacy snapshots normalize to safe empty/default collections.
+Legacy snapshots normalize to safe empty/default collections. The API rejects
+future schemas and prevents an older client from overwriting a newer snapshot.
 
 ## Relevant files
 
@@ -57,8 +59,8 @@ projection statement so a losing concurrent request is a complete no-op.
 Both profiles are consent-first. A POST requires `state.startDate` to be a string.
 
 Hana can explore without saving, then **Start Health Overhaul** atomically seeds
-only `profileId=hana`. Cramble has no preview; after the client gate,
-**Begin the First Oath** atomically seeds only `profileId=cramble`. If an old
+only `profileId=hana`. Cramble has no preview; opening the Cramble profile and
+choosing **Begin the First Oath** atomically seeds only `profileId=cramble`. If an old
 unstarted snapshot exists, the client preserves its server revision and replaces
 it through POST CAS instead of deleting first.
 
@@ -232,7 +234,7 @@ The first successful call creates the tables.
 
 There is no authenticated identity or authorization. The `hana` and `cramble`
 values prevent accidental state mixing but are publicly selectable API inputs.
-Cramble's `hana` password is client-side and does not protect this endpoint.
+The app currently has no profile authentication protecting this endpoint.
 
 Before public or sensitive deployment, add server-validated sessions, bind each
 session to one profile, authorize GET/POST, protect mutating requests,

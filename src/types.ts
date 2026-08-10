@@ -2,6 +2,22 @@ export type QuestGroup = 'daily' | 'longTerm'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
+export type QuestJourneyRole =
+  | 'foundation'
+  | 'growth'
+  | 'starter'
+  | 'setup'
+
+export type QuestCompletionPath =
+  | { kind: 'combo'; target: number }
+  | { kind: 'totalSuccesses'; target: number }
+  | { kind: 'oneTime'; target: 1 }
+
+export type QuestCompletionCriteria = {
+  /** Completing any path finishes the current quest chapter. */
+  paths: QuestCompletionPath[]
+}
+
 export type QuestSchedule =
   | { kind: 'daily' }
   | { kind: 'weekly'; daysOfWeek: Weekday[] }
@@ -45,7 +61,7 @@ export type Quest = {
   difficulty: Difficulty
   /** Per-habit accent color (hex) from the Calm Garden palette. */
   color: string
-  /** Required quests always show up; optional quests rotate by date. */
+  /** Marks a catalogue anchor; visibility is controlled by explicit activation. */
   required?: boolean
   /** Quest unlock level. Defaults to 1. */
   minLevel?: number
@@ -57,6 +73,14 @@ export type Quest = {
   custom?: boolean
   /** Local creation date; also anchors custom rolling habit periods. */
   createdDate?: string
+  /** How this finite chapter ends. Anytime logs deliberately have no criterion. */
+  completionCriteria?: QuestCompletionCriteria
+  /** Psychological role used for catalogue grouping and completion copy. */
+  journeyRole?: QuestJourneyRole
+  /** Legacy definitions remain readable for history but cannot be activated. */
+  catalogState?: 'active' | 'legacy'
+  /** Optional active successor shown alongside a legacy record. */
+  supersededBy?: string
 }
 
 export type PauseReason =
@@ -95,6 +119,23 @@ export type HabitSettings = {
   reminder: HabitReminder
   archivedAt: string | null
   pauses: TrackingPause[]
+  completion?: HabitCompletionState
+}
+
+export type HabitGraduationEvent = {
+  id: string
+  achievedDate: string
+  effectiveDate: string
+  recordedAt: string
+  criterionSnapshot: QuestCompletionCriteria
+}
+
+export type HabitCompletionState = {
+  /** Restoring a bloomed quest begins a fresh chapter from this logical date. */
+  cycleStartedOn: string | null
+  /** Pending until effectiveDate, then treated as fully bloomed. */
+  graduation: HabitGraduationEvent | null
+  history: HabitGraduationEvent[]
 }
 
 export type HabitBackfillEvent = {
@@ -152,7 +193,7 @@ export type GardenWeed = {
 }
 
 export type GameState = {
-  schemaVersion?: 3
+  schemaVersion?: number
   /** Null means this profile has not started its tracker yet. */
   startDate: string | null
   currentDate: string
@@ -165,6 +206,8 @@ export type GameState = {
   syncRevision?: number
   /** Per-habit lifecycle and reminder intent, shared by built-in and custom habits. */
   habitSettings?: Record<string, HabitSettings>
+  /** Explicit opt-in dates for scheduled quests. Unlisted built-ins stay available. */
+  questActivations?: Record<string, string>
   /** Deadline-free definitions. Lifecycle state is stored in habitSettings. */
   openActivities: OpenActivity[]
   /** Per-logical-day values. Check activities are 0/1; counts are safe integers. */

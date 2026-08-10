@@ -54,8 +54,9 @@ type Quest = {
 }
 ```
 
-`required: true` currently matters for daily tasks: required daily tasks always
-show. Optional daily tasks rotate by date.
+`required: true` marks a catalogue anchor. The active plan is now controlled by
+`questActivations`: the three Level 1 foundation quests are seeded initially,
+and every later built-in quest is added voluntarily from **Available quests**.
 
 `minLevel` gates when the task can appear. Omitted means level 1.
 
@@ -214,32 +215,23 @@ Level thresholds are defined in `LEVEL_REQUIREMENTS` in `src/lib/hanaGame.ts`.
 
 The UI uses these to render the level badge and flower progress bar.
 
-## Date-based daily rotation and long-term windows
+## Voluntary activation and long-term windows
 
-The visible quest set is stored in state so checking a task never reshuffles
-other tasks in the same render/day.
+The visible quest set is stored in state. Completing a goal period never adds or
+swaps another quest during the same tracker day.
 
 `syncActiveQuestPlan(state, quests)`:
 
-- Creates `activeDailyQuests[currentDate]` if missing.
-- Keeps valid existing daily quest ids for that date.
-- Fills missing daily slots from the level-appropriate unlocked pool.
-- Keeps valid existing long-term active ids.
-- Fills missing long-term slots from the level-appropriate unlocked pool.
-- Starts or renews long-term windows when missing/expired.
+- Normalizes `questActivations` for old snapshots.
+- Selects every activated, scheduled, trackable daily quest for the logical day.
+- Keeps every activated, trackable long-term quest and starts its window when
+  needed.
+- Excludes future, legacy, archived, paused, or graduated quests.
+- Leaves newly added built-ins pending until the next 04:00 tracker day.
 
-Quest counts by level:
-
-- Level 1: **2 core daily**, **1 long-term**
-- Level 2-4: **3 core daily**, **1 long-term**
-- Level 5-7: **4 daily**, **2 long-term**
-- Level 8+: **5 daily**, **3 long-term**
-
-The Spring memory quest `remember-cramble` is layered on top of the core daily
-count by `selectDailyQuestIds()`. It appears daily once unlocked but does not
-push out health anchors like hydration, sunlight, or iron.
-
-This gives a little daily variety while keeping the current day stable.
+There is no fixed slot limit. Levels only reveal choices; they do not add them.
+Finite completion criteria graduate successful quests out of Today on the next
+tracker day while preserving their records and rewards in **Bloomed Skills**.
 
 User-created habits are stored in `GameState.customHabits` and appended through
 `getQuestCatalog(quests, state)`. They are required daily-group entries, so they
@@ -252,7 +244,7 @@ date. New definitions use `schedule.kind = 'periodTarget'`. See
 rules.
 
 Dates are stored as local `YYYY-MM-DD` tracking-day keys, not UTC ISO slices.
-`todayKey()` uses a fixed local 04:00 boundary: 00:00â€“03:59 belongs to the
+`todayKey()` uses a fixed local 04:00 boundary: 00:00-03:59 belongs to the
 previous key, and 04:00 begins the next key. Date-key arithmetic remains based
 on local calendar components so daylight-saving transitions do not change the
 boundary by an elapsed-hour subtraction.

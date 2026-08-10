@@ -60,17 +60,17 @@ describe('Hana game date sync', () => {
   it('renews an expired long-term quest window on the new date', () => {
     const oldState = createSavedState({
       currentDate: '2026-07-07',
-      activeLongTermQuestIds: ['badminton-boss'],
+      activeLongTermQuestIds: ['any-physical-effort'],
       longTermWindows: {
-        'badminton-boss': '2026-07-07',
+        'any-physical-effort': '2026-07-07',
       },
     })
 
     const syncedState = syncStateToDate(oldState, quests, '2026-07-13')
-    const quest = quests.find((item) => item.id === 'badminton-boss')
+    const quest = quests.find((item) => item.id === 'any-physical-effort')
 
     expect(quest).toBeDefined()
-    expect(syncedState.longTermWindows['badminton-boss']).toBe('2026-07-13')
+    expect(syncedState.longTermWindows['any-physical-effort']).toBe('2026-07-13')
     expect(getLongTermQuestStatus(syncedState, quest!).label).toBe('4 days left')
   })
 

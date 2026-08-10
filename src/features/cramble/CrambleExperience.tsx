@@ -37,7 +37,9 @@ import {
   archiveHabit,
   deleteHabitPermanently,
   hasHabitHistory,
+  isHabitGraduatedOnDate,
   restoreHabit,
+  restoreGraduatedHabit,
   resumeHabitTracking,
   resumeProfileTracking,
   startHabitPause,
@@ -75,6 +77,7 @@ import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { downloadProfileCsv } from '@/lib/habitExport'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
+import { reconcileQuestGraduation } from '@/lib/questCompletion'
 
 type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail'
 const CRAMBLE_CONFLICT_BACKUP_KEY = 'cramble-game/conflict-backup-v1'
@@ -600,10 +603,18 @@ export function CrambleExperience({ onBack }: Props) {
     if (!quest) return
 
     const next = toggleQuestCompletion(previous, quest)
-    void commitGameState({
+    const withUpdatedRenown = {
       ...next,
       totalFlowers: recomputeTotalFlowers(next, catalog),
-    })
+    }
+    void commitGameState(
+      reconcileQuestGraduation(
+        withUpdatedRenown,
+        crambleQuests,
+        'cramble',
+        quest,
+      ),
+    )
   }
 
   const undoQuestOccurrence = (id: string) => {
@@ -615,10 +626,18 @@ export function CrambleExperience({ onBack }: Props) {
 
     const next = undoQuestCompletion(previous, quest)
     if (next === previous) return
-    void commitGameState({
+    const withUpdatedRenown = {
       ...next,
       totalFlowers: recomputeTotalFlowers(next, catalog),
-    })
+    }
+    void commitGameState(
+      reconcileQuestGraduation(
+        withUpdatedRenown,
+        crambleQuests,
+        'cramble',
+        quest,
+      ),
+    )
   }
 
   const toggleSkip = (id: string) => {
@@ -627,14 +646,13 @@ export function CrambleExperience({ onBack }: Props) {
     const quest = getQuestCatalog(crambleQuests, previous).find(
       (item) => item.id === id,
     )
-    if (
-      !quest ||
-      quest.schedule?.kind === 'quota' ||
-      quest.schedule?.kind === 'periodTarget'
-    ) return
+    if (!quest) return
 
-    const weekKey = getSkipWeekKey(previous.currentDate)
     const skipKey = getSkipEventKey(previous, quest)
+    const storedWeekKey = Object.entries(previous.questSkips ?? {}).find(
+      ([, skips]) => skips[skipKey] === true,
+    )?.[0]
+    const weekKey = storedWeekKey ?? getSkipWeekKey(previous.currentDate)
     const skipsThisWeek = previous.questSkips?.[weekKey] ?? {}
     const isSkipped = Boolean(skipsThisWeek[skipKey])
     if (!isSkipped && getSkipProgress(previous).remaining <= 0) return
@@ -673,6 +691,10 @@ export function CrambleExperience({ onBack }: Props) {
     const withHabit: HanaGameState = {
       ...previous,
       customHabits: [...previous.customHabits, customHabit],
+      questActivations: {
+        ...(previous.questActivations ?? {}),
+        [customHabit.id]: addDays(previous.currentDate, 1),
+      },
     }
     void commitGameState(
       updateHabitPreferences(withHabit, customHabit.id, {
@@ -858,7 +880,12 @@ export function CrambleExperience({ onBack }: Props) {
 
   const restoreCrambleHabit = (habitId: string) => {
     const previous = gameRef.current
-    if (previous) void commitGameState(restoreHabit(previous, habitId))
+    if (!previous) return
+    void commitGameState(
+      isHabitGraduatedOnDate(previous, habitId)
+        ? restoreGraduatedHabit(previous, habitId)
+        : restoreHabit(previous, habitId),
+    )
   }
 
   const deleteCrambleHabit = (habitId: string) => {
@@ -890,10 +917,18 @@ export function CrambleExperience({ onBack }: Props) {
     if (!quest) return 'That habit is unavailable.'
     const result = recordQuestCompletionForDate(previous, quest, dateKey)
     if (result.error) return result.error
-    void commitGameState({
+    const withUpdatedRenown = {
       ...result.state,
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    })
+    }
+    void commitGameState(
+      reconcileQuestGraduation(
+        withUpdatedRenown,
+        crambleQuests,
+        'cramble',
+        quest,
+      ),
+    )
     return null
   }
 
@@ -905,10 +940,18 @@ export function CrambleExperience({ onBack }: Props) {
     if (!quest) return 'That habit is unavailable.'
     const result = undoQuestCompletionForDate(previous, quest, dateKey)
     if (result.error) return result.error
-    void commitGameState({
+    const withUpdatedRenown = {
       ...result.state,
       totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    })
+    }
+    void commitGameState(
+      reconcileQuestGraduation(
+        withUpdatedRenown,
+        crambleQuests,
+        'cramble',
+        quest,
+      ),
+    )
     return null
   }
 

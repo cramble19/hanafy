@@ -9,7 +9,9 @@
     "color": "#8bb4c7",
     "required": true,
     "minLevel": 1,
-    "schedule": { "kind": "daily" }
+    "schedule": { "kind": "daily" },
+    "journeyRole": "foundation",
+    "completionCriteria": { "paths": [{ "kind": "combo", "target": 3 }, { "kind": "totalSuccesses", "target": 5 }] }
   },
   {
     "id": "sunward-tablet",
@@ -21,7 +23,9 @@
     "color": "#d3ad68",
     "required": true,
     "minLevel": 1,
-    "schedule": { "kind": "weekly", "daysOfWeek": [0] }
+    "schedule": { "kind": "weekly", "daysOfWeek": [0] },
+    "journeyRole": "foundation",
+    "completionCriteria": { "paths": [{ "kind": "combo", "target": 2 }, { "kind": "totalSuccesses", "target": 3 }] }
   },
   {
     "id": "training-yard",
@@ -33,7 +37,9 @@
     "color": "#93ad82",
     "required": true,
     "minLevel": 1,
-    "schedule": { "kind": "daily" }
+    "schedule": { "kind": "daily" },
+    "journeyRole": "growth",
+    "completionCriteria": { "paths": [{ "kind": "combo", "target": 7 }, { "kind": "totalSuccesses", "target": 12 }] }
   },
   {
     "id": "provisioners-plate",
@@ -45,7 +51,9 @@
     "color": "#d3ad68",
     "required": true,
     "minLevel": 1,
-    "schedule": { "kind": "daily" }
+    "schedule": { "kind": "daily" },
+    "journeyRole": "foundation",
+    "completionCriteria": { "paths": [{ "kind": "combo", "target": 5 }, { "kind": "totalSuccesses", "target": 8 }] }
   },
   {
     "id": "evening-seal",
@@ -57,6 +65,8 @@
     "color": "#c096bb",
     "required": true,
     "minLevel": 1,
-    "schedule": { "kind": "daily" }
+    "schedule": { "kind": "daily" },
+    "journeyRole": "foundation",
+    "completionCriteria": { "paths": [{ "kind": "combo", "target": 3 }, { "kind": "totalSuccesses", "target": 5 }] }
   }
 ]

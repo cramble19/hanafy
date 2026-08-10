@@ -1,4 +1,5 @@
 import { addDays, getQuestCatalog } from '@/lib/hanaGame'
+import { isHabitGraduatedOnDate } from '@/lib/habitLifecycle'
 import {
   getHabitRangeStats,
   type HabitPeriodStat,
@@ -151,7 +152,12 @@ function calculateProfile(
   const settledMissed = settledPeriods.length - settledCompleted
   const activeDateKeys = getTrackedDateKeys(sourceState, rangeStart, rangeEnd)
   const strongestHabit = periodsByHabit
-    .filter(({ quest }) => !isCurrentlyArchived(sourceState, quest.id))
+    .filter(
+      ({ quest }) =>
+        quest.catalogState !== 'legacy' &&
+        !isCurrentlyArchived(sourceState, quest.id) &&
+        !isHabitGraduatedOnDate(sourceState, quest.id),
+    )
     .map(({ quest, settledPeriods: periods }) => {
       const completed = periods.filter(
         ({ status }) => status === 'completed',

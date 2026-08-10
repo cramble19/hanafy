@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRight, LockKeyhole } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
 import { TogetherMark } from '@/components/icons/TogetherMark'
@@ -77,7 +77,7 @@ export function HomePage({
           ref={crambleButtonRef}
           type="button"
           onClick={onSelectCramble}
-          aria-label="Unlock Cramble's tracker"
+          aria-label="Open Cramble's tracker"
           className="emblem-btn flex flex-col items-center gap-4 outline-none"
         >
           <span className="emblem-wrap is-delayed">
@@ -85,10 +85,7 @@ export function HomePage({
               <SunMark className="size-20" />
             </span>
           </span>
-          <span className="flex items-center gap-2 text-lg font-medium text-ink">
-            Cramble
-            <LockKeyhole className="size-3.5 text-faint" aria-hidden="true" />
-          </span>
+          <span className="text-lg font-medium text-ink">Cramble</span>
         </button>
       </div>
 

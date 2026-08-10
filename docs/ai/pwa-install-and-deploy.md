@@ -7,7 +7,7 @@ This project is configured as an installable Vite PWA.
 - Static React app built by Vite.
 - Vercel API route at `api/hana-sync.ts` handles DB-first production sync after
   each profile's start action.
-- No account authentication. Cramble has a client-side password gate only.
+- No account authentication. Both profile tiles open directly.
 - Production builds read/write Hana and Cramble as separate Postgres profiles.
 - Browser `localStorage` uses separate profile caches as offline fallback.
 - PWA install and offline app shell are handled by `vite-plugin-pwa`.

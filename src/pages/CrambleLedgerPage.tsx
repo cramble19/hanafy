@@ -22,6 +22,7 @@ import {
 import type { HanaGameState, Quest } from '@/types'
 import {
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   isHabitPausedOnDate,
 } from '@/lib/habitLifecycle'
 import { getOpenActivityRangeStats } from '@/lib/openActivityStats'
@@ -98,6 +99,14 @@ export function HabitLedgerPage({
       history,
       isLocked: (quest.minLevel ?? 1) > level && !history?.periods.length,
       isArchived: isHabitArchivedOnDate(game, quest.id),
+      isGraduated: isHabitGraduatedOnDate(game, quest.id),
+      isLegacy: quest.catalogState === 'legacy',
+      isActivated: Boolean(
+        game.questActivations?.[quest.id] &&
+          (game.questActivations?.[quest.id] ?? '') <= game.currentDate,
+      ),
+      activationDate: game.questActivations?.[quest.id] ?? null,
+      hasHistory: Boolean(history?.periods.length || history?.totalRecords),
       isPaused: isHabitPausedOnDate(game, quest.id),
       momentum: history
         ? getHabitMomentumSignal(history, profileId)
@@ -105,14 +114,36 @@ export function HabitLedgerPage({
     }
   })
   const currentRecords = questRecords.filter(
-    (record) => !record.isLocked && !record.isArchived && !record.isPaused,
+    (record) =>
+      !record.isLocked &&
+      !record.isArchived &&
+      !record.isGraduated &&
+      !record.isLegacy &&
+      !record.isPaused &&
+      (record.isActivated || record.hasHistory),
   )
   const pausedRecords = questRecords.filter(
-    (record) => !record.isLocked && !record.isArchived && record.isPaused,
+    (record) =>
+      !record.isLocked &&
+      !record.isArchived &&
+      !record.isGraduated &&
+      !record.isLegacy &&
+      record.isPaused,
   )
   const archivedRecords = questRecords.filter((record) => record.isArchived)
+  const graduatedRecords = questRecords.filter(
+    (record) => record.isGraduated && !record.isArchived,
+  )
+  const legacyRecords = questRecords.filter(
+    (record) => record.isLegacy && record.hasHistory && !record.isArchived,
+  )
   const futureRecords = questRecords.filter(
-    (record) => record.isLocked && !record.isArchived,
+    (record) =>
+      !record.isLegacy &&
+      !record.isArchived &&
+      !record.isGraduated &&
+      !record.hasHistory &&
+      (record.isLocked || !record.isActivated),
   )
   const activityRecords = getOpenActivityCatalog(game).map((activity) => ({
     activity,
@@ -155,7 +186,19 @@ export function HabitLedgerPage({
     record: (typeof questRecords)[number],
     allowRestore = false,
   ) => {
-    const { quest, stat, recent, momentum, isLocked, isPaused, isArchived } = record
+    const {
+      quest,
+      stat,
+      recent,
+      momentum,
+      isLocked,
+      isPaused,
+      isArchived,
+      isGraduated,
+      isLegacy,
+      isActivated,
+      activationDate,
+    } = record
     return (
       <div key={quest.id} className="ledger-quest-row-wrap">
         <button
@@ -182,7 +225,15 @@ export function HabitLedgerPage({
             </span>
             <span className="mt-1 block text-xs text-muted">
               {formatQuestCadence(quest)}
-              {isPaused ? ' · Paused' : isArchived ? ' · Archived' : ''}
+              {isGraduated
+                ? ' · Bloomed'
+                : isLegacy
+                  ? ' · Earlier chapter'
+                  : isPaused
+                    ? ' · Paused'
+                    : isArchived
+                      ? ' · Archived'
+                      : ''}
             </span>
             <span className="mt-2 flex min-h-2 items-center gap-1" aria-hidden="true">
               {recent?.periods.slice(-6).map((period) => (
@@ -192,6 +243,10 @@ export function HabitLedgerPage({
             <span className="sr-only">
               {isLocked
                 ? `Unlocks at level ${quest.minLevel}. Open task preview.`
+                : !isActivated
+                  ? activationDate
+                    ? `Starts on ${activationDate}. Open task preview.`
+                    : 'Available to add from Today. Open task preview.'
                 : `${recent?.completedPeriods ?? stat?.completed ?? 0} of ${recent?.decidedPeriods ?? stat?.shown ?? 0} recent targets met. Open task history.`}
             </span>
           </span>
@@ -199,13 +254,21 @@ export function HabitLedgerPage({
             <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs font-semibold tabular-nums text-ink">
               {isLocked
                 ? `Level ${quest.minLevel}`
+                : !isActivated
+                  ? activationDate
+                    ? 'Starts next day'
+                    : 'Available'
                 : recent?.decidedPeriods
                   ? `${recent.successRate}% · 30D`
                   : isPaused
                     ? 'Paused'
-                    : isArchived
-                      ? 'Archived'
-                      : 'In progress'}
+                    : isGraduated
+                      ? 'Bloomed'
+                      : isLegacy
+                        ? 'History'
+                        : isArchived
+                          ? 'Archived'
+                          : 'In progress'}
             </span>
             <ChevronRight className="size-4" aria-hidden="true" />
           </span>
@@ -570,6 +633,39 @@ export function HabitLedgerPage({
                 </details>
               ) : null}
 
+              {graduatedRecords.length ? (
+                <details className="ledger-record-group" open>
+                  <summary>
+                    {isCramble ? 'Mastered chapters' : 'Bloomed skills'}{' '}
+                    <span>{graduatedRecords.length}</span>
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    These quests finished their chapter and left Today. Their
+                    history and earned rewards remain.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {graduatedRecords.map((record) =>
+                      renderQuestRecord(record, true),
+                    )}
+                  </div>
+                </details>
+              ) : null}
+
+              {legacyRecords.length ? (
+                <details className="ledger-record-group">
+                  <summary>
+                    Earlier chapters <span>{legacyRecords.length}</span>
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-faint">
+                    Cleaned-up quests stay here so their records and rewards
+                    keep their original meaning.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {legacyRecords.map((record) => renderQuestRecord(record))}
+                  </div>
+                </details>
+              ) : null}
+
               {archivedRecords.length ? (
                 <details className="ledger-record-group" open>
                   <summary>
@@ -590,7 +686,8 @@ export function HabitLedgerPage({
                     Future quests <span>{futureRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
-                    These begin only after they unlock. They create no earlier misses.
+                    Unlocking only makes a quest available. Add it from Today
+                    whenever it feels right; it creates no earlier misses.
                   </p>
                   <div className="mt-3 space-y-3">
                     {futureRecords.map((record) => renderQuestRecord(record))}

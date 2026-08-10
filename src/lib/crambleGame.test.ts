@@ -15,7 +15,6 @@ import {
   CRAMBLE_PENDING_STORAGE_KEY,
   getCrambleChapterProgress,
   getCrambleJourneyProgress,
-  isCramblePassword,
 } from '@/lib/crambleGame'
 import { STORAGE_KEY } from '@/lib/hanaGame'
 
@@ -27,13 +26,6 @@ function stateWithRenown(totalFlowers: number) {
 }
 
 describe('Cramble game', () => {
-  it('uses the requested static password as a session gate', () => {
-    expect(isCramblePassword('hana')).toBe(true)
-    expect(isCramblePassword(' hana ')).toBe(true)
-    expect(isCramblePassword('Hana')).toBe(false)
-    expect(isCramblePassword('cramble')).toBe(false)
-  })
-
   it('keeps Cramble cache and quest IDs separate from Hana', () => {
     const state = syncStateToDate(
       createStartedHanaState('2026-08-06'),

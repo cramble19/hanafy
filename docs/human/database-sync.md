@@ -29,8 +29,8 @@ quest does not change Hana's garden, and vice versa.
 Hana is not written to the database until **Start Health Overhaul** is pressed.
 Her Explore mode remains temporary.
 
-Cramble is not written until the password gate is passed and **Begin the First
-Oath** is pressed. Starting or resetting either profile replaces that profile
+Cramble is not written until **Begin the First Oath** is pressed. Starting or
+resetting either profile replaces that profile
 with one revision-checked transaction; it never clears the durable copy before
 the replacement has succeeded.
 
@@ -69,11 +69,10 @@ request fails, the separate local cache can be used temporarily.
 Local development deliberately disables cloud sync and keeps both profiles on
 the current device.
 
-## Password and security
+## Security
 
-Cramble's static password, `hana`, is only a casual client-side entry gate. It
-does not secure the API, hide the password from the built JavaScript, or encrypt
-the local cache. The database endpoint also has no account authentication yet.
+The database endpoint has no account authentication yet, and the local cache is
+not encrypted.
 Use a server-validated session system before treating this as private or sharing
 the deployment publicly.
 

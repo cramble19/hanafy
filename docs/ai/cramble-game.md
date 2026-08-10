@@ -16,26 +16,14 @@ Technical source of truth for Cramble's isolated habit experience.
 
 ## Entry and navigation
 
-`src/App.tsx` routes Home -> `crambleGate` -> `cramble` using local view state.
-`CrambleGatePage` validates the input through `isCramblePassword()`.
-
-```ts
-export const CRAMBLE_PASSWORD = 'hana'
-```
-
-Matching is case-sensitive after trimming surrounding whitespace. Unlock state is
-not persisted. Returning home unmounts `CrambleExperience`, and selecting Cramble
-again shows the gate.
-
-This is a casual UI gate. The password is compiled into the client bundle, the
-cache is plaintext, and `/api/hana-sync` is unauthenticated. Never describe it as
-secure authentication.
+`src/App.tsx` routes Home directly to `CrambleExperience`. Returning home
+unmounts the controller; selecting Cramble again loads the saved profile without
+an intermediate gate.
 
 ## Files
 
 - `src/features/cramble/CrambleExperience.tsx` — isolated controller, hydration,
   state mutations, save queue, and internal views.
-- `src/pages/CrambleGatePage.tsx` — password form and feedback.
 - `src/pages/CrambleStartPage.tsx` — consent-first First Oath start.
 - `src/pages/CramblePage.tsx` — cadence-aware tracker.
 - `src/pages/ObservatoryPage.tsx` — progress-driven two-traveler journey scene.
@@ -44,7 +32,7 @@ secure authentication.
   occurrence analytics.
 - `src/data/crambleTasks.json` / `crambleQuests.ts` — Cramble-only catalog.
 - `src/data/crambleChronicles.json` — original rotating lines.
-- `src/lib/crambleGame.ts` — password, cache key, and chapter progress.
+- `src/lib/crambleGame.ts` — cache key and chapter progress.
 - `src/lib/customHabits.ts` / `src/components/AddHabitDialog.tsx` — shared
   custom-habit validation, creation, and form UI.
 - `src/lib/openActivities.ts` / `src/components/AddAnytimeLogDialog.tsx` /

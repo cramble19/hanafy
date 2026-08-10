@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import {
   getQuestCatalog,
   getQuestScheduleProgress,
+  isQuestActivatedOnDate,
   todayKey,
 } from '@/lib/hanaGame'
 import {
@@ -35,6 +36,8 @@ export function useHabitReminders(
         const settings = getHabitSettings(game, quest.id)
         const progress = getQuestScheduleProgress(game, quest)
         if (
+          quest.catalogState === 'legacy' ||
+          !isQuestActivatedOnDate(game, quest.id) ||
           !settings.reminder.enabled ||
           !settings.reminder.time ||
           !isLogicalDayReminderDue(

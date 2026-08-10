@@ -11,6 +11,7 @@ import type { HanaGameState, Quest, Weekday } from '@/types'
 import {
   isHabitPausedOnDate,
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   isHabitTrackableOnDate,
   MAX_BACKFILL_DAYS,
 } from '@/lib/habitLifecycle'
@@ -484,19 +485,42 @@ const WEEKDAY_LONG_NAMES = [
 
 function getQuestActiveStart(state: HanaGameState, quest: Quest) {
   const profileStart = state.startDate ?? state.currentDate
-  const configuredStart =
-    quest.createdDate && quest.createdDate > profileStart
-      ? quest.createdDate
-      : profileStart
-  if ((quest.minLevel ?? 1) <= 1) return configuredStart
+  const activationDate = state.questActivations?.[quest.id]
+  const configuredStart = [profileStart, quest.createdDate, activationDate]
+    .filter((dateKey): dateKey is string => Boolean(dateKey))
+    .sort()
+    .at(-1) as string
+  if (activationDate) return configuredStart
+  // Pre-v4 snapshots did not persist explicit activation dates. Keep their
+  // original required/custom history boundary until normalization materializes
+  // the activation map; v4 available quests use an empty map and stay neutral.
+  if (
+    state.questActivations === undefined &&
+    ((quest.minLevel ?? 1) <= 1 || quest.custom)
+  ) {
+    return configuredStart
+  }
 
   const firstPresentedDate = Object.entries(state.activeDailyQuests ?? {})
     .filter(([, questIds]) => questIds.includes(quest.id))
     .map(([dateKey]) => dateKey)
     .sort()[0]
-  if (!firstPresentedDate) return null
-  return firstPresentedDate > configuredStart
-    ? firstPresentedDate
+  const firstLongTermWindow = state.longTermWindows?.[quest.id]
+  const firstRecordedDate = [
+    ...Object.entries(state.dailyCompletions ?? {})
+      .filter(([, records]) => records[quest.id] === true)
+      .map(([dateKey]) => dateKey),
+    ...Object.entries(state.habitOccurrences ?? {})
+      .filter(([, records]) => (records[quest.id] ?? 0) > 0)
+      .map(([dateKey]) => dateKey),
+    ...Object.keys(state.longTermCompletions?.[quest.id] ?? {}),
+  ].sort()[0]
+  const firstEvidence = [firstPresentedDate, firstLongTermWindow, firstRecordedDate]
+    .filter((dateKey): dateKey is string => Boolean(dateKey))
+    .sort()[0]
+  if (!firstEvidence) return null
+  return firstEvidence > configuredStart
+    ? firstEvidence
     : configuredStart
 }
 
@@ -514,7 +538,8 @@ function buildHabitDays(
     isEligible: isHabitAvailableOnDate(state, quest, dateKey),
     isPaused:
       isHabitPausedOnDate(state, quest.id, dateKey) ||
-      isHabitArchivedOnDate(state, quest.id, dateKey),
+      isHabitArchivedOnDate(state, quest.id, dateKey) ||
+      isHabitGraduatedOnDate(state, quest.id, dateKey),
     isToday: dateKey === state.currentDate,
   }))
 }
@@ -528,6 +553,7 @@ function buildDailyGroupPeriods(
   const schedule = quest.schedule ?? { kind: 'daily' as const }
   if (schedule.kind === 'quota' || schedule.kind === 'periodTarget') {
     const periods = new Map<string, HabitPeriodStat>()
+    const skippedPeriods = getSkippedDailyDates(state, quest.id)
     const canDeriveEveryWindow =
       (quest.minLevel ?? 1) <= 1 && Boolean(quest.required || quest.custom)
     listDateKeys(activeStart, currentDate)
@@ -549,6 +575,8 @@ function buildDailyGroupPeriods(
           target: progress.target,
           status: progress.isComplete
             ? 'completed'
+            : skippedPeriods.has(progress.periodStart)
+              ? 'skipped'
             : isPeriodPaused(state, quest.id, progress.periodStart, progress.periodEnd)
               ? 'paused'
               : isPastCorrectionWindow(progress.periodEnd, currentDate)
@@ -781,7 +809,8 @@ function isPeriodPaused(
 ) {
   return listDateKeys(startDate, endDate).some((dateKey) =>
     isHabitPausedOnDate(state, habitId, dateKey) ||
-    isHabitArchivedOnDate(state, habitId, dateKey),
+    isHabitArchivedOnDate(state, habitId, dateKey) ||
+    isHabitGraduatedOnDate(state, habitId, dateKey),
   )
 }
 

@@ -3,7 +3,6 @@ import type { HanaGameState } from '@/types'
 
 export const CRAMBLE_STORAGE_KEY = 'cramble-game/v1'
 export const CRAMBLE_PENDING_STORAGE_KEY = 'cramble-game/pending-v1'
-export const CRAMBLE_PASSWORD = 'hana'
 export const CRAMBLE_QUEST_PLAN_OPTIONS = {
   rotateExpiredLongTerm: true,
 } as const
@@ -55,9 +54,6 @@ export const CRAMBLE_JOURNEY = {
   endScale: 0.62,
 } as const
 
-export function isCramblePassword(value: string) {
-  return value.trim() === CRAMBLE_PASSWORD
-}
 
 export function getCrambleChapterProgress(state: HanaGameState) {
   const level = getLevel(state.totalFlowers)

@@ -274,7 +274,7 @@ describe('JSON profile backup', () => {
     })
 
     expect(backup.format).toBe('hanafy-profile-backup')
-    expect(backup.formatVersion).toBe(2)
+    expect(backup.formatVersion).toBe(3)
     expect(backup.profile).toEqual({
       id: 'cramble',
       name: 'Cramble',

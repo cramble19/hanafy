@@ -11,12 +11,12 @@ frontend:
 ```text
 Home
 ├─ Hana -> start/preview -> Spring tracker -> Garden / Ledger
-└─ Cramble -> client gate -> First Oath -> Archive tracker -> Observatory / Ledger
+└─ Cramble -> First Oath -> Archive tracker -> Observatory / Ledger
 ```
 
 Production is DB-first: a Vercel function persists both profiles in Postgres.
 Each profile has a distinct local cache for offline fallback. There is no account
-authentication; Cramble's static password is only a client-side navigation gate.
+authentication; both profile tiles open their own path directly.
 
 ## Runtime stack
 
@@ -59,11 +59,12 @@ src/
     openActivities.ts             # deadline-free definitions and mutations
     openActivityStats.ts          # neutral factual range statistics
     logicalDay.ts                 # shared local 04:00 tracking-day clock
-    hanaGame.ts                   # shared pure date/quest/reward engine
+    hanaGame.ts                   # shared pure date/quest/reward/activation engine
+    questCompletion.ts            # finite quest chapter progress and graduation
     hanaCloudSync.ts              # profile-aware payload generation
     hanaRemoteState.ts            # profile-aware GET/POST helpers
     hanaStats.ts                  # shared profile, period-window, and Ledger stats
-    crambleGame.ts                # Cramble gate/cache/chapter rules
+    crambleGame.ts                # Cramble cache/chapter rules
   pages/                          # profile-specific screen components
   styles/globals.css              # tokens, Tailwind entry, variants, reward scenes
   types.ts                        # Quest, GameState, compatibility aliases
@@ -79,8 +80,8 @@ remain under `App` because its controller predates the profile split. Cramble is
 mounted only in `CrambleExperience`; its internal tracker, Observatory, and Ledger
 use a separate local view union.
 
-Returning from Cramble to Home unmounts that controller and discards unlock state.
-Selecting Cramble again always returns to the password gate.
+Returning from Cramble to Home unmounts that controller. Selecting Cramble again
+loads its saved profile directly.
 
 ## Data model and game engine
 
@@ -128,6 +129,17 @@ A current period target awards one difficulty reward only after its full count,
 with no partial reward or penalty. Legacy quotas preserve their target-capped
 per-occurrence rewards. Analytics use one aggregate row per flexible period
 rather than one apparent miss per day.
+
+`GameState.questActivations` stores the logical day each scheduled quest was
+voluntarily added. Unlocking only makes a Hana quest available; it never adds it
+to Today. There is no fixed active-slot limit. Added quests begin on the next
+04:00 tracker day.
+
+Every scheduled quest has finite completion criteria. Combo and total-success
+paths are derived from saved goal-window outcomes; pauses and skips are neutral.
+Reaching either path schedules graduation for the next tracker day, so the
+completed card stays stable today. Graduated quests leave Today, retain rewards
+and history in Bloomed Skills, and can be restored as a fresh chapter.
 
 `GameState.customHabits` stores user-created definitions. The effective catalog
 is always `getQuestCatalog(baseQuests, state)`, with built-ins first and valid
@@ -188,9 +200,9 @@ requires `DATABASE_URL` or `POSTGRES_URL`.
 ## Security boundary
 
 Allowed profile ids and row/profile equality are validated to prevent accidental
-cross-profile writes. This is data partitioning, not authorization. GET, POST,
-and DELETE have no authenticated identity. `CRAMBLE_PASSWORD` ships in the JS
-bundle and localStorage is plaintext. Add server-side sessions and authenticated,
+cross-profile writes. This is data partitioning, not authorization. GET and POST
+have no authenticated identity, and localStorage is plaintext. Add server-side
+sessions and authenticated,
 profile-scoped API checks before public or sensitive use.
 
 ## Engineering conventions

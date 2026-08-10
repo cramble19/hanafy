@@ -1,11 +1,12 @@
 import type {
   GameState,
+  HabitCompletionState,
   HabitSettings,
   PauseReason,
   TrackingPause,
 } from '@/types'
 
-export const GAME_STATE_SCHEMA_VERSION = 3 as const
+export const GAME_STATE_SCHEMA_VERSION = 4 as const
 export const MAX_BACKFILL_DAYS = 3
 
 export const PAUSE_REASON_OPTIONS: Array<{
@@ -29,11 +30,40 @@ export function createDefaultHabitSettings(): HabitSettings {
     reminder: { enabled: false, time: null },
     archivedAt: null,
     pauses: [],
+    completion: createDefaultHabitCompletionState(),
   }
 }
 
-export function getHabitSettings(state: GameState, habitId: string) {
-  return state.habitSettings?.[habitId] ?? createDefaultHabitSettings()
+export function createDefaultHabitCompletionState(): HabitCompletionState {
+  return {
+    cycleStartedOn: null,
+    graduation: null,
+    history: [],
+  }
+}
+
+export function getHabitSettings(
+  state: GameState,
+  habitId: string,
+): HabitSettings & { completion: HabitCompletionState } {
+  const defaults = createDefaultHabitSettings()
+  const defaultCompletion = createDefaultHabitCompletionState()
+  const stored = state.habitSettings?.[habitId]
+  if (!stored) {
+    return { ...defaults, completion: defaultCompletion }
+  }
+  const storedCompletion = stored.completion
+  return {
+    ...defaults,
+    ...stored,
+    reminder: { ...defaults.reminder, ...(stored.reminder ?? {}) },
+    pauses: stored.pauses ?? [],
+    completion: {
+      cycleStartedOn: storedCompletion?.cycleStartedOn ?? null,
+      graduation: storedCompletion?.graduation ?? null,
+      history: storedCompletion?.history ?? [],
+    },
+  }
 }
 
 export function isPauseActiveOnDate(pause: TrackingPause, dateKey: string) {
@@ -79,6 +109,15 @@ export function isHabitArchivedOnDate(
   return Boolean(archivedAt && archivedAt <= dateKey)
 }
 
+export function isHabitGraduatedOnDate(
+  state: GameState,
+  habitId: string,
+  dateKey = state.currentDate,
+) {
+  const graduation = getHabitSettings(state, habitId).completion.graduation
+  return Boolean(graduation && graduation.effectiveDate <= dateKey)
+}
+
 export function isHabitTrackableOnDate(
   state: GameState,
   habitId: string,
@@ -86,6 +125,7 @@ export function isHabitTrackableOnDate(
 ) {
   return (
     !isHabitArchivedOnDate(state, habitId, dateKey) &&
+    !isHabitGraduatedOnDate(state, habitId, dateKey) &&
     !isHabitPausedOnDate(state, habitId, dateKey)
   )
 }
@@ -174,6 +214,24 @@ export function restoreHabit(state: GameState, habitId: string): GameState {
   })
 }
 
+export function restoreGraduatedHabit(
+  state: GameState,
+  habitId: string,
+): GameState {
+  const settings = getHabitSettings(state, habitId)
+  const graduation = settings.completion.graduation
+  if (!graduation || graduation.effectiveDate > state.currentDate) return state
+
+  return setHabitSettings(state, habitId, {
+    ...settings,
+    completion: {
+      cycleStartedOn: state.currentDate,
+      graduation: null,
+      history: [...settings.completion.history, graduation].slice(-50),
+    },
+  })
+}
+
 export function updateHabitPreferences(
   state: GameState,
   habitId: string,
@@ -253,6 +311,8 @@ export function deleteHabitPermanently(
 
   const habitSettings = { ...(state.habitSettings ?? {}) }
   delete habitSettings[habitId]
+  const questActivations = { ...(state.questActivations ?? {}) }
+  delete questActivations[habitId]
   const longTermWindows = { ...state.longTermWindows }
   delete longTermWindows[habitId]
   const longTermCompletions = { ...state.longTermCompletions }
@@ -269,6 +329,7 @@ export function deleteHabitPermanently(
       new Set([...(state.deletedHabitIds ?? []), habitId]),
     ),
     habitSettings,
+    questActivations,
     activeDailyQuests: mapArrayRecord(state.activeDailyQuests, (ids) =>
       ids.filter((id) => id !== habitId),
     ),

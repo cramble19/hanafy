@@ -12,6 +12,7 @@ import {
 import {
   hasHabitHistory,
   isHabitArchivedOnDate,
+  isHabitGraduatedOnDate,
   isHabitPausedOnDate,
 } from '@/lib/habitLifecycle'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
@@ -21,6 +22,8 @@ import {
   getOpenActivityRangeStats,
   type OpenActivityRangeStats,
 } from '@/lib/openActivityStats'
+import { getQuestCompletionProgress } from '@/lib/questCompletion'
+import { describeQuestCompletionCriteria } from '@/lib/questCompletionRules'
 
 type ChronicleTheme = {
   documentTitle: string
@@ -39,8 +42,10 @@ type ChronicleTheme = {
 type ChronicleHabit = {
   quest: Quest
   stats: HabitRangeStats
-  lifecycle: 'active' | 'paused' | 'archived'
+  lifecycle: 'active' | 'paused' | 'archived' | 'graduated' | 'legacy'
   archivedAt: string | null
+  completionLabel: string
+  completionProgress: string
 }
 
 type ChronicleOpenActivity = {
@@ -267,7 +272,7 @@ export function buildProfileChronicleHtml(
         <li>${escapeHtml(formatDateRange(historyStart, state.currentDate))}</li>
         <li>Tracking day: ${formatTrackingHour()}–3:59 AM next day</li>
         <li>Level ${getLevel(state.totalFlowers)}</li>
-        <li>${summary.active} active · ${summary.paused} paused · ${summary.archived} archived</li>
+        <li>${summary.active} active · ${summary.paused} paused · ${summary.graduated} bloomed · ${summary.legacy} earlier · ${summary.archived} archived</li>
         <li>Exported ${escapeHtml(formatExportedAt(exportedDate))}</li>
       </ul>
     </header>
@@ -345,20 +350,49 @@ function getChronicleHabits(
       if (!stats) return result
 
       const archived = isHabitArchivedOnDate(state, quest.id)
-      const paused = !archived && isHabitPausedOnDate(state, quest.id)
+      const graduated = !archived && isHabitGraduatedOnDate(state, quest.id)
+      const legacy = !archived && !graduated && quest.catalogState === 'legacy'
+      const paused =
+        !archived &&
+        !graduated &&
+        !legacy &&
+        isHabitPausedOnDate(state, quest.id)
       const attempted =
         hasHabitHistory(state, quest.id) ||
         stats.periods.length > 0 ||
         stats.totalRecords > 0
       const isNeverUnlockedFuture =
-        (quest.minLevel ?? 1) > level && !attempted && !archived && !paused
+        ((quest.minLevel ?? 1) > level ||
+          !state.questActivations?.[quest.id]) &&
+        !attempted &&
+        !archived &&
+        !paused &&
+        !graduated
       if (isNeverUnlockedFuture) return result
+      const completion = getQuestCompletionProgress(
+        state,
+        baseQuests,
+        profileId,
+        quest,
+      )
 
       result.push({
         quest,
         stats,
-        lifecycle: archived ? 'archived' : paused ? 'paused' : 'active',
+        lifecycle: archived
+          ? 'archived'
+          : graduated
+            ? 'graduated'
+            : legacy
+              ? 'legacy'
+            : paused
+              ? 'paused'
+              : 'active',
         archivedAt: state.habitSettings?.[quest.id]?.archivedAt ?? null,
+        completionLabel: describeQuestCompletionCriteria(completion.criteria),
+        completionProgress: completion.paths
+          .map((path) => `${Math.min(path.current, path.target)}/${path.target}`)
+          .join(' or '),
       })
       return result
     },
@@ -396,7 +430,13 @@ function sortChronicleOpenActivities(
 }
 
 function sortChronicleHabits(first: ChronicleHabit, second: ChronicleHabit) {
-  const lifecycleOrder = { active: 0, paused: 1, archived: 2 }
+  const lifecycleOrder = {
+    active: 0,
+    paused: 1,
+    graduated: 2,
+    legacy: 3,
+    archived: 4,
+  }
   return (
     lifecycleOrder[first.lifecycle] - lifecycleOrder[second.lifecycle] ||
     first.quest.title.localeCompare(second.quest.title)
@@ -436,6 +476,9 @@ function summarizeHabits(
     paused:
       habits.filter(({ lifecycle }) => lifecycle === 'paused').length +
       anytimeActivities.filter(({ lifecycle }) => lifecycle === 'paused').length,
+    graduated:
+      habits.filter(({ lifecycle }) => lifecycle === 'graduated').length,
+    legacy: habits.filter(({ lifecycle }) => lifecycle === 'legacy').length,
     archived:
       habits.filter(({ lifecycle }) => lifecycle === 'archived').length +
       anytimeActivities.filter(({ lifecycle }) => lifecycle === 'archived').length,
@@ -529,11 +572,17 @@ function renderOpenActivityDays(stats: OpenActivityRangeStats) {
     .join('')}</ol>`
 }
 
-function renderHabit({ quest, stats, lifecycle, archivedAt }: ChronicleHabit) {
+function renderHabit({
+  quest,
+  stats,
+  lifecycle,
+  archivedAt,
+  completionLabel,
+  completionProgress,
+}: ChronicleHabit) {
   const neutral = stats.skippedPeriods + stats.pausedPeriods
   const records =
     quest.group === 'longTerm' ? stats.completedPeriods : stats.totalRecords
-  const pace = quest.group === 'longTerm' ? '—' : `${formatNumber(stats.weeklyPace)}/wk`
   const archivedLabel =
     lifecycle === 'archived' && archivedAt
       ? ` · since ${formatDateKey(archivedAt)}`
@@ -555,8 +604,9 @@ function renderHabit({ quest, stats, lifecycle, archivedAt }: ChronicleHabit) {
       ${habitStat(formatNumber(records), 'Records')}
       ${habitStat(stats.decidedPeriods ? `${stats.successRate}%` : '—', 'Success')}
       ${habitStat(formatNumber(neutral), 'Neutral')}
-      ${habitStat(pace, 'Pace')}
+      ${habitStat(completionProgress, 'Quest journey')}
     </div>
+    <p class="description" style="padding:0 22px 18px">Finishes after ${escapeHtml(completionLabel)}.</p>
     <div class="period-history">
       <div class="history-label"><strong>Goal-window history</strong><span>${stats.completedPeriods} met · ${stats.missedPeriods} missed · ${neutral} neutral · ${countPeriods(stats, 'open')} open</span></div>
       ${renderPeriods(stats)}
