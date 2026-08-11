@@ -142,6 +142,32 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         AND revision = ${payload.baseRevision}
       ON CONFLICT (profile_id, revision) DO NOTHING
     `, sql`
+      UPDATE hana_state_snapshots
+      SET
+        current_date_key = ${payload.currentDate},
+        total_flowers = ${payload.totalFlowers},
+        state = jsonb_set(
+          ${JSON.stringify(payload.state)}::jsonb,
+          '{syncRevision}',
+          to_jsonb(hana_state_snapshots.revision + 1),
+          true
+        ),
+        revision = hana_state_snapshots.revision + 1,
+        write_token = ${payload.writeToken},
+        synced_at = ${payload.syncedAt}::timestamptz
+      WHERE profile_id = ${payload.profileId}
+        AND ${payload.baseRevision} > 0
+        AND revision = ${payload.baseRevision}
+        AND COALESCE(
+          CASE
+            WHEN jsonb_typeof(state -> 'schemaVersion') = 'number'
+              THEN (state ->> 'schemaVersion')::integer
+            ELSE 1
+          END,
+          1
+        ) <= ${payload.stateSchemaVersion}
+      RETURNING revision, synced_at
+    `, sql`
       INSERT INTO hana_state_snapshots (
         profile_id,
         current_date_key,
@@ -155,28 +181,17 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         ${payload.profileId},
         ${payload.currentDate},
         ${payload.totalFlowers},
-        ${JSON.stringify(payload.state)}::jsonb,
+        jsonb_set(
+          ${JSON.stringify(payload.state)}::jsonb,
+          '{syncRevision}',
+          '1'::jsonb,
+          true
+        ),
         1,
         ${payload.writeToken},
         ${payload.syncedAt}::timestamptz
       WHERE ${payload.baseRevision} = 0
-      ON CONFLICT (profile_id)
-      DO UPDATE SET
-        current_date_key = EXCLUDED.current_date_key,
-        total_flowers = EXCLUDED.total_flowers,
-        state = EXCLUDED.state,
-        revision = hana_state_snapshots.revision + 1,
-        write_token = EXCLUDED.write_token,
-        synced_at = EXCLUDED.synced_at
-      WHERE hana_state_snapshots.revision = ${payload.baseRevision}
-        AND COALESCE(
-          CASE
-            WHEN jsonb_typeof(hana_state_snapshots.state -> 'schemaVersion') = 'number'
-              THEN (hana_state_snapshots.state ->> 'schemaVersion')::integer
-            ELSE 1
-          END,
-          1
-        ) <= ${payload.stateSchemaVersion}
+      ON CONFLICT (profile_id) DO NOTHING
       RETURNING revision, synced_at
     `]
 
@@ -341,7 +356,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     })
 
     const transactionResults = await sql.transaction(syncQueries)
-    const snapshotRows = transactionResults[1]
+    const snapshotRows = transactionResults[1].length
+      ? transactionResults[1]
+      : transactionResults[2]
     if (!snapshotRows.length) {
       const currentRows = await sql`
         SELECT revision, write_token
