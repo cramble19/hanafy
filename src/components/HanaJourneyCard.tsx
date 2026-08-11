@@ -22,14 +22,6 @@ const MILESTONES = [
   { level: 5, flowers: 35 },
 ] as const
 
-const RING_BLOSSOMS = [
-  { level: 1, x: 67, y: 65, scale: 0.78 },
-  { level: 2, x: 36, y: 126, scale: 0.9 },
-  { level: 3, x: 67, y: 199, scale: 1 },
-  { level: 4, x: 137, y: 228, scale: 1.04 },
-  { level: 5, x: 211, y: 184, scale: 1.1 },
-] as const
-
 export function HanaJourneyCard({
   totalFlowers,
   levelProgress,
@@ -102,26 +94,6 @@ export function HanaJourneyCard({
             pathLength="100"
             style={progressStyle}
           />
-          <path
-            className="hana-journey-vine"
-            d="M128 25 C68 20 25 67 25 128 C25 190 73 235 133 235"
-          />
-          <g className="hana-journey-leaves">
-            <path d="M75 42 C62 35 57 45 70 52 C77 55 82 49 75 42Z" />
-            <path d="M50 72 C35 68 35 81 49 85 C57 86 60 78 50 72Z" />
-            <path d="M31 112 C18 105 14 118 27 125 C34 128 40 119 31 112Z" />
-            <path d="M33 163 C20 169 26 181 39 174 C46 169 42 161 33 163Z" />
-            <path d="M57 202 C48 213 59 222 69 210 C73 203 65 197 57 202Z" />
-            <path d="M98 228 C94 243 108 244 112 230 C112 221 102 220 98 228Z" />
-          </g>
-          {RING_BLOSSOMS.map((blossom, index) => (
-            <JourneyBlossom
-              key={blossom.level}
-              {...blossom}
-              visible={levelProgress.level >= blossom.level && blossom.level <= 5}
-              delay={index * 110}
-            />
-          ))}
         </svg>
 
         <span className="hana-journey-percent" aria-hidden="true">
@@ -130,11 +102,6 @@ export function HanaJourneyCard({
         <span className="hana-journey-ring-copy">
           <strong>Level {levelProgress.level}</strong>
           <span>{safeTotal} flowers</span>
-        </span>
-        <span className="hana-journey-petals" aria-hidden="true">
-          <i />
-          <i />
-          <i />
         </span>
       </div>
 
@@ -189,43 +156,5 @@ export function HanaJourneyCard({
         </div>
       </details>
     </section>
-  )
-}
-
-function JourneyBlossom({
-  x,
-  y,
-  scale,
-  visible,
-  delay,
-}: {
-  x: number
-  y: number
-  scale: number
-  visible: boolean
-  delay: number
-}) {
-  return (
-    <g
-      className="hana-journey-ring-blossom"
-      data-visible={visible}
-      style={{ '--blossom-delay': `${delay}ms` } as CSSProperties}
-      transform={`translate(${x} ${y}) scale(${scale})`}
-    >
-      {[0, 72, 144, 216, 288].map((rotation, index) => (
-        <ellipse
-          key={rotation}
-          cx="0"
-          cy="-7"
-          rx="4.6"
-          ry="7.4"
-          fill={index % 2 ? '#f3c4cf' : '#f7d4db'}
-          stroke="#a86f79"
-          strokeWidth="0.85"
-          transform={`rotate(${rotation})`}
-        />
-      ))}
-      <circle r="3.2" fill="#f0c46e" stroke="#a86f79" strokeWidth="0.8" />
-    </g>
   )
 }

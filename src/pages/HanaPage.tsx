@@ -22,6 +22,12 @@ import { QuestSection } from '@/components/QuestSection'
 import { AvailableQuestsSection } from '@/components/AvailableQuestsSection'
 import { HanaJourneyCard } from '@/components/HanaJourneyCard'
 import {
+  TrackerViewTabs,
+  trackerViewPanelId,
+  trackerViewTabId,
+  type TrackerView,
+} from '@/components/TrackerViewTabs'
+import {
   PausedHabitsCard,
   ProfilePauseBanner,
   TodayProgressCard,
@@ -191,6 +197,7 @@ export function HanaPage({
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [infoQuestId, setInfoQuestId] = useState<string | null>(null)
+  const [trackerView, setTrackerView] = useState<TrackerView>('quests')
   const catalog = getQuestCatalog(quests, game)
   const openActivities = getOpenActivityCatalog(game)
   const levelProgress = getLevelProgress(game.totalFlowers)
@@ -351,89 +358,117 @@ export function HanaPage({
         onChange={onSetDailyEmotion}
       />
 
-      <TodayProgressCard
+      <TrackerViewTabs
         profile="hana"
-        complete={todayComplete}
-        total={todayTotal}
-      />
-      {activeProfilePause ? (
-        <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
-      ) : null}
-      {!activeProfilePause ? (
-        <main className="mt-6 space-y-8">
-          <QuestSection
-            title="Daily Quests"
-            quests={visibleQuests.daily}
-            checkedIds={dailyCheckedIds}
-            skippedIds={skippedIds}
-            periodProgressById={periodProgressById}
-            onOpenInfo={setInfoQuestId}
-            onToggle={onToggle}
-          />
-          <QuestSection
-            title="Long Term Quests"
-            quests={visibleQuests.longTerm}
-            checkedIds={longTermCheckedIds}
-            skippedIds={skippedIds}
-            onOpenInfo={setInfoQuestId}
-            onToggle={onToggle}
-          />
-          <AnytimeLogSection
-            profile="hana"
-            activities={activeOpenActivities}
-            todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
-            onIncrement={onIncrementOpenActivity}
-            onDecrement={onDecrementOpenActivity}
-            onSetRating={onSetOpenActivityRating}
-            onManage={setManagedActivityId}
-          />
-          <AvailableQuestsSection
-            quests={questsReadyToAdd}
-            activationDates={game.questActivations ?? {}}
-            currentDate={game.currentDate}
-            onAdd={onActivateQuest}
-          />
-        </main>
-      ) : null}
-
-      <PausedHabitsCard
-        habits={[...pausedHabits, ...pausedOpenActivities]}
-        onResume={onResumeHabit}
-        onManage={(itemId) => {
-          if (openActivities.some((activity) => activity.id === itemId)) {
-            setManagedActivityId(itemId)
-          } else {
-            setManagedHabitId(itemId)
-          }
-        }}
+        value={trackerView}
+        onChange={setTrackerView}
       />
 
-      <HanaJourneyCard
-        totalFlowers={game.totalFlowers}
-        levelProgress={levelProgress}
-        springArc={springArc}
-        onOpenGarden={onOpenGarden}
-      />
-
-      <main className="mt-8 space-y-8">
-        <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
-          <span className="font-medium text-ink">Weekly skips:</span>{' '}
-          {skipProgress.remaining}/{skipProgress.limit} left
-          <p className="mt-1 text-xs text-faint">
-            Skips reset every Sunday. A skipped quest gives 0 flowers.
-          </p>
-        </div>
-        {!activeProfilePause ? (
-          <EveningWeeds
-            weeds={eveningWeeds}
-            checkedIds={weedCheckedIds}
-            weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
-            weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
-            wiltedFlowers={weedProgress.wiltedFlowers}
-            onToggle={onToggleWeed}
-          />
+      <section
+        id={trackerViewPanelId('hana', 'quests')}
+        className="tracker-view-panel"
+        role="tabpanel"
+        aria-labelledby={trackerViewTabId('hana', 'quests')}
+        hidden={trackerView !== 'quests'}
+      >
+        <TodayProgressCard
+          profile="hana"
+          complete={todayComplete}
+          total={todayTotal}
+        />
+        {activeProfilePause ? (
+          <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
         ) : null}
-      </main>
+        {!activeProfilePause ? (
+          <div className="mt-6 space-y-8">
+            <QuestSection
+              title="Daily Quests"
+              quests={visibleQuests.daily}
+              checkedIds={dailyCheckedIds}
+              skippedIds={skippedIds}
+              periodProgressById={periodProgressById}
+              onOpenInfo={setInfoQuestId}
+              onToggle={onToggle}
+            />
+            <QuestSection
+              title="Long Term Quests"
+              quests={visibleQuests.longTerm}
+              checkedIds={longTermCheckedIds}
+              skippedIds={skippedIds}
+              onOpenInfo={setInfoQuestId}
+              onToggle={onToggle}
+            />
+            <AvailableQuestsSection
+              quests={questsReadyToAdd}
+              activationDates={game.questActivations ?? {}}
+              currentDate={game.currentDate}
+              onAdd={onActivateQuest}
+            />
+          </div>
+        ) : null}
+
+        <PausedHabitsCard
+          habits={pausedHabits}
+          title="Paused quests"
+          onResume={onResumeHabit}
+          onManage={setManagedHabitId}
+        />
+
+        <HanaJourneyCard
+          totalFlowers={game.totalFlowers}
+          levelProgress={levelProgress}
+          springArc={springArc}
+          onOpenGarden={onOpenGarden}
+        />
+
+        <div className="mt-8 space-y-8">
+          <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
+            <span className="font-medium text-ink">Weekly skips:</span>{' '}
+            {skipProgress.remaining}/{skipProgress.limit} left
+            <p className="mt-1 text-xs text-faint">
+              Skips reset every Sunday. A skipped quest gives 0 flowers.
+            </p>
+          </div>
+          {!activeProfilePause ? (
+            <EveningWeeds
+              weeds={eveningWeeds}
+              checkedIds={weedCheckedIds}
+              weedsTowardNextWilt={weedProgress.weedsTowardNextWilt}
+              weedsPerWiltedFlower={weedProgress.weedsPerWiltedFlower}
+              wiltedFlowers={weedProgress.wiltedFlowers}
+              onToggle={onToggleWeed}
+            />
+          ) : null}
+        </div>
+      </section>
+
+      <section
+        id={trackerViewPanelId('hana', 'anytime')}
+        className="tracker-view-panel"
+        role="tabpanel"
+        aria-labelledby={trackerViewTabId('hana', 'anytime')}
+        hidden={trackerView !== 'anytime'}
+      >
+        {activeProfilePause ? (
+          <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
+        ) : null}
+        <AnytimeLogSection
+          profile="hana"
+          activities={activeOpenActivities}
+          todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
+          disabled={Boolean(activeProfilePause)}
+          onIncrement={onIncrementOpenActivity}
+          onDecrement={onDecrementOpenActivity}
+          onSetRating={onSetOpenActivityRating}
+          onManage={setManagedActivityId}
+        />
+        <PausedHabitsCard
+          habits={pausedOpenActivities}
+          title="Paused anytime logs"
+          onResume={onResumeHabit}
+          onManage={setManagedActivityId}
+        />
+      </section>
 
       {showDevControls ? (
         <section className="mt-10 rounded-card border border-dashed border-border bg-surface/70 p-4">

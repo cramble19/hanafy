@@ -40,11 +40,13 @@ export function AnytimeLogSection({
           <HeadingIcon />
         </span>
         <div>
-          <h2 id={titleId}>Anytime logs</h2>
+          <h2 id={titleId}>
+            {profile === 'hana' ? "Today's activity log" : "Today's field log"}
+          </h2>
           <p>
             {profile === 'hana'
-              ? 'No due dates · blank days stay neutral'
-              : 'No deadline · enter a field note when it happens'}
+              ? 'No deadline · record only what happened'
+              : 'No deadline · record what happened'}
           </p>
         </div>
       </div>

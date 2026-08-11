@@ -22,6 +22,12 @@ import { QuestInfoDialog } from '@/components/QuestInfoDialog'
 import { CloudSyncNotice } from '@/components/CloudSyncNotice'
 import { QuestSection } from '@/components/QuestSection'
 import {
+  TrackerViewTabs,
+  trackerViewPanelId,
+  trackerViewTabId,
+  type TrackerView,
+} from '@/components/TrackerViewTabs'
+import {
   PausedHabitsCard,
   ProfilePauseBanner,
   TodayProgressCard,
@@ -176,6 +182,7 @@ export function CramblePage({
   const [isBackfillOpen, setIsBackfillOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [infoQuestId, setInfoQuestId] = useState<string | null>(null)
+  const [trackerView, setTrackerView] = useState<TrackerView>('quests')
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const openActivities = getOpenActivityCatalog(game)
@@ -338,6 +345,19 @@ export function CramblePage({
         onChange={onSetDailyEmotion}
       />
 
+      <TrackerViewTabs
+        profile="cramble"
+        value={trackerView}
+        onChange={setTrackerView}
+      />
+
+      <section
+        id={trackerViewPanelId('cramble', 'quests')}
+        className="tracker-view-panel"
+        role="tabpanel"
+        aria-labelledby={trackerViewTabId('cramble', 'quests')}
+        hidden={trackerView !== 'quests'}
+      >
       <TodayProgressCard
         profile="cramble"
         complete={todayComplete}
@@ -369,28 +389,14 @@ export function CramblePage({
               onToggle={onToggle}
             />
           ) : null}
-          <AnytimeLogSection
-            profile="cramble"
-            activities={activeOpenActivities}
-            todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
-            onIncrement={onIncrementOpenActivity}
-            onDecrement={onDecrementOpenActivity}
-            onSetRating={onSetOpenActivityRating}
-            onManage={setManagedActivityId}
-          />
         </main>
       ) : null}
 
       <PausedHabitsCard
-        habits={[...pausedHabits, ...pausedOpenActivities]}
+        habits={pausedHabits}
+        title="Paused lessons"
         onResume={onResumeHabit}
-        onManage={(itemId) => {
-          if (openActivities.some((activity) => activity.id === itemId)) {
-            setManagedActivityId(itemId)
-          } else {
-            setManagedHabitId(itemId)
-          }
-        }}
+        onManage={setManagedHabitId}
       />
 
       <section className="cramble-codex-card relative z-10 mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
@@ -495,6 +501,35 @@ export function CramblePage({
             ? `${chapter.nextChapter} now waits beyond the archive doors.`
             : `${chapter.renownRemaining} more renown remains in this first, gentle oath.`}
         </p>
+      </section>
+      </section>
+
+      <section
+        id={trackerViewPanelId('cramble', 'anytime')}
+        className="tracker-view-panel"
+        role="tabpanel"
+        aria-labelledby={trackerViewTabId('cramble', 'anytime')}
+        hidden={trackerView !== 'anytime'}
+      >
+        {activeProfilePause ? (
+          <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
+        ) : null}
+        <AnytimeLogSection
+          profile="cramble"
+          activities={activeOpenActivities}
+          todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
+          disabled={Boolean(activeProfilePause)}
+          onIncrement={onIncrementOpenActivity}
+          onDecrement={onDecrementOpenActivity}
+          onSetRating={onSetOpenActivityRating}
+          onManage={setManagedActivityId}
+        />
+        <PausedHabitsCard
+          habits={pausedOpenActivities}
+          title="Paused field logs"
+          onResume={onResumeHabit}
+          onManage={setManagedActivityId}
+        />
       </section>
 
       {showDevControls ? (

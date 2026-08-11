@@ -1083,7 +1083,7 @@ select.add-habit-input {
 .hana-journey-ring-track,
 .hana-journey-ring-progress {
   fill: none;
-  stroke-width: 7;
+  stroke-width: 10;
   transform: rotate(-90deg);
   transform-origin: 130px 130px;
 }
@@ -1093,45 +1093,10 @@ select.add-habit-input {
 }
 
 .hana-journey-ring-progress {
-  stroke: #8ca56f;
+  stroke: #789467;
   stroke-dasharray: 100;
   stroke-linecap: round;
   transition: stroke-dashoffset 950ms cubic-bezier(0.22, 0.72, 0.24, 1);
-}
-
-.hana-journey-vine {
-  fill: none;
-  stroke: #607f51;
-  stroke-linecap: round;
-  stroke-width: 2.1;
-  opacity: 0;
-  transition: opacity 420ms ease 180ms;
-}
-
-.hana-journey-card[data-visible="true"] .hana-journey-vine {
-  opacity: 0.82;
-}
-
-.hana-journey-leaves {
-  fill: #87a76f;
-  stroke: #557849;
-  stroke-width: 0.8;
-  opacity: 0;
-  transition: opacity 520ms ease 320ms;
-}
-
-.hana-journey-card[data-visible="true"] .hana-journey-leaves {
-  opacity: 0.92;
-}
-
-.hana-journey-ring-blossom {
-  opacity: 0;
-}
-
-.hana-journey-card[data-visible="true"]
-  .hana-journey-ring-blossom[data-visible="true"] {
-  animation: hana-journey-bloom 420ms cubic-bezier(0.2, 0.74, 0.25, 1.2) both;
-  animation-delay: calc(300ms + var(--blossom-delay));
 }
 
 .hana-journey-ring-copy {
@@ -1171,44 +1136,6 @@ select.add-habit-input {
   font-weight: 600;
 }
 
-.hana-journey-petals {
-  position: absolute;
-  right: 10%;
-  top: 48%;
-  width: 2.5rem;
-  height: 4rem;
-  pointer-events: none;
-}
-
-.hana-journey-petals i {
-  position: absolute;
-  width: 0.42rem;
-  height: 0.68rem;
-  border-radius: 9999px 9999px 9999px 0;
-  background: rgba(238, 166, 183, 0.74);
-  opacity: 0;
-}
-
-.hana-journey-card[data-visible="true"] .hana-journey-petals i {
-  animation: hana-journey-petal 1.25s ease-out both;
-}
-
-.hana-journey-petals i:nth-child(1) {
-  left: 0;
-  animation-delay: 720ms !important;
-}
-
-.hana-journey-petals i:nth-child(2) {
-  left: 1.1rem;
-  top: 0.6rem;
-  animation-delay: 850ms !important;
-}
-
-.hana-journey-petals i:nth-child(3) {
-  right: 0;
-  top: 1.4rem;
-  animation-delay: 980ms !important;
-}
 
 .hana-journey-remaining {
   margin-top: -0.3rem;
@@ -3659,21 +3586,6 @@ select.add-habit-input {
     scale: 1;
   }
 }
-@keyframes hana-journey-petal {
-  0% {
-    opacity: 0;
-    translate: 0 0;
-    rotate: 0deg;
-  }
-  24% {
-    opacity: 0.78;
-  }
-  100% {
-    opacity: 0;
-    translate: 0.7rem 1.8rem;
-    rotate: 95deg;
-  }
-}
 @keyframes reward-rise {
   from {
     opacity: 0;
@@ -3827,9 +3739,7 @@ select.add-habit-input {
   .home-memory-overlay,
   .home-memory-card,
   .flower-pulse,
-  .hana-journey-ring-blossom,
   .hana-journey-milestone-icon,
-  .hana-journey-petals i,
   .quest-bloom-sparkles span,
   .quest-flower-feedback,
   .spring-petal,
@@ -3850,10 +3760,12 @@ select.add-habit-input {
     animation: none;
   }
   .hana-journey-ring-progress,
-  .hana-journey-vine,
-  .hana-journey-leaves,
   .hana-journey-milestone-line > span,
   .hana-journey-milestone-line > i {
+    transition: none;
+  }
+  .tracker-view-tabs button,
+  .tracker-view-tabs button::after {
     transition: none;
   }
   .cramble-forge-spark {
@@ -4057,6 +3969,82 @@ select.add-habit-input {
   .quest-info-track > span {
     transition: none;
   }
+}
+
+/* Scheduled quests and neutral logs are separate Today views. */
+.tracker-view-tabs {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.tracker-view-tabs button {
+  position: relative;
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  padding: 0.65rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  outline: none;
+  transition: color 150ms ease;
+}
+
+.tracker-view-tabs button::after {
+  content: "";
+  position: absolute;
+  right: 19%;
+  bottom: -1px;
+  left: 19%;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: transparent;
+  transform: scaleX(0.55);
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.tracker-view-tabs button[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+
+.tracker-view-tabs-hana button[aria-selected="true"] {
+  color: #527447;
+}
+
+.tracker-view-tabs-hana button[aria-selected="true"]::after {
+  background: #527447;
+}
+
+.tracker-view-tabs-cramble button[aria-selected="true"] {
+  color: var(--cramble-brass);
+}
+
+.tracker-view-tabs-cramble button[aria-selected="true"]::after {
+  background: var(--cramble-brass);
+}
+
+.tracker-view-tabs button:focus-visible {
+  border-radius: 0.75rem;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 58%, transparent);
+}
+
+.tracker-view-panel {
+  position: relative;
+  z-index: 10;
+  min-width: 0;
+}
+
+.tracker-view-panel[hidden] {
+  display: none;
+}
+
+.tracker-view-panel > .anytime-log-section {
+  margin-top: 1rem;
 }
 
 /* Habit lifecycle, recovery, and Today-first controls */

@@ -121,17 +121,19 @@ export function PausedHabitsCard({
   habits,
   onResume,
   onManage,
+  title = 'Paused habits & logs',
 }: {
   habits: PausedTrackerItem[]
   onResume: (habitId: string) => void
   onManage: (habitId: string) => void
+  title?: string
 }) {
   if (!habits.length) return null
   return (
     <section className="paused-habits-card">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">Neutral for now</p>
-        <h2 className="mt-1 text-lg font-semibold text-ink">Paused habits &amp; logs</h2>
+        <h2 className="mt-1 text-lg font-semibold text-ink">{title}</h2>
       </div>
       <div className="mt-3 space-y-2">
         {habits.map((habit) => (
