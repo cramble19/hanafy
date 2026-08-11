@@ -1102,7 +1102,7 @@ select.add-habit-input {
 .hana-journey-ring-copy {
   position: absolute;
   left: 50%;
-  top: 51%;
+  top: 50%;
   display: grid;
   justify-items: center;
   transform: translate(-50%, -50%);
@@ -1120,20 +1120,19 @@ select.add-habit-input {
   white-space: nowrap;
 }
 
-.hana-journey-ring-copy span {
+.hana-journey-flower-count {
   margin-top: 0.45rem;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.02rem;
 }
 
 .hana-journey-percent {
-  position: absolute;
-  right: 9%;
-  top: 26%;
+  margin-bottom: 0.5rem;
   color: #557849;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.55rem;
   font-weight: 600;
+  line-height: 1;
 }
 
 

@@ -96,12 +96,12 @@ export function HanaJourneyCard({
           />
         </svg>
 
-        <span className="hana-journey-percent" aria-hidden="true">
-          {overallPercent}%
-        </span>
         <span className="hana-journey-ring-copy">
+          <span className="hana-journey-percent" aria-hidden="true">
+            {overallPercent}%
+          </span>
           <strong>Level {levelProgress.level}</strong>
-          <span>{safeTotal} flowers</span>
+          <span className="hana-journey-flower-count">{safeTotal} flowers</span>
         </span>
       </div>
 

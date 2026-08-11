@@ -26,6 +26,9 @@ describe('HanaJourneyCard', () => {
     expect(html).toContain('Your garden journey')
     expect(html).toContain('Level 3')
     expect(html).toContain('18 flowers')
+    expect(html).toContain(
+      '<span class="hana-journey-percent" aria-hidden="true">51%</span><strong>Level 3</strong>',
+    )
     expect(html).toContain('17 flowers to complete Spring')
     expect(html).toContain('6 of 10 flowers collected toward Level 4')
     expect(html).toContain('aria-valuenow="18"')
