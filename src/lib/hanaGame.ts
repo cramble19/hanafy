@@ -761,7 +761,9 @@ export function getSpringArcProgress(state: HanaGameState) {
     100,
     Math.round((level / SPRING_ARC.targetLevel) * 100),
   )
-  const percent = Math.min(flowerPercent, levelPercent)
+  // Spring's target level is reached at the same 35-flower milestone, so the
+  // flower total is the continuous source of truth for every journey view.
+  const percent = flowerPercent
 
   return {
     ...SPRING_ARC,

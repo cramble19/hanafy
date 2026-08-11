@@ -6,6 +6,7 @@ import {
   getLongTermQuestStatus,
   getQuestScheduleProgress,
   getSkipProgress,
+  getSpringArcProgress,
   hasValidQuestSchedule,
   parseStoredHanaState,
   recomputeTotalFlowers,
@@ -13,6 +14,24 @@ import {
   todayKey,
   visibleQuestsForState,
 } from './hanaGame'
+
+describe('Hana Spring journey', () => {
+  it('keeps progress continuous between level milestones', () => {
+    const state = {
+      ...createStartedHanaState('2026-08-11'),
+      totalFlowers: 34,
+    }
+
+    expect(getSpringArcProgress(state)).toMatchObject({
+      level: 4,
+      percent: 97,
+      flowerPercent: 97,
+      levelPercent: 80,
+      flowersRemaining: 1,
+      isComplete: false,
+    })
+  })
+})
 
 describe('Hana game date sync', () => {
   it('uses 4:00 AM as the shared Today boundary', () => {

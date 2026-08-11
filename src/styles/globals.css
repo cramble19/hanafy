@@ -484,57 +484,6 @@ body {
   animation: flower-pulse 2.8s ease-in-out infinite;
 }
 
-.mini-garden-card {
-  display: grid;
-  grid-template-columns: 6.4rem minmax(0, 1fr);
-  gap: 1rem;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 244, 191, 0.42), transparent 28%),
-    linear-gradient(135deg, rgba(253, 243, 227, 0.84), rgba(255, 255, 255, 0.76));
-  padding: 0.7rem;
-  box-shadow: 0 12px 28px -22px rgba(43, 38, 32, 0.35);
-}
-.mini-garden-sky {
-  position: relative;
-  min-height: 4.6rem;
-  overflow: hidden;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 76% 22%, rgba(255, 244, 191, 0.74), transparent 16%),
-    linear-gradient(180deg, #222b5a, #6f8d5f);
-}
-.mini-garden-sky::after {
-  content: "";
-  position: absolute;
-  inset-inline: -10%;
-  bottom: -1.1rem;
-  height: 2.8rem;
-  border-radius: 50% 50% 0 0;
-  background: linear-gradient(180deg, #7ca06a, #527746);
-}
-.mini-garden-moon {
-  position: absolute;
-  right: 0.75rem;
-  top: 0.62rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 9999px;
-  background: #fff4bf;
-  box-shadow: 0 0 16px rgba(255, 244, 191, 0.72);
-}
-.mini-garden-flower {
-  position: absolute;
-  bottom: 0.45rem;
-  z-index: 1;
-  width: 1.45rem;
-  height: 2.2rem;
-  transform: translateX(-50%);
-  animation: mini-bloom 520ms cubic-bezier(0.2, 0, 0, 1) backwards;
-}
-
 .profile-action-bar {
   position: sticky;
   bottom: max(0.8rem, env(safe-area-inset-bottom));
@@ -1032,11 +981,405 @@ select.add-habit-input {
   line-height: 1.72;
 }
 
-.spring-arc-card {
+.hana-journey-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(168, 111, 121, 0.2);
+  border-radius: var(--radius-xl);
   background:
-    radial-gradient(circle at 85% 8%, rgba(247, 166, 190, 0.26), transparent 28%),
-    radial-gradient(circle at 8% 0%, rgba(255, 240, 196, 0.62), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(247, 166, 190, 0.16), transparent 24%),
+    radial-gradient(circle at 12% 0%, rgba(255, 240, 196, 0.52), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(253, 243, 227, 0.86)),
     var(--surface);
+  padding: 1.35rem 1.1rem 1.2rem;
+  box-shadow:
+    0 20px 44px -32px rgba(79, 60, 36, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.hana-journey-heading {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.hana-journey-heading p {
+  color: #557849;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hana-journey-heading h2 {
+  margin-top: 0.28rem;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.55rem, 7vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.hana-journey-corner {
+  position: absolute;
+  top: 1rem;
+  z-index: 1;
+  width: 2.2rem;
+  height: 3rem;
+  opacity: 0.5;
+}
+
+.hana-journey-corner::before,
+.hana-journey-corner::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px 9999px 9999px 0;
+  border: 1px solid rgba(120, 171, 99, 0.58);
+  rotate: 34deg;
+}
+
+.hana-journey-corner::before {
+  top: 0.2rem;
+  width: 0.52rem;
+  height: 1rem;
+}
+
+.hana-journey-corner::after {
+  top: 1.2rem;
+  left: 0.72rem;
+  width: 0.44rem;
+  height: 0.86rem;
+  rotate: 68deg;
+}
+
+.hana-journey-corner-left {
+  left: 1rem;
+  border-left: 1px solid rgba(120, 171, 99, 0.44);
+  border-radius: 50% 0 0 0;
+}
+
+.hana-journey-corner-right {
+  right: 1rem;
+  border-right: 1px solid rgba(120, 171, 99, 0.44);
+  border-radius: 0 50% 0 0;
+  transform: scaleX(-1);
+}
+
+.hana-journey-ring {
+  position: relative;
+  width: min(100%, 18.5rem);
+  margin: 0.55rem auto 0;
+}
+
+.hana-journey-ring > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.hana-journey-ring-track,
+.hana-journey-ring-progress {
+  fill: none;
+  stroke-width: 7;
+  transform: rotate(-90deg);
+  transform-origin: 130px 130px;
+}
+
+.hana-journey-ring-track {
+  stroke: rgba(120, 171, 99, 0.16);
+}
+
+.hana-journey-ring-progress {
+  stroke: #8ca56f;
+  stroke-dasharray: 100;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 950ms cubic-bezier(0.22, 0.72, 0.24, 1);
+}
+
+.hana-journey-vine {
+  fill: none;
+  stroke: #607f51;
+  stroke-linecap: round;
+  stroke-width: 2.1;
+  opacity: 0;
+  transition: opacity 420ms ease 180ms;
+}
+
+.hana-journey-card[data-visible="true"] .hana-journey-vine {
+  opacity: 0.82;
+}
+
+.hana-journey-leaves {
+  fill: #87a76f;
+  stroke: #557849;
+  stroke-width: 0.8;
+  opacity: 0;
+  transition: opacity 520ms ease 320ms;
+}
+
+.hana-journey-card[data-visible="true"] .hana-journey-leaves {
+  opacity: 0.92;
+}
+
+.hana-journey-ring-blossom {
+  opacity: 0;
+}
+
+.hana-journey-card[data-visible="true"]
+  .hana-journey-ring-blossom[data-visible="true"] {
+  animation: hana-journey-bloom 420ms cubic-bezier(0.2, 0.74, 0.25, 1.2) both;
+  animation-delay: calc(300ms + var(--blossom-delay));
+}
+
+.hana-journey-ring-copy {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  display: grid;
+  justify-items: center;
+  transform: translate(-50%, -50%);
+  color: var(--ink);
+  text-align: center;
+}
+
+.hana-journey-ring-copy strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 8vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hana-journey-ring-copy span {
+  margin-top: 0.45rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+}
+
+.hana-journey-percent {
+  position: absolute;
+  right: 9%;
+  top: 26%;
+  color: #557849;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.hana-journey-petals {
+  position: absolute;
+  right: 10%;
+  top: 48%;
+  width: 2.5rem;
+  height: 4rem;
+  pointer-events: none;
+}
+
+.hana-journey-petals i {
+  position: absolute;
+  width: 0.42rem;
+  height: 0.68rem;
+  border-radius: 9999px 9999px 9999px 0;
+  background: rgba(238, 166, 183, 0.74);
+  opacity: 0;
+}
+
+.hana-journey-card[data-visible="true"] .hana-journey-petals i {
+  animation: hana-journey-petal 1.25s ease-out both;
+}
+
+.hana-journey-petals i:nth-child(1) {
+  left: 0;
+  animation-delay: 720ms !important;
+}
+
+.hana-journey-petals i:nth-child(2) {
+  left: 1.1rem;
+  top: 0.6rem;
+  animation-delay: 850ms !important;
+}
+
+.hana-journey-petals i:nth-child(3) {
+  right: 0;
+  top: 1.4rem;
+  animation-delay: 980ms !important;
+}
+
+.hana-journey-remaining {
+  margin-top: -0.3rem;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.1rem, 5.2vw, 1.35rem);
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.hana-journey-milestones {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 1.25rem;
+}
+
+.hana-journey-milestone-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 0.98rem;
+  z-index: 0;
+  height: 2px;
+  overflow: visible;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(120, 171, 99, 0.28) 0 8px,
+    transparent 8px 14px
+  );
+}
+
+.hana-journey-milestone-line > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  max-width: 100%;
+  background: #668759;
+  transition: width 950ms cubic-bezier(0.22, 0.72, 0.24, 1);
+}
+
+.hana-journey-milestone-line > i {
+  position: absolute;
+  top: 50%;
+  width: 0.72rem;
+  height: 0.72rem;
+  border: 2px solid #fffaf3;
+  border-radius: 9999px;
+  background: #668759;
+  box-shadow: 0 0 0 1px #668759;
+  transform: translate(-50%, -50%);
+  transition: left 950ms cubic-bezier(0.22, 0.72, 0.24, 1);
+}
+
+.hana-journey-milestone {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  color: var(--muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.hana-journey-milestone-icon {
+  display: block;
+  width: 2.05rem;
+  height: 2.05rem;
+  margin-bottom: 0.34rem;
+  border-radius: 9999px;
+  background: #fffaf3;
+  filter: grayscale(0.65);
+  opacity: 0.48;
+}
+
+.hana-journey-milestone[data-reached="true"] {
+  color: var(--ink);
+}
+
+.hana-journey-milestone[data-reached="true"] .hana-journey-milestone-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.hana-journey-card[data-visible="true"]
+  .hana-journey-milestone[data-reached="true"]
+  .hana-journey-milestone-icon {
+  animation: hana-journey-bloom 380ms cubic-bezier(0.2, 0.74, 0.25, 1.2) both;
+  animation-delay: calc(420ms + var(--milestone-delay));
+}
+
+.hana-journey-milestone strong {
+  font-size: 0.86rem;
+}
+
+.hana-journey-garden-button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 3.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 1.35rem;
+  border: 1px solid #527147;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #6e8f5d, #506f46);
+  color: #fffaf3;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 14px 26px -20px rgba(44, 74, 38, 0.72);
+  outline: none;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.hana-journey-garden-button:active {
+  transform: scale(0.985);
+}
+
+.hana-journey-garden-button:focus-visible,
+.hana-journey-details summary:focus-visible {
+  outline: 2px solid #557849;
+  outline-offset: 3px;
+}
+
+.hana-journey-details {
+  margin-top: 0.85rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.hana-journey-details summary {
+  width: fit-content;
+  margin-inline: auto;
+  color: #557849;
+  cursor: pointer;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.96rem;
+  font-weight: 600;
+  list-style: none;
+  outline: none;
+}
+
+.hana-journey-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.hana-journey-details summary::after {
+  content: " +";
+  font-family: Inter, sans-serif;
+}
+
+.hana-journey-details[open] summary::after {
+  content: " −";
+}
+
+.hana-journey-details > div {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  border: 1px solid rgba(120, 171, 99, 0.18);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.8rem;
 }
 
 .stats-page-shell {
@@ -3306,16 +3649,29 @@ select.add-habit-input {
     transform: scale(1.06) rotate(2deg);
   }
 }
-@keyframes mini-bloom {
+@keyframes hana-journey-bloom {
   from {
     opacity: 0;
-    translate: 0 0.8rem;
-    scale: 0.68;
+    scale: 0.62;
   }
   to {
     opacity: 1;
-    translate: 0 0;
     scale: 1;
+  }
+}
+@keyframes hana-journey-petal {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  24% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    translate: 0.7rem 1.8rem;
+    rotate: 95deg;
   }
 }
 @keyframes reward-rise {
@@ -3471,7 +3827,9 @@ select.add-habit-input {
   .home-memory-overlay,
   .home-memory-card,
   .flower-pulse,
-  .mini-garden-flower,
+  .hana-journey-ring-blossom,
+  .hana-journey-milestone-icon,
+  .hana-journey-petals i,
   .quest-bloom-sparkles span,
   .quest-flower-feedback,
   .spring-petal,
@@ -3490,6 +3848,13 @@ select.add-habit-input {
   .habit-momentum-emoji,
   .planted-flower {
     animation: none;
+  }
+  .hana-journey-ring-progress,
+  .hana-journey-vine,
+  .hana-journey-leaves,
+  .hana-journey-milestone-line > span,
+  .hana-journey-milestone-line > i {
+    transition: none;
   }
   .cramble-forge-spark {
     opacity: 0;

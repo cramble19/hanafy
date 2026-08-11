@@ -20,6 +20,7 @@ import { QuestInfoDialog } from '@/components/QuestInfoDialog'
 import { CloudSyncNotice } from '@/components/CloudSyncNotice'
 import { QuestSection } from '@/components/QuestSection'
 import { AvailableQuestsSection } from '@/components/AvailableQuestsSection'
+import { HanaJourneyCard } from '@/components/HanaJourneyCard'
 import {
   PausedHabitsCard,
   ProfilePauseBanner,
@@ -407,43 +408,12 @@ export function HanaPage({
         }}
       />
 
-      <section className="mb-8 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-muted">Flower balance</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
-              {game.totalFlowers} 🌸
-            </p>
-          </div>
-          <FlowerMark className="size-14 flower-pulse" />
-        </div>
-
-        <div className="mt-5">
-          <div className="mb-2 flex justify-between text-xs font-medium text-muted">
-            <span>Level {levelProgress.level}</span>
-            <span>
-              {levelProgress.collectedThisLevel}/{levelProgress.neededThisLevel}{' '}
-              flowers
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-            <div
-              className="h-full rounded-full bg-success transition-all duration-500"
-              style={{ width: `${levelProgress.percent}%` }}
-            />
-          </div>
-          <p className="mt-2 text-xs text-faint">
-            New gentle quests become available as Hana collects flowers. Hana
-            adds them only when she feels ready.
-          </p>
-        </div>
-
-        <MiniGardenPreview
-          totalFlowers={game.totalFlowers}
-          springPercent={springArc.percent}
-          onOpenGarden={onOpenGarden}
-        />
-      </section>
+      <HanaJourneyCard
+        totalFlowers={game.totalFlowers}
+        levelProgress={levelProgress}
+        springArc={springArc}
+        onOpenGarden={onOpenGarden}
+      />
 
       <main className="mt-8 space-y-8">
         <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
@@ -464,54 +434,6 @@ export function HanaPage({
           />
         ) : null}
       </main>
-
-      <section className="spring-arc-card mt-10 overflow-hidden rounded-card border border-border bg-surface p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-faint">
-              Arc {springArc.arcNumber}: {springArc.season}
-            </p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
-              {springArc.isComplete ? 'First bloom unlocked' : 'Make spring bloom'}
-            </h2>
-          </div>
-          <div className="rounded-full bg-surface/80 px-3 py-1 text-xs font-semibold text-ink shadow-sm">
-            {springArc.percent}%
-          </div>
-        </div>
-
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/65">
-          <div
-            className="h-full rounded-full bg-success transition-all duration-500"
-            style={{ width: `${springArc.percent}%` }}
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-control bg-white/60 p-3">
-            <p className="text-xs font-medium text-faint">Spring level</p>
-            <p className="mt-1 font-semibold text-ink">
-              Level {Math.min(levelProgress.level, springArc.targetLevel)}/
-              {springArc.targetLevel}
-            </p>
-          </div>
-          <div className="rounded-control bg-white/60 p-3">
-            <p className="text-xs font-medium text-faint">Garden fullness</p>
-            <p className="mt-1 font-semibold text-ink">
-              {Math.min(game.totalFlowers, springArc.targetFlowers)}/
-              {springArc.targetFlowers} flowers
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-4 text-sm leading-6 text-muted">
-          {springArc.isComplete
-            ? `Spring is fully bloomed. ${springArc.nextSeason} will bring ${springArc.nextTheme.toLowerCase()}.`
-            : springArc.flowersRemaining > 0
-              ? `${springArc.flowersRemaining} more flowers to finish this gentle first season.`
-              : 'Reach the Spring level target to close Arc 1.'}
-        </p>
-      </section>
 
       {showDevControls ? (
         <section className="mt-10 rounded-card border border-dashed border-border bg-surface/70 p-4">
@@ -756,78 +678,6 @@ export function HanaPage({
         />
       ) : null}
     </div>
-  )
-}
-
-function MiniGardenPreview({
-  totalFlowers,
-  springPercent,
-  onOpenGarden,
-}: {
-  totalFlowers: number
-  springPercent: number
-  onOpenGarden: () => void
-}) {
-  const bloomCount = Math.min(5, Math.max(1, Math.ceil(springPercent / 20)))
-
-  return (
-    <button
-      type="button"
-      onClick={onOpenGarden}
-      className="mini-garden-card mt-5 w-full text-left transition active:scale-[0.98] motion-reduce:transition-none"
-      aria-label="Open Hana's night garden"
-    >
-      <span className="mini-garden-sky" aria-hidden="true">
-        <span className="mini-garden-moon" />
-        {Array.from({ length: bloomCount }, (_, index) => (
-          <MiniBloom key={index} index={index} />
-        ))}
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold text-ink">
-          Night garden preview
-        </span>
-        <span className="mt-0.5 block text-xs leading-5 text-muted">
-          {totalFlowers === 0
-            ? 'Plant the first flower today.'
-            : `${totalFlowers} net flowers are blooming under the moon.`}
-        </span>
-      </span>
-    </button>
-  )
-}
-
-function MiniBloom({ index }: { index: number }) {
-  const left = 18 + index * 13
-  const colors = ['#f7a6be', '#d98ba0', '#f1b56f', '#9e8fd0', '#8fb48a']
-
-  return (
-    <svg
-      viewBox="0 0 24 34"
-      className="mini-garden-flower"
-      style={{ left: `${left}%`, animationDelay: `${index * 120}ms` }}
-      aria-hidden="true"
-    >
-      <path
-        d="M12 31 C12 23 12 17 12 11"
-        fill="none"
-        stroke="#78ab63"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      {[0, 72, 144, 216, 288].map((deg) => (
-        <ellipse
-          key={deg}
-          cx="12"
-          cy="9"
-          rx="3.5"
-          ry="6"
-          fill={colors[index % colors.length]}
-          transform={`rotate(${deg} 12 12)`}
-        />
-      ))}
-      <circle cx="12" cy="12" r="2.8" fill="#eea63a" />
-    </svg>
   )
 }
 
