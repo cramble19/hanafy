@@ -4457,6 +4457,7 @@ select.add-habit-input {
 .together-hero-card,
 .together-profile-card,
 .together-trend-card,
+.together-emotion-card,
 .together-strongest-card,
 .together-status-card {
   border: 1px solid rgba(111, 85, 46, 0.14);
@@ -4563,6 +4564,88 @@ select.add-habit-input {
 .together-trend-card {
   border-radius: 1.3rem;
   padding: 1rem 0.8rem 0.5rem;
+}
+
+.together-emotion-card {
+  border-radius: 1.3rem;
+  padding: 1rem 0.8rem 0.85rem;
+}
+
+.together-emotion-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.together-emotion-range {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem;
+  border: 1px solid rgba(111, 85, 46, 0.14);
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: rgba(247, 239, 226, 0.9);
+}
+
+.together-emotion-range button {
+  min-height: 2.75rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.72rem;
+  color: #675e52;
+  font-size: 0.7rem;
+  font-weight: 700;
+  outline: none;
+  transition:
+    transform 150ms ease,
+    color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.together-emotion-range button[aria-pressed='true'] {
+  color: #fffaf0;
+  background: #40372f;
+  box-shadow: 0 8px 18px -12px rgba(43, 38, 32, 0.85);
+}
+
+.together-emotion-range button:active {
+  transform: scale(0.96);
+}
+
+.together-emotion-range button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(64, 55, 47, 0.2);
+}
+
+.together-emotion-grid {
+  stroke-dasharray: none;
+}
+
+.together-emotion-axis {
+  font-size: 16px;
+}
+
+.together-emotion-date {
+  font-size: 15px;
+}
+
+.together-emotion-dot-hana {
+  fill: #fffdf8;
+  stroke-width: 1.8;
+}
+
+.together-emotion-dot-cramble {
+  fill: var(--together-cramble);
+  stroke: #fffdf8;
+  stroke-width: 1.6;
+}
+
+.together-emotion-caption {
+  margin-top: 0.6rem;
+  color: #675e52;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 
 .together-chart-legend {
@@ -4789,12 +4872,22 @@ select.add-habit-input {
   .together-strongest-rate small {
     text-align: left;
   }
+
+  .together-emotion-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .together-emotion-range {
+    align-self: flex-start;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .home-together-card,
   .together-back-button,
   .together-range-button,
+  .together-emotion-range button,
   .together-home-button,
   .together-paths > path:first-of-type,
   .together-paths > path:nth-of-type(2) {

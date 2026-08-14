@@ -3,6 +3,8 @@ import type { DailyEmotion, GameState } from '@/types'
 
 export type EmotionHistoryRange = 7 | 30 | 90
 
+export type CombinedEmotionRange = 7 | 30
+
 export type EmotionHistoryDay = {
   dateKey: string
   emotion: DailyEmotion | null
@@ -16,6 +18,19 @@ export type EmotionHistoryStats = {
   recordedDays: number
   mostCommon: DailyEmotion | null
   current: DailyEmotion | null
+}
+
+export type CombinedEmotionDay = {
+  dateKey: string
+  hanaEmotion: DailyEmotion | null
+  crambleEmotion: DailyEmotion | null
+}
+
+export type CombinedEmotionStats = {
+  range: CombinedEmotionRange
+  startDate: string
+  endDate: string
+  days: CombinedEmotionDay[]
 }
 
 export const EMOTIONS_BEST_FIRST: DailyEmotion[] = [
@@ -57,6 +72,41 @@ export function getEmotionHistoryStats(
     mostCommon: getMostCommonEmotion(recorded),
     current: state.dailyEmotions?.[state.currentDate] ?? null,
   }
+}
+
+/**
+ * Builds one shared logical-day axis for Hana and Cramble. The comparison ends
+ * on the earlier profile date and begins only once both started profiles exist;
+ * absent emotion records remain explicit neutral gaps.
+ */
+export function getCombinedEmotionStats(
+  hanaState: GameState,
+  crambleState: GameState,
+  range: CombinedEmotionRange,
+): CombinedEmotionStats {
+  const endDate =
+    hanaState.currentDate <= crambleState.currentDate
+      ? hanaState.currentDate
+      : crambleState.currentDate
+  const selectedStart = addDays(endDate, -(range - 1))
+  const profileStarts = [hanaState.startDate, crambleState.startDate].filter(
+    (dateKey): dateKey is string => Boolean(dateKey),
+  )
+  const startDate = profileStarts.reduce(
+    (latest, dateKey) => (dateKey > latest ? dateKey : latest),
+    selectedStart,
+  )
+  const days: CombinedEmotionDay[] = []
+
+  for (let dateKey = startDate; dateKey <= endDate; dateKey = addDays(dateKey, 1)) {
+    days.push({
+      dateKey,
+      hanaEmotion: hanaState.dailyEmotions?.[dateKey] ?? null,
+      crambleEmotion: crambleState.dailyEmotions?.[dateKey] ?? null,
+    })
+  }
+
+  return { range, startDate, endDate, days }
 }
 
 /** Consecutive runs prevent a line from implying data on unrecorded days. */

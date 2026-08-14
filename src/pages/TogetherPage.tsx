@@ -12,8 +12,16 @@ import {
   type ComparisonTrendBucket,
   type ProfileComparisonSummary,
 } from '@/lib/combinedStats'
+import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
+import {
+  EMOTIONS_BEST_FIRST,
+  getCombinedEmotionStats,
+  getEmotionTimelineRuns,
+  type CombinedEmotionRange,
+  type CombinedEmotionStats,
+} from '@/lib/emotionHistory'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
-import type { HanaGameState } from '@/types'
+import type { DailyEmotion, HanaGameState } from '@/types'
 
 type Props = {
   hanaGame: HanaGameState
@@ -23,6 +31,7 @@ type Props = {
 }
 
 const RANGE_OPTIONS: ComparisonRange[] = [7, 30, 90]
+const EMOTION_RANGE_OPTIONS: CombinedEmotionRange[] = [7, 30]
 
 export function TogetherPage({
   hanaGame,
@@ -31,6 +40,8 @@ export function TogetherPage({
   onBack,
 }: Props) {
   const [range, setRange] = useState<ComparisonRange>(30)
+  const [emotionRange, setEmotionRange] =
+    useState<CombinedEmotionRange>(7)
   const headingRef = usePageHeadingFocus()
   const stats = useMemo(
     () =>
@@ -42,6 +53,10 @@ export function TogetherPage({
         range,
       ),
     [crambleGame, hanaGame, range],
+  )
+  const emotionStats = useMemo(
+    () => getCombinedEmotionStats(hanaGame, crambleGame, emotionRange),
+    [crambleGame, emotionRange, hanaGame],
   )
 
   return (
@@ -130,6 +145,12 @@ export function TogetherPage({
 
         <ConsistencyTrend stats={stats} />
 
+        <EmotionalWeather
+          stats={emotionStats}
+          range={emotionRange}
+          onRangeChange={setEmotionRange}
+        />
+
         <section aria-labelledby="strongest-rhythms-title">
           <h2 id="strongest-rhythms-title" className="together-section-title">
             Strongest rhythms
@@ -154,6 +175,184 @@ export function TogetherPage({
         </button>
       </main>
     </div>
+  )
+}
+
+function EmotionalWeather({
+  stats,
+  range,
+  onRangeChange,
+}: {
+  stats: CombinedEmotionStats
+  range: CombinedEmotionRange
+  onRangeChange: (range: CombinedEmotionRange) => void
+}) {
+  const chart = getEmotionChartGeometry(stats)
+  const hanaRecorded = stats.days.filter(
+    (day) => day.hanaEmotion !== null,
+  ).length
+  const crambleRecorded = stats.days.filter(
+    (day) => day.crambleEmotion !== null,
+  ).length
+  const hasEvidence = hanaRecorded > 0 || crambleRecorded > 0
+  const summary = `Emotion history from ${formatAccessibleDate(stats.startDate)} to ${formatAccessibleDate(stats.endDate)}. Hana recorded ${hanaRecorded} ${hanaRecorded === 1 ? 'day' : 'days'} and Cramble recorded ${crambleRecorded} ${crambleRecorded === 1 ? 'day' : 'days'}. The vertical scale runs from Bright to Heavy. Unrecorded days are neutral gaps.`
+
+  return (
+    <section
+      className="together-emotion-card"
+      aria-labelledby="emotional-weather-title"
+    >
+      <div className="together-emotion-heading">
+        <div>
+          <h2 id="emotional-weather-title" className="together-section-title">
+            Emotional weather
+          </h2>
+          <p className="mt-1 text-xs text-muted">How both days have felt</p>
+        </div>
+        <div
+          className="together-emotion-range"
+          role="group"
+          aria-label="Emotion chart range"
+        >
+          {EMOTION_RANGE_OPTIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-controls="together-emotion-chart"
+              aria-pressed={range === option}
+              onClick={() => onRangeChange(option)}
+            >
+              {option} days
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        Showing {range}-day emotion history. Hana recorded {hanaRecorded}{' '}
+        {hanaRecorded === 1 ? 'day' : 'days'} and Cramble recorded{' '}
+        {crambleRecorded} {crambleRecorded === 1 ? 'day' : 'days'}.
+      </p>
+
+      <div className="relative mt-3">
+        <svg
+          id="together-emotion-chart"
+          viewBox="0 0 360 224"
+          className="w-full"
+          role="img"
+          aria-label={summary}
+        >
+          {EMOTIONS_BEST_FIRST.map((emotion) => {
+            const y = chart.yFor(emotion)
+            return (
+              <g key={emotion}>
+                <line
+                  x1="62"
+                  x2="346"
+                  y1={y}
+                  y2={y}
+                  className="together-chart-grid together-emotion-grid"
+                />
+                <text
+                  x="54"
+                  y={y + 4}
+                  textAnchor="end"
+                  className="together-chart-axis together-emotion-axis"
+                >
+                  {DAILY_EMOTION_LABELS[emotion]}
+                </text>
+              </g>
+            )
+          })}
+
+          {chart.hanaSegments.map((segment, index) => (
+            <polyline
+              key={`emotion-hana-${index}`}
+              points={segment}
+              className="together-chart-line together-chart-line-hana"
+            />
+          ))}
+          {chart.crambleSegments.map((segment, index) => (
+            <polyline
+              key={`emotion-cramble-${index}`}
+              points={segment}
+              className="together-chart-line together-chart-line-cramble"
+            />
+          ))}
+
+          {stats.days.map((day, index) => {
+            const x = chart.xFor(index)
+            return (
+              <g key={day.dateKey}>
+                {day.crambleEmotion ? (
+                  <rect
+                    x={x - 4.5}
+                    y={chart.yFor(day.crambleEmotion) - 4.5}
+                    width="9"
+                    height="9"
+                    rx="1.4"
+                    transform={`rotate(45 ${x} ${chart.yFor(day.crambleEmotion)})`}
+                    className="together-chart-dot-cramble together-emotion-dot-cramble"
+                  />
+                ) : null}
+                {day.hanaEmotion ? (
+                  <circle
+                    cx={x}
+                    cy={chart.yFor(day.hanaEmotion)}
+                    r="4.1"
+                    className="together-chart-dot-hana together-emotion-dot-hana"
+                  />
+                ) : null}
+              </g>
+            )
+          })}
+
+          {chart.dateTickIndices.map((index) => (
+            <text
+              key={stats.days[index].dateKey}
+              x={chart.xFor(index)}
+              y="216"
+              textAnchor={
+                index === 0
+                  ? 'start'
+                  : index === stats.days.length - 1
+                    ? 'end'
+                    : 'middle'
+              }
+              className="together-chart-axis together-emotion-date"
+            >
+              {index === stats.days.length - 1
+                ? 'Today'
+                : formatAxisDate(stats.days[index].dateKey)}
+            </text>
+          ))}
+        </svg>
+
+        {!hasEvidence ? (
+          <p className="together-chart-empty">Emotion history is still gathering</p>
+        ) : null}
+      </div>
+
+      <div className="together-chart-legend mt-1" aria-hidden="true">
+        <span><i data-profile="hana" />Hana</span>
+        <span><i data-profile="cramble" />Cramble</span>
+      </div>
+      <p className="together-emotion-caption">
+        Hana {hanaRecorded} {hanaRecorded === 1 ? 'day' : 'days'} · Cramble{' '}
+        {crambleRecorded} {crambleRecorded === 1 ? 'day' : 'days'} recorded.
+        Blank days stay neutral.
+      </p>
+
+      <ul className="sr-only">
+        {stats.days.map((day) => (
+          <li key={day.dateKey}>
+            {formatAccessibleDate(day.dateKey)}: Hana{' '}
+            {emotionLabel(day.hanaEmotion)}; Cramble{' '}
+            {emotionLabel(day.crambleEmotion)}.
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -418,4 +617,67 @@ function formatAxisDate(dateKey: string) {
     'Dec',
   ][month - 1]
   return `${monthName} ${day}`
+}
+
+function getEmotionChartGeometry(stats: CombinedEmotionStats) {
+  const dayCount = stats.days.length
+  const xFor = (index: number) =>
+    dayCount <= 1 ? 204 : 68 + (index * 272) / (dayCount - 1)
+  const yFor = (emotion: DailyEmotion) =>
+    26 + EMOTIONS_BEST_FIRST.indexOf(emotion) * 38
+  const indexByDate = new Map(
+    stats.days.map((day, index) => [day.dateKey, index]),
+  )
+  const segmentsFor = (profile: 'hana' | 'cramble') => {
+    const days = stats.days.map((day) => ({
+      dateKey: day.dateKey,
+      emotion:
+        profile === 'hana' ? day.hanaEmotion : day.crambleEmotion,
+    }))
+    return getEmotionTimelineRuns(days)
+      .filter((run) => run.length > 1)
+      .map((run) =>
+        run
+          .map((day) => {
+            const index = indexByDate.get(day.dateKey) ?? 0
+            return `${xFor(index)},${yFor(day.emotion)}`
+          })
+          .join(' '),
+      )
+  }
+
+  return {
+    xFor,
+    yFor,
+    hanaSegments: segmentsFor('hana'),
+    crambleSegments: segmentsFor('cramble'),
+    dateTickIndices: getEmotionDateTickIndices(dayCount),
+  }
+}
+
+function getEmotionDateTickIndices(dayCount: number) {
+  if (dayCount <= 0) return []
+  if (dayCount === 1) return [0]
+  const last = dayCount - 1
+  const divisions = dayCount <= 7 ? 2 : 3
+  return Array.from(
+    new Set(
+      Array.from({ length: divisions + 1 }, (_, index) =>
+        Math.round((last * index) / divisions),
+      ),
+    ),
+  )
+}
+
+function emotionLabel(emotion: DailyEmotion | null) {
+  return emotion ? DAILY_EMOTION_LABELS[emotion] : 'not recorded'
+}
+
+function formatAccessibleDate(dateKey: string) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day, 12))
 }

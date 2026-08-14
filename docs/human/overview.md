@@ -27,6 +27,11 @@ quest lists, saved device data, and database records stay separate.
 7. Open the Garden or Observatory to see real progress reflected visually.
 8. Open either profile's Ledger to review recent activity and the separate
    Emotion history graph.
+9. Open **Together** to compare both paths without turning emotions into a
+   score. Its **Emotional weather** row plots Hana and Cramble on the same five
+   calm emotion levels, with a compact **7 days** or **30 days** view (starting
+   at 7 days). As the caption says, **Blank days stay neutral**: a day with no
+   entry remains an empty gap rather than being treated as a bad day.
 
 ## What makes it kind
 
@@ -43,6 +48,8 @@ quest lists, saved device data, and database records stay separate.
   rewards or streaks. A recorded emotion appears as a small face over that
   profile's unchanged Home emblem and has its own neutral Ledger graph. Hana also
   has only the approved Energy level and Productive day Anytime logs.
+- Shared Journey uses separate visual marks for the two emotion paths and never
+  calculates an emotion winner, average, reward, streak, or penalty.
 - Motion is subtle and respects reduced-motion preferences.
 
 ## Saving and installation

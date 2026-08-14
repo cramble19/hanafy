@@ -167,6 +167,12 @@ Shared Journey activity. Home reads the current logical day's value for each
 profile and overlays only the corresponding face on the existing emblem.
 `EmotionHistoryPage` and `emotionHistory.ts` provide the shared 7/30/90-day
 ordinal Ledger graph; missing dates split the line into neutral gaps.
+`TogetherPage` also renders a non-competitive **Emotional weather** comparison,
+subtitled **How both days have felt**, from the two stored `dailyEmotions` maps.
+It owns an independent 7/30-day range control (`Emotion chart range`), defaults
+to 7 days, uses the same five-level ordinal scale (`bright` through `heavy`),
+and draws Hana and Cramble as distinct paths. Missing records remain visual gaps
+and do not become inferred values, averages, misses, rewards, or activity.
 
 ## Profile isolation
 
