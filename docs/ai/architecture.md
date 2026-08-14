@@ -170,9 +170,11 @@ ordinal Ledger graph; missing dates split the line into neutral gaps.
 `TogetherPage` also renders a non-competitive **Emotional weather** comparison,
 subtitled **How both days have felt**, from the two stored `dailyEmotions` maps.
 It owns an independent 7/30-day range control (`Emotion chart range`), defaults
-to 7 days, uses the same five-level ordinal scale (`bright` through `heavy`),
-and draws Hana and Cramble as distinct paths. Missing records remain visual gaps
-and do not become inferred values, averages, misses, rewards, or activity.
+to 7 days, and always builds the complete selected logical-date window ending
+on the earlier profile date. Per-profile pre-start dates and missing records
+remain neutral. The chart uses the same five-level ordinal scale (`bright`
+through `heavy`) and distinguishes Hana's flower path from Cramble's sun path;
+gaps never become inferred values, averages, misses, rewards, or activity.
 
 ## Profile isolation
 

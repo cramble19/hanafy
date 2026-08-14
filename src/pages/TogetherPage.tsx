@@ -194,6 +194,8 @@ function EmotionalWeather({
   const crambleRecorded = stats.days.filter(
     (day) => day.crambleEmotion !== null,
   ).length
+  const latestHanaIndex = getLatestRecordedEmotionIndex(stats, 'hana')
+  const latestCrambleIndex = getLatestRecordedEmotionIndex(stats, 'cramble')
   const hasEvidence = hanaRecorded > 0 || crambleRecorded > 0
   const summary = `Emotion history from ${formatAccessibleDate(stats.startDate)} to ${formatAccessibleDate(stats.endDate)}. Hana recorded ${hanaRecorded} ${hanaRecorded === 1 ? 'day' : 'days'} and Cramble recorded ${crambleRecorded} ${crambleRecorded === 1 ? 'day' : 'days'}. The vertical scale runs from Bright to Heavy. Unrecorded days are neutral gaps.`
 
@@ -234,6 +236,11 @@ function EmotionalWeather({
         {crambleRecorded} {crambleRecorded === 1 ? 'day' : 'days'}.
       </p>
 
+      <div className="together-emotion-window" aria-hidden="true">
+        <span>{formatAxisDate(stats.startDate)}–Today</span>
+        <span>Every date stays visible</span>
+      </div>
+
       <div className="relative mt-3">
         <svg
           id="together-emotion-chart"
@@ -242,6 +249,22 @@ function EmotionalWeather({
           role="img"
           aria-label={summary}
         >
+          {range === 7
+            ? stats.days.map((day, index) => {
+                const x = chart.xFor(index)
+                return (
+                  <line
+                    key={`emotion-guide-${day.dateKey}`}
+                    x1={x}
+                    x2={x}
+                    y1="26"
+                    y2="178"
+                    className="together-emotion-day-guide"
+                  />
+                )
+              })
+            : null}
+
           {EMOTIONS_BEST_FIRST.map((emotion) => {
             const y = chart.yFor(emotion)
             return (
@@ -282,50 +305,73 @@ function EmotionalWeather({
 
           {stats.days.map((day, index) => {
             const x = chart.xFor(index)
+            const sharesEmotion =
+              day.hanaEmotion !== null &&
+              day.hanaEmotion === day.crambleEmotion
+            const markerOffset = sharesEmotion ? 3.5 : 0
             return (
               <g key={day.dateKey}>
                 {day.crambleEmotion ? (
-                  <rect
-                    x={x - 4.5}
-                    y={chart.yFor(day.crambleEmotion) - 4.5}
-                    width="9"
-                    height="9"
-                    rx="1.4"
-                    transform={`rotate(45 ${x} ${chart.yFor(day.crambleEmotion)})`}
-                    className="together-chart-dot-cramble together-emotion-dot-cramble"
+                  <EmotionChartMarker
+                    profile="cramble"
+                    x={x + markerOffset}
+                    y={chart.yFor(day.crambleEmotion)}
+                    useProfileMark={range === 7 || index === latestCrambleIndex}
                   />
                 ) : null}
                 {day.hanaEmotion ? (
-                  <circle
-                    cx={x}
-                    cy={chart.yFor(day.hanaEmotion)}
-                    r="4.1"
-                    className="together-chart-dot-hana together-emotion-dot-hana"
+                  <EmotionChartMarker
+                    profile="hana"
+                    x={x - markerOffset}
+                    y={chart.yFor(day.hanaEmotion)}
+                    useProfileMark={range === 7 || index === latestHanaIndex}
                   />
                 ) : null}
               </g>
             )
           })}
 
-          {chart.dateTickIndices.map((index) => (
-            <text
-              key={stats.days[index].dateKey}
-              x={chart.xFor(index)}
-              y="216"
-              textAnchor={
-                index === 0
-                  ? 'start'
-                  : index === stats.days.length - 1
-                    ? 'end'
-                    : 'middle'
-              }
-              className="together-chart-axis together-emotion-date"
-            >
-              {index === stats.days.length - 1
-                ? 'Today'
-                : formatAxisDate(stats.days[index].dateKey)}
-            </text>
-          ))}
+          {range === 7
+            ? stats.days.map((day, index) => {
+                const x = chart.xFor(index)
+                const isFirst = index === 0
+                const isLast = index === stats.days.length - 1
+                return (
+                  <text
+                    key={`emotion-date-${day.dateKey}`}
+                    x={x}
+                    y="202"
+                    textAnchor="middle"
+                    className={`together-chart-axis together-emotion-date${isLast ? ' together-emotion-date-today' : ''}`}
+                  >
+                    <tspan x={x}>{formatAxisDay(day.dateKey)}</tspan>
+                    {isFirst || isLast ? (
+                      <tspan x={x} dy="13">
+                        {isLast ? 'Today' : formatAxisMonth(day.dateKey)}
+                      </tspan>
+                    ) : null}
+                  </text>
+                )
+              })
+            : chart.dateTickIndices.map((index) => (
+                <text
+                  key={stats.days[index].dateKey}
+                  x={chart.xFor(index)}
+                  y="216"
+                  textAnchor={
+                    index === 0
+                      ? 'start'
+                      : index === stats.days.length - 1
+                        ? 'end'
+                        : 'middle'
+                  }
+                  className="together-chart-axis together-emotion-date"
+                >
+                  {index === stats.days.length - 1
+                    ? 'Today'
+                    : formatAxisDate(stats.days[index].dateKey)}
+                </text>
+              ))}
         </svg>
 
         {!hasEvidence ? (
@@ -334,13 +380,20 @@ function EmotionalWeather({
       </div>
 
       <div className="together-chart-legend mt-1" aria-hidden="true">
-        <span><i data-profile="hana" />Hana</span>
-        <span><i data-profile="cramble" />Cramble</span>
+        <span>
+          <FlowerMark className="together-emotion-legend-icon together-emotion-legend-icon-hana" />
+          Hana
+        </span>
+        <span>
+          <SunMark className="together-emotion-legend-icon together-emotion-legend-icon-cramble" />
+          Cramble
+        </span>
       </div>
       <p className="together-emotion-caption">
-        Hana {hanaRecorded} {hanaRecorded === 1 ? 'day' : 'days'} · Cramble{' '}
-        {crambleRecorded} {crambleRecorded === 1 ? 'day' : 'days'} recorded.
-        Blank days stay neutral.
+        <strong>Full {range}-day window:</strong> Hana {hanaRecorded}{' '}
+        {hanaRecorded === 1 ? 'day' : 'days'} · Cramble {crambleRecorded}{' '}
+        {crambleRecorded === 1 ? 'day' : 'days'} recorded. Blank days stay
+        neutral.
       </p>
 
       <ul className="sr-only">
@@ -353,6 +406,54 @@ function EmotionalWeather({
         ))}
       </ul>
     </section>
+  )
+}
+
+function EmotionChartMarker({
+  profile,
+  x,
+  y,
+  useProfileMark,
+}: {
+  profile: 'hana' | 'cramble'
+  x: number
+  y: number
+  useProfileMark: boolean
+}) {
+  if (useProfileMark) {
+    const Mark = profile === 'hana' ? FlowerMark : SunMark
+    return (
+      <Mark
+        x={x - 7}
+        y={y - 7}
+        width="14"
+        height="14"
+        className={`together-emotion-symbol together-emotion-symbol-${profile}`}
+      />
+    )
+  }
+
+  if (profile === 'hana') {
+    return (
+      <circle
+        cx={x}
+        cy={y}
+        r="4.1"
+        className="together-chart-dot-hana together-emotion-dot-hana"
+      />
+    )
+  }
+
+  return (
+    <rect
+      x={x - 4.5}
+      y={y - 4.5}
+      width="9"
+      height="9"
+      rx="1.4"
+      transform={`rotate(45 ${x} ${y})`}
+      className="together-chart-dot-cramble together-emotion-dot-cramble"
+    />
   )
 }
 
@@ -601,8 +702,16 @@ function trendSummary(name: string, rates: Array<number | null>) {
 }
 
 function formatAxisDate(dateKey: string) {
-  const [, month, day] = dateKey.split('-').map(Number)
-  const monthName = [
+  return `${formatAxisMonth(dateKey)} ${formatAxisDay(dateKey)}`
+}
+
+function formatAxisDay(dateKey: string) {
+  return String(Number(dateKey.slice(-2)))
+}
+
+function formatAxisMonth(dateKey: string) {
+  const [, month] = dateKey.split('-').map(Number)
+  return [
     'Jan',
     'Feb',
     'Mar',
@@ -616,7 +725,20 @@ function formatAxisDate(dateKey: string) {
     'Nov',
     'Dec',
   ][month - 1]
-  return `${monthName} ${day}`
+}
+
+function getLatestRecordedEmotionIndex(
+  stats: CombinedEmotionStats,
+  profile: 'hana' | 'cramble',
+) {
+  for (let index = stats.days.length - 1; index >= 0; index -= 1) {
+    const emotion =
+      profile === 'hana'
+        ? stats.days[index].hanaEmotion
+        : stats.days[index].crambleEmotion
+    if (emotion !== null) return index
+  }
+  return -1
 }
 
 function getEmotionChartGeometry(stats: CombinedEmotionStats) {

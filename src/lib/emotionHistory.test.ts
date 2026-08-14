@@ -84,7 +84,7 @@ describe('emotion history', () => {
 })
 
 describe('combined emotion history', () => {
-  it('aligns both profiles to the earlier current logical day and later start', () => {
+  it('keeps a full seven-day axis ending on the earlier current logical day', () => {
     const hana = {
       ...createStartedHanaState('2026-08-01'),
       currentDate: '2026-08-10',
@@ -98,6 +98,7 @@ describe('combined emotion history', () => {
       ...createStartedHanaState('2026-08-04'),
       currentDate: '2026-08-08',
       dailyEmotions: {
+        '2026-08-03': 'good' as const,
         '2026-08-05': 'heavy' as const,
         '2026-08-06': 'okay' as const,
       },
@@ -107,9 +108,19 @@ describe('combined emotion history', () => {
 
     expect(stats).toEqual({
       range: 7,
-      startDate: '2026-08-04',
+      startDate: '2026-08-02',
       endDate: '2026-08-08',
       days: [
+        {
+          dateKey: '2026-08-02',
+          hanaEmotion: null,
+          crambleEmotion: null,
+        },
+        {
+          dateKey: '2026-08-03',
+          hanaEmotion: null,
+          crambleEmotion: null,
+        },
         {
           dateKey: '2026-08-04',
           hanaEmotion: 'good',
@@ -160,24 +171,41 @@ describe('combined emotion history', () => {
     )).toBe(true)
   })
 
-  it('ignores a null start date while preserving the other profile boundary', () => {
+  it('keeps dates before a recent profile start as neutral', () => {
     const hana = {
       ...createStartedHanaState('2026-08-12'),
       currentDate: '2026-08-14',
+      dailyEmotions: {
+        '2026-08-10': 'bright' as const,
+        '2026-08-12': 'good' as const,
+      },
     }
     const cramble = {
       ...createStartedHanaState('2026-08-01'),
-      startDate: null,
       currentDate: '2026-08-14',
+      dailyEmotions: {
+        '2026-08-08': 'okay' as const,
+      },
     }
 
     const stats = getCombinedEmotionStats(hana, cramble, 7)
 
-    expect(stats.startDate).toBe('2026-08-12')
-    expect(stats.days.map(({ dateKey }) => dateKey)).toEqual([
-      '2026-08-12',
-      '2026-08-13',
-      '2026-08-14',
-    ])
+    expect(stats.startDate).toBe('2026-08-08')
+    expect(stats.days).toHaveLength(7)
+    expect(stats.days[0]).toEqual({
+      dateKey: '2026-08-08',
+      hanaEmotion: null,
+      crambleEmotion: 'okay',
+    })
+    expect(stats.days[2]).toEqual({
+      dateKey: '2026-08-10',
+      hanaEmotion: null,
+      crambleEmotion: null,
+    })
+    expect(stats.days[4]).toEqual({
+      dateKey: '2026-08-12',
+      hanaEmotion: 'good',
+      crambleEmotion: null,
+    })
   })
 })

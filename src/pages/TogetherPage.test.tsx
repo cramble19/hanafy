@@ -36,12 +36,17 @@ describe('TogetherPage emotional weather', () => {
     expect(html).toContain('aria-label="Emotion chart range"')
     expect(html).toMatch(/aria-pressed="true"[^>]*>7 days<\/button>/)
     expect(html).toMatch(/aria-pressed="false"[^>]*>30 days<\/button>/)
-    expect(html).toContain(
-      'Hana 3 days \u00b7 Cramble 2 days recorded. Blank days stay neutral.',
+    expect(html).toContain('Aug 8–Today')
+    expect(html).toContain('Every date stays visible')
+    expect(html).toMatch(
+      /Full 7-day window:<\/strong> Hana 3 days · Cramble 2 days recorded\. Blank days stay neutral\./,
     )
 
-    expect(html.match(/together-emotion-dot-hana/g)).toHaveLength(3)
-    expect(html.match(/together-emotion-dot-cramble/g)).toHaveLength(2)
+    expect(html.match(/together-emotion-day-guide/g)).toHaveLength(7)
+    expect(html.match(/together-emotion-symbol-hana/g)).toHaveLength(3)
+    expect(html.match(/together-emotion-symbol-cramble/g)).toHaveLength(2)
+    expect(html).toContain('together-emotion-legend-icon-hana')
+    expect(html).toContain('together-emotion-legend-icon-cramble')
     expect(html).toContain(
       'August 10, 2026: Hana not recorded; Cramble not recorded.',
     )
@@ -67,10 +72,12 @@ describe('TogetherPage emotional weather', () => {
     )
 
     expect(html).toContain('Emotion history is still gathering')
-    expect(html).toContain(
-      'Hana 0 days \u00b7 Cramble 0 days recorded. Blank days stay neutral.',
+    expect(html).toMatch(
+      /Full 7-day window:<\/strong> Hana 0 days · Cramble 0 days recorded\. Blank days stay neutral\./,
     )
     expect(html).not.toContain('together-emotion-dot-hana')
     expect(html).not.toContain('together-emotion-dot-cramble')
+    expect(html).not.toContain('together-emotion-symbol-hana')
+    expect(html).not.toContain('together-emotion-symbol-cramble')
   })
 })

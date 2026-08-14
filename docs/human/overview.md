@@ -30,7 +30,9 @@ quest lists, saved device data, and database records stay separate.
 9. Open **Together** to compare both paths without turning emotions into a
    score. Its **Emotional weather** row plots Hana and Cramble on the same five
    calm emotion levels, with a compact **7 days** or **30 days** view (starting
-   at 7 days). As the caption says, **Blank days stay neutral**: a day with no
+   at 7 days). Each option always shows its complete calendar window, even if
+   one person started later. Hana's flower and Cramble's sun distinguish their
+   records. As the caption says, **Blank days stay neutral**: a day with no
    entry remains an empty gap rather than being treated as a bad day.
 
 ## What makes it kind

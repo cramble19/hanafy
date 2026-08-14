@@ -1,11 +1,14 @@
-type Props = { className?: string }
+import type { SVGProps } from 'react'
+
+type Props = SVGProps<SVGSVGElement>
 
 const PETAL_ROTATIONS = [0, 72, 144, 216, 288]
 
 /** A compact cherry blossom for Hana's Garden action. */
-export function GardenBlossomIcon({ className }: Props) {
+export function GardenBlossomIcon({ className, ...svgProps }: Props) {
   return (
     <svg
+      {...svgProps}
       viewBox="0 0 32 32"
       className={className}
       aria-hidden="true"

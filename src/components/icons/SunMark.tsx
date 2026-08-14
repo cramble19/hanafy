@@ -1,11 +1,18 @@
-type Props = { className?: string }
+import type { SVGProps } from 'react'
+
+type Props = SVGProps<SVGSVGElement>
 
 const RAYS = [0, 45, 90, 135, 180, 225, 270, 315]
 
 /** Solar mark; its parent controls color and the rays respect reduced motion. */
-export function SunMark({ className }: Props) {
+export function SunMark({ className, ...svgProps }: Props) {
   return (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
+    <svg
+      {...svgProps}
+      viewBox="0 0 100 100"
+      className={className}
+      aria-hidden="true"
+    >
       <g className="sun-rays">
         {RAYS.map((deg) => (
           <rect
