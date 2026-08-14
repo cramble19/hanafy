@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { HanaGameState } from '@/types'
 import {
   chooseDbFirstState,
@@ -9,6 +9,10 @@ import {
 import { crambleQuests } from '@/data/crambleQuests'
 
 describe('Hana remote state helpers', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('prefers database state over cache and initial state', () => {
     const databaseState = createState({ currentDate: '2026-07-14', totalFlowers: 7 })
     const cachedState = createState({ currentDate: '2026-07-13', totalFlowers: 2 })
@@ -68,7 +72,45 @@ describe('Hana remote state helpers', () => {
         syncedAt: '2026-07-14T09:00:00.000Z',
       },
     })
-    expect(fetchImpl).toHaveBeenCalledWith('/api/hana-sync?profileId=hana')
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/api/hana-sync?profileId=hana',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+  })
+
+  it('deduplicates simultaneous reads for the same profile', async () => {
+    const state = createState({ currentDate: '2026-07-14', totalFlowers: 3 })
+    let resolveFetch: ((response: Response) => void) | undefined
+    const fetchImpl = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve
+        }),
+    ) as unknown as typeof fetch
+    vi.stubGlobal('fetch', fetchImpl)
+
+    const first = loadHanaStateFromDb('cramble')
+    const second = loadHanaStateFromDb('cramble')
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+
+    resolveFetch?.(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          snapshot: {
+            profileId: 'cramble',
+            currentDate: '2026-07-14',
+            totalFlowers: 3,
+            state,
+            syncedAt: '2026-07-14T09:00:00.000Z',
+          },
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 
   it('rejects a snapshot belonging to the other profile', async () => {

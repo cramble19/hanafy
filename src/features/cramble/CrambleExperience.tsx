@@ -93,6 +93,7 @@ import {
   serializePendingProfileSync,
   type PendingProfileSync,
 } from '@/lib/profileSync'
+import { readLocalProfileState } from '@/lib/profileCache'
 
 type CrambleView =
   | 'tracker'
@@ -107,10 +108,15 @@ type Props = {
 export function CrambleExperience({ onBack }: Props) {
   const [view, setView] = useState<CrambleView>('tracker')
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
-  const [game, setGame] = useState<HanaGameState | null>(null)
+  const [initialLocal] = useState(() => readLocalProfileState('cramble'))
+  const [game, setGame] = useState<HanaGameState | null>(
+    initialLocal?.state ?? null,
+  )
   useHabitReminders('cramble', game, crambleQuests)
-  const gameRef = useRef<HanaGameState | null>(null)
-  const pendingDbSaveRef = useRef<PendingProfileSync | null>(null)
+  const gameRef = useRef<HanaGameState | null>(game)
+  const pendingDbSaveRef = useRef<PendingProfileSync | null>(
+    initialLocal?.pending ?? null,
+  )
   const isDbSaveInFlightRef = useRef(false)
   const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
@@ -404,6 +410,32 @@ export function CrambleExperience({ onBack }: Props) {
       }
 
       if (!remote.snapshot) {
+        const recoverableState = gameRef.current ?? readCachedGame()
+        if (recoverableState && hasHanaStarted(recoverableState)) {
+          const stateForToday = {
+            ...syncStateToDate(
+              recoverableState,
+              crambleQuests,
+              todayKey(),
+              CRAMBLE_QUEST_PLAN_OPTIONS,
+            ),
+            syncRevision: 0,
+          }
+          const pending = queuePendingProfileSync(
+            { ...initialState, syncRevision: 0 },
+            stateForToday,
+            null,
+          )
+          pendingDbSaveRef.current = pending
+          cachePendingGame(pending)
+          gameRef.current = stateForToday
+          setGame(stateForToday)
+          cacheGame(stateForToday)
+          setCloudSyncStatus('syncing')
+          await flushQueuedDbSave()
+          return !pendingDbSaveRef.current
+        }
+
         setGame(initialState)
         clearCache()
         clearPendingCache()

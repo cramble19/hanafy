@@ -4,8 +4,11 @@ Technical source of truth for profile-aware cloud persistence.
 
 ## Model
 
-Production is DB-first. Postgres stores one current snapshot per profile plus
-analytics-friendly quest and weed rows. The two supported profile ids are:
+Postgres is the durable source of truth, while production rendering is
+local-first. A valid device snapshot is shown immediately and then reconciled
+against Postgres in the background. Postgres stores one current snapshot per
+profile plus analytics-friendly quest and weed rows. The two supported profile
+ids are:
 
 ```ts
 type HanaProfileId = 'hana' | 'cramble'
@@ -68,14 +71,21 @@ Production hydration:
 
 1. Read and normalize that profile's durable pending snapshot. If one exists,
    show it and upload it before accepting a database response.
-2. If there is no pending snapshot and the browser is online, GET the selected
-   profile.
-3. If the request fails or the browser is offline, use only that profile's cache
-   when available.
-4. If GET succeeds with `snapshot: null`, clear only that profile's cache and
-   return its unstarted state.
-5. Parse the snapshot with the selected profile's base catalog, merge its valid
-   custom definitions, move it to the current local date, and save if needed.
+2. If there is no pending snapshot, normalize and show that profile's ordinary
+   device cache immediately when available.
+3. If the browser is online, GET the selected profile in the background.
+   Simultaneous reads for the same profile share one request and a stalled read
+   is abandoned after eight seconds.
+4. A mutation-revision guard prevents a late GET from overwriting any action
+   recorded while hydration was running.
+5. If GET succeeds, parse the snapshot with the selected profile's base catalog,
+   merge its valid custom definitions, move it to the current local date, and
+   save if needed.
+6. If GET returns `snapshot: null` but a started device snapshot exists, preserve
+   it and enqueue a revision-zero recovery save instead of deleting it. With no
+   local journey, return the profile's unstarted state.
+7. If the request fails or the browser is offline, continue using the device
+   snapshot. No blocking loader is required when that snapshot is valid.
 
 Local development skips all API calls and uses the profile-specific cache.
 
@@ -90,8 +100,9 @@ On reconnect or a later reload, the marked snapshot is normalized to today and
 uploaded against the `syncRevision` captured with that exact pending state. A
 successful save advances the current and any newer queued state to the returned
 revision, and clears the pending key only if it still matches the state just
-saved. A 409 never silently rebases stale local state: explicit conflict recovery
-exports CSV, stores a JSON backup, and then loads the database copy.
+saved. A 409 fetches the current remote snapshot and attempts a bounded
+three-way rebase; the durable pending copy remains on the device if automatic
+reconciliation cannot safely finish.
 
 Hydration uses a sequence and local-mutation revision guard. A GET that started
 before a newer local change or a newer hydration cannot overwrite the current UI.
@@ -149,9 +160,9 @@ This makes once-or-several-times goals in configurable day/week windows one
 reporting outcome rather than a collection of false daily misses. Partial
 progress has no penalty. The full dated boolean and counted occurrence history
 remains in the snapshot. Old snapshots without `habitOccurrences` normalize it
-to an empty record, while legacy quota history keeps its original meaning. The
-API applies additive migrations for revision, write-token, history-epoch, and
-paused-status support.
+to an empty record, while legacy quota history keeps its original meaning. SQL
+schema changes live in versioned files under `database/migrations` and run
+outside the request path.
 
 Deadline-free definitions live in `state.openActivities`, with positive logical
 day values in `state.openActivityLogs[date][activityId]`. They use the same full
@@ -160,7 +171,7 @@ do not create `hana_quest_statuses` rows because that projection represents
 scored goal windows; Ledger/export analytics read their snapshot history
 directly. No SQL migration is required.
 
-The API accepts only supported state schema versions (currently 1 through 3),
+The API accepts only supported state schema versions (currently 1 through 5),
 and the snapshot upsert also compares the incoming version with the stored one.
 A POST whose schema is older than the current snapshot updates zero rows and
 returns the normal 409 conflict response. This protects version-3 fields from
@@ -177,7 +188,7 @@ the endpoint network-only.
 
 ## Tables
 
-The route creates shared tables on first use:
+The profile-sync migration creates these shared tables:
 
 ```sql
 hana_state_snapshots (
@@ -219,16 +230,20 @@ hana_weed_statuses (
 )
 ```
 
-Table names are historical; `profile_id` is the data-partition boundary. The API
-adds missing columns/paused-status constraints to existing deployments and wraps
-each accepted snapshot plus its projection changes in one transaction. Revision
-CAS rejects a full snapshot whose captured base is stale.
+Table names are historical; `profile_id` is the data-partition boundary. Run
+`npm run db:migrate` after setting a trusted `DATABASE_URL` or `POSTGRES_URL` and
+before deploying a schema-dependent API change. The request handler never runs
+DDL. Each accepted snapshot plus its projection changes remains one transaction,
+and revision CAS rejects a full snapshot whose captured base is stale.
 
 ## Environment and deployment
 
 The API accepts either `DATABASE_URL` or `POSTGRES_URL`. Connect a Postgres
-database (for example Neon) to the Vercel project, set one variable, and redeploy.
-The first successful call creates the tables.
+database (for example Neon) to the Vercel project and set one variable. Run
+`npm run db:migrate` once before the first deployment, then redeploy. The
+migration is idempotent and safe to rerun after pulling a version that changes
+it. Keep the Vercel function region close to the database; the current
+deployment uses Singapore (`sin1`) alongside the Neon Singapore project.
 
 ## Security
 

@@ -3,18 +3,16 @@ import { ChevronLeft, RefreshCw } from 'lucide-react'
 import { TogetherMark } from '@/components/icons/TogetherMark'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
-  CRAMBLE_PENDING_STORAGE_KEY,
   CRAMBLE_QUEST_PLAN_OPTIONS,
-  CRAMBLE_STORAGE_KEY,
 } from '@/lib/crambleGame'
 import {
   createInitialHanaState,
-  hasHanaStarted,
   parseStoredHanaState,
   syncStateToDate,
   todayKey,
 } from '@/lib/hanaGame'
 import { loadHanaStateFromDb } from '@/lib/hanaRemoteState'
+import { readLocalProfileState } from '@/lib/profileCache'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { TogetherPage } from '@/pages/TogetherPage'
 import type { HanaGameState } from '@/types'
@@ -32,8 +30,11 @@ type ReadOnlyLoadState =
 export function TogetherExperience({ hanaGame, onBack }: Props) {
   const comparisonDate = useMemo(() => todayKey(), [])
   const [retrySequence, setRetrySequence] = useState(0)
-  const [crambleLoad, setCrambleLoad] = useState<ReadOnlyLoadState>({
-    status: 'loading',
+  const [crambleLoad, setCrambleLoad] = useState<ReadOnlyLoadState>(() => {
+    const local = readLocalProfileState('cramble', comparisonDate)
+    return local
+      ? { status: 'ready', game: local.state, notice: null }
+      : { status: 'loading' }
   })
 
   useEffect(() => {
@@ -44,15 +45,11 @@ export function TogetherExperience({ hanaGame, onBack }: Props) {
     }
 
     const load = async () => {
-      setCrambleLoad({ status: 'loading' })
-      const pending = readCrambleStorage(
-        CRAMBLE_PENDING_STORAGE_KEY,
-        comparisonDate,
-      )
-      if (pending && hasHanaStarted(pending)) {
+      const local = readLocalProfileState('cramble', comparisonDate)
+      if (local?.source === 'pending') {
         finish({
           status: 'ready',
-          game: pending,
+          game: local.state,
           notice: import.meta.env.DEV
             ? null
             : 'Including Cramble actions saved on this device and waiting to sync.',
@@ -60,7 +57,8 @@ export function TogetherExperience({ hanaGame, onBack }: Props) {
         return
       }
 
-      const cached = readCrambleStorage(CRAMBLE_STORAGE_KEY, comparisonDate)
+      const cached = local?.state ?? null
+      if (!cached) setCrambleLoad({ status: 'loading' })
       if (import.meta.env.DEV) {
         finish({
           status: 'ready',
@@ -150,22 +148,6 @@ export function TogetherExperience({ hanaGame, onBack }: Props) {
       notice={crambleLoad.notice}
       onBack={onBack}
     />
-  )
-}
-
-function readCrambleStorage(key: string, comparisonDate: string) {
-  const saved = window.localStorage.getItem(key)
-  if (!saved) return null
-  return syncStateToDate(
-    parseStoredHanaState(
-      saved,
-      crambleQuests,
-      comparisonDate,
-      CRAMBLE_QUEST_PLAN_OPTIONS,
-    ),
-    crambleQuests,
-    comparisonDate,
-    CRAMBLE_QUEST_PLAN_OPTIONS,
   )
 }
 

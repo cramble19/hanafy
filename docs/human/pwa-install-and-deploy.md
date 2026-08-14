@@ -35,9 +35,13 @@ Steps:
 3. Connect it to the Hanafy project.
 4. Make sure Vercel has `DATABASE_URL` or `POSTGRES_URL` in Environment
    Variables.
-5. Redeploy the project.
-6. Open the deployed app and start or complete a quest in each path. The shared
-   database tables are created automatically on the first successful sync.
+5. In a trusted local shell with the same database variable, run
+   `npm run db:migrate` once. It is safe to rerun after a future schema update.
+6. Redeploy the project.
+7. Open the deployed app and start or complete a quest in each path.
+
+The API is configured to run in Singapore near the current Neon database. Keep
+those regions together if the database is moved later.
 
 ## Phone install
 

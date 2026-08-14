@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "db:migrate": "node scripts/migrate-db.mjs",
     "icons": "node scripts/generate-pwa-icons.mjs",
     "preview": "vite preview",
     "test": "vitest run",

@@ -82,9 +82,7 @@ import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { setDailyEmotion } from '@/lib/dailyEmotions'
 import {
-  CRAMBLE_PENDING_STORAGE_KEY,
   CRAMBLE_QUEST_PLAN_OPTIONS,
-  CRAMBLE_STORAGE_KEY,
 } from '@/lib/crambleGame'
 import {
   advancePendingProfileSyncRevision,
@@ -95,6 +93,11 @@ import {
   serializePendingProfileSync,
   type PendingProfileSync,
 } from '@/lib/profileSync'
+import {
+  HANA_PENDING_STORAGE_KEY,
+  readLocalProfileEmotion,
+  readLocalProfileState,
+} from '@/lib/profileCache'
 
 type View =
   | 'home'
@@ -118,20 +121,26 @@ type CloudSyncStatus =
   | 'preview'
 type HomeFocusTarget = 'hana' | 'cramble' | 'together' | null
 
-const HANA_PENDING_STORAGE_KEY = 'hana-game/pending-v1'
 export default function App() {
   const [view, setView] = useState<View>('home')
   const [homeFocusTarget, setHomeFocusTarget] =
     useState<HomeFocusTarget>(null)
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
   const [isExploringHana, setIsExploringHana] = useState(false)
-  const [hanaGame, setHanaGame] = useState<HanaGameState | null>(null)
+  const [initialHanaLocal] = useState(() => readLocalProfileState('hana'))
+  const [hanaGame, setHanaGame] = useState<HanaGameState | null>(
+    initialHanaLocal?.state ?? null,
+  )
   const [homeLogicalDate, setHomeLogicalDate] = useState(() => todayKey())
   const [homeCrambleEmotion, setHomeCrambleEmotion] =
-    useState<DailyEmotion | null>(null)
+    useState<DailyEmotion | null>(() =>
+      readLocalProfileEmotion('cramble', homeLogicalDate),
+    )
   useHabitReminders('hana', hanaGame, quests)
-  const hanaGameRef = useRef<HanaGameState | null>(null)
-  const pendingDbSaveRef = useRef<PendingProfileSync | null>(null)
+  const hanaGameRef = useRef<HanaGameState | null>(hanaGame)
+  const pendingDbSaveRef = useRef<PendingProfileSync | null>(
+    initialHanaLocal?.pending ?? null,
+  )
   const isDbSaveInFlightRef = useRef(false)
   const syncConflictRef = useRef(false)
   const saveLoopPromiseRef = useRef<Promise<void> | null>(null)
@@ -429,6 +438,27 @@ export default function App() {
       }
 
       if (!remote.snapshot) {
+        const recoverableState = hanaGameRef.current ?? readCachedHanaGame()
+        if (recoverableState && hasHanaStarted(recoverableState)) {
+          const stateForToday = {
+            ...syncStateToDate(recoverableState, quests, todayKey()),
+            syncRevision: 0,
+          }
+          const pending = queuePendingProfileSync(
+            { ...initialState, syncRevision: 0 },
+            stateForToday,
+            null,
+          )
+          pendingDbSaveRef.current = pending
+          cachePendingHanaGame(pending)
+          hanaGameRef.current = stateForToday
+          setHanaGame(stateForToday)
+          cacheHanaGame(stateForToday)
+          setCloudSyncStatus('syncing')
+          await flushQueuedDbSave()
+          return !pendingDbSaveRef.current
+        }
+
         setHanaGame(initialState)
         clearHanaCache()
         clearPendingHanaCache()
@@ -613,26 +643,13 @@ export default function App() {
     const finish = (emotion: DailyEmotion | null) => {
       if (!cancelled) setHomeCrambleEmotion(emotion)
     }
-    const readStoredState = (key: string) => {
-      const saved = window.localStorage.getItem(key)
-      return saved
-        ? parseStoredHanaState(
-            saved,
-            crambleQuests,
-            homeLogicalDate,
-            CRAMBLE_QUEST_PLAN_OPTIONS,
-          )
-        : null
-    }
     const load = async () => {
-      const pending = readStoredState(CRAMBLE_PENDING_STORAGE_KEY)
-      if (pending && hasHanaStarted(pending)) {
-        finish(pending.dailyEmotions[homeLogicalDate] ?? null)
+      const local = readLocalProfileState('cramble', homeLogicalDate)
+      finish(local?.state.dailyEmotions[homeLogicalDate] ?? null)
+      if (local?.source === 'pending') {
         return
       }
 
-      const cached = readStoredState(CRAMBLE_STORAGE_KEY)
-      finish(cached?.dailyEmotions[homeLogicalDate] ?? null)
       if (import.meta.env.DEV || !navigator.onLine) return
 
       const remote = await loadHanaStateFromDb('cramble')

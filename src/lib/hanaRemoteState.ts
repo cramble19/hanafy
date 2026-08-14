@@ -7,6 +7,12 @@ import { hasHanaStarted } from '@/lib/hanaGame'
 import type { HanaGameState, Quest } from '@/types'
 
 type FetchLike = typeof fetch
+const PROFILE_LOAD_TIMEOUT_MS = 8_000
+const PROFILE_SAVE_TIMEOUT_MS = 12_000
+const inFlightProfileLoads = new Map<
+  HanaProfileId,
+  Promise<LoadHanaStateResult>
+>()
 
 export type RemoteHanaSnapshot = {
   profileId: HanaProfileId
@@ -27,12 +33,39 @@ export type SaveHanaStateResult =
 
 export type DbFirstStateSource = 'database' | 'cache' | 'initial'
 
-export async function loadHanaStateFromDb(
+export function loadHanaStateFromDb(
   profileId: HanaProfileId = 'hana',
   fetchImpl: FetchLike = fetch,
 ): Promise<LoadHanaStateResult> {
+  const shouldDedupe = fetchImpl === globalThis.fetch
+  if (shouldDedupe) {
+    const existing = inFlightProfileLoads.get(profileId)
+    if (existing) return existing
+  }
+
+  const request = requestHanaStateFromDb(profileId, fetchImpl)
+  if (!shouldDedupe) return request
+
+  inFlightProfileLoads.set(profileId, request)
+  void request.finally(() => {
+    if (inFlightProfileLoads.get(profileId) === request) {
+      inFlightProfileLoads.delete(profileId)
+    }
+  })
+  return request
+}
+
+async function requestHanaStateFromDb(
+  profileId: HanaProfileId,
+  fetchImpl: FetchLike,
+): Promise<LoadHanaStateResult> {
   try {
-    const response = await fetchImpl(`/api/hana-sync?profileId=${profileId}`)
+    const response = await fetchWithTimeout(
+      fetchImpl,
+      `/api/hana-sync?profileId=${profileId}`,
+      undefined,
+      PROFILE_LOAD_TIMEOUT_MS,
+    )
     if (!response.ok) {
       return { ok: false, error: `Load failed with ${response.status}` }
     }
@@ -47,7 +80,7 @@ export async function loadHanaStateFromDb(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : 'Load failed',
+      error: getRequestError(error, 'Load'),
     }
   }
 }
@@ -94,13 +127,18 @@ export async function saveProfileStateToDb(
   const baseRevision = state.syncRevision ?? 0
 
   try {
-    const response = await fetchImpl('/api/hana-sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      fetchImpl,
+      '/api/hana-sync',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...payload, baseRevision }),
       },
-      body: JSON.stringify({ ...payload, baseRevision }),
-    })
+      PROFILE_SAVE_TIMEOUT_MS,
+    )
 
     if (!response.ok) {
       return {
@@ -124,9 +162,31 @@ export async function saveProfileStateToDb(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : 'Save failed',
+      error: getRequestError(error, 'Save'),
     }
   }
+}
+
+async function fetchWithTimeout(
+  fetchImpl: FetchLike,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+) {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetchImpl(input, { ...init, signal: controller.signal })
+  } finally {
+    globalThis.clearTimeout(timeout)
+  }
+}
+
+function getRequestError(error: unknown, operation: 'Load' | 'Save') {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return `${operation} timed out`
+  }
+  return error instanceof Error ? error.message : `${operation} failed`
 }
 
 export function chooseDbFirstState({

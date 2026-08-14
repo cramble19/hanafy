@@ -6,6 +6,7 @@ import { createProfileCloudSyncPayload } from '../src/lib/hanaCloudSync'
 import { createStartedHanaState } from '../src/lib/hanaGame'
 
 const database = vi.hoisted(() => ({
+  directQueries: [] as string[],
   transactionQueries: [] as string[],
   acceptedWrite: 'update' as 'update' | 'insert' | 'none',
   currentRows: [] as Array<{ revision: number; write_token: string }>,
@@ -15,6 +16,7 @@ vi.mock('@neondatabase/serverless', () => {
   type FakeQuery = Promise<unknown[]> & { queryText: string }
   const sql = ((strings: TemplateStringsArray) => {
     const queryText = strings.join('?')
+    database.directQueries.push(queryText)
     const rows = queryText.includes('SELECT revision, write_token')
       ? database.currentRows
       : []
@@ -48,10 +50,38 @@ import handler from './hana-sync'
 
 describe('profile sync API revision writes', () => {
   beforeEach(() => {
+    database.directQueries = []
     database.transactionQueries = []
     database.acceptedWrite = 'update'
     database.currentRows = []
     process.env.DATABASE_URL = 'postgresql://example.invalid/neondb'
+  })
+
+  it('reads a profile without running schema DDL in the request path', async () => {
+    let statusCode = 200
+    let responseBody: unknown
+    const response = {
+      setHeader() {},
+      status(code: number) {
+        statusCode = code
+        return this
+      },
+      json(body: unknown) {
+        responseBody = body
+      },
+      end() {},
+    }
+
+    await handler(
+      { method: 'GET', query: { profileId: 'hana' } },
+      response,
+    )
+
+    expect(statusCode).toBe(200)
+    expect(responseBody).toEqual({ ok: true, snapshot: null })
+    expect(database.directQueries).toHaveLength(1)
+    expect(database.directQueries[0]).toContain('FROM hana_state_snapshots')
+    expect(database.directQueries[0]).not.toMatch(/CREATE TABLE|ALTER TABLE/)
   })
 
   it('updates an established profile with a matching nonzero revision', async () => {
@@ -93,6 +123,9 @@ describe('profile sync API revision writes', () => {
         expect.stringContaining('ON CONFLICT (profile_id) DO NOTHING'),
       ]),
     )
+    expect(
+      [...database.directQueries, ...database.transactionQueries].join('\n'),
+    ).not.toMatch(/CREATE TABLE|ALTER TABLE|DO \$\$/)
   })
 
   it('creates Hana on her first save at revision zero', async () => {
