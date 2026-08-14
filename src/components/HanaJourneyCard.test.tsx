@@ -8,7 +8,7 @@ import {
 import { HanaJourneyCard } from './HanaJourneyCard'
 
 describe('HanaJourneyCard', () => {
-  it('shows overall Spring progress, level milestones, and next-level details', () => {
+  it('shows compact overall Spring progress and next-level details', () => {
     const game = {
       ...createStartedHanaState('2026-08-11'),
       totalFlowers: 18,
@@ -19,28 +19,19 @@ describe('HanaJourneyCard', () => {
         totalFlowers={game.totalFlowers}
         levelProgress={getLevelProgress(game.totalFlowers)}
         springArc={getSpringArcProgress(game)}
-        onOpenGarden={() => undefined}
       />,
     )
 
-    expect(html).toContain('Your garden journey')
-    expect(html).toContain('Level 3')
-    expect(html).toContain('18 flowers')
-    expect(html).toContain(
-      '<span class="hana-journey-percent" aria-hidden="true">51%</span><strong>Level 3</strong>',
-    )
-    expect(html).toContain('17 flowers to complete Spring')
-    expect(html).toContain('6 of 10 flowers collected toward Level 4')
+    expect(html).toContain('Your journey')
+    expect(html).toContain('Level 3 · Growing rhythm')
+    expect(html).toContain('18 flowers gathered')
+    expect(html).toContain('51%')
+    expect(html).toContain('4 more to Level 4')
     expect(html).toContain('aria-valuenow="18"')
-    expect(html).toContain('View garden')
-    expect(html.match(/hana-journey-ring-track/g)).toHaveLength(1)
-    expect(html.match(/hana-journey-ring-progress/g)).toHaveLength(1)
-    expect(html).not.toContain('hana-journey-vine')
-    expect(html).not.toContain('hana-journey-ring-blossom')
-    expect(html).not.toContain('hana-journey-petals')
-    expect(html).not.toContain('Flower balance')
-    expect(html).not.toContain('Next bloom')
-    expect(html).not.toContain('What counts')
+    expect(html).toContain('hana-journey-track')
+    expect(html).not.toContain('hana-journey-ring')
+    expect(html).not.toContain('hana-journey-milestone')
+    expect(html).not.toContain('View garden')
   })
 
   it('shows the completed Spring state without exceeding the progress maximum', () => {
@@ -54,12 +45,11 @@ describe('HanaJourneyCard', () => {
         totalFlowers={game.totalFlowers}
         levelProgress={getLevelProgress(game.totalFlowers)}
         springArc={getSpringArcProgress(game)}
-        onOpenGarden={() => undefined}
       />,
     )
 
-    expect(html).toContain('Level 6')
-    expect(html).toContain('Spring is in full bloom')
+    expect(html).toContain('Level 6 · In full bloom')
+    expect(html).toContain('Spring is complete')
     expect(html).toContain('aria-valuemax="35"')
     expect(html).toContain('aria-valuenow="35"')
   })

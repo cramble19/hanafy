@@ -30,10 +30,8 @@ import {
 import {
   PausedHabitsCard,
   ProfilePauseBanner,
-  TodayProgressCard,
   TodayUtilityActions,
 } from '@/components/TodayHabitControls'
-import { FlowerMark } from '@/components/icons/FlowerMark'
 import { GardenBlossomIcon } from '@/components/icons/GardenBlossomIcon'
 import { HanaAddHabitIcon } from '@/components/icons/HanaAddHabitIcon'
 import { HanaLedgerIcon } from '@/components/icons/HanaLedgerIcon'
@@ -268,10 +266,6 @@ export function HanaPage({
       (first.minLevel ?? 1) - (second.minLevel ?? 1) ||
       first.title.localeCompare(second.title),
   )
-  const todayTotal = visibleQuests.daily.length + visibleQuests.longTerm.length
-  const todayComplete =
-    Object.values(dailyCheckedIds).filter(Boolean).length +
-    Object.values(longTermCheckedIds).filter(Boolean).length
   const springArc = getSpringArcProgress(game)
   const seasonalQuote = getSeasonalQuote(game.currentDate)
   const showDevControls = import.meta.env.DEV
@@ -282,33 +276,33 @@ export function HanaPage({
   }
 
   return (
-    <div className="hana-spring-shell mx-auto min-h-full w-full max-w-md px-5 pb-8 pt-6">
+    <div className="hana-spring-shell hana-cozy-page mx-auto min-h-full w-full max-w-md px-5 pb-8 pt-6">
       <SpringDecor />
-      <div className="mb-6 flex items-center gap-3">
+      <div className="hana-cozy-profile-line mb-3 flex items-center gap-3">
         <button
           type="button"
           onClick={onBack}
           aria-label="Back to home"
-          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+          className="hana-cozy-round-button flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
         >
           <ChevronLeft className="size-5" />
         </button>
-        <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
-          <FlowerMark className="size-5" />
+        <span className="hana-cozy-name flex items-center gap-1.5 text-sm font-medium text-muted">
+          <GardenBlossomIcon className="size-5" />
           Hana
         </span>
       </div>
 
-      <header className="mb-5">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
+      <header className="hana-cozy-header mb-3">
+        <p className="hana-cozy-arc text-xs font-medium uppercase tracking-[0.14em] text-faint">
           Arc {springArc.arcNumber} · {springArc.season} season
         </p>
-        <div className="mt-1 flex items-end justify-between gap-4">
+        <div className="hana-cozy-title-row mt-1 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-ink">
+            <h1 className="hana-cozy-title text-3xl font-semibold tracking-tight text-ink">
               {springArc.isComplete ? 'Spring Complete' : 'Today'}
             </h1>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+            <p className="hana-cozy-date mt-1 flex items-center gap-1.5 text-sm text-muted">
               <CalendarDays className="size-4" />
               {displayDate(game.currentDate)}
             </p>
@@ -322,7 +316,7 @@ export function HanaPage({
               cloudSyncStatus === 'disabled' ||
               cloudSyncStatus === 'preview'
             }
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+            className="hana-cozy-refresh inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
             aria-label="Refresh Hana's progress from database"
           >
             <RefreshCw
@@ -331,24 +325,13 @@ export function HanaPage({
             Refresh
           </button>
         </div>
-        <p className="mt-3 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
+        <p className="hana-cozy-sync-status mt-2 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>
       </header>
 
-      <section className="spring-quote-card mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
-            {getQuoteLabel(seasonalQuote)}
-          </p>
-          <span className="text-sm" aria-hidden="true">
-            {getQuoteIcon(seasonalQuote)}
-          </span>
-        </div>
-        <blockquote className="mt-2 text-sm leading-6 text-ink">
+      <section className="spring-quote-card spring-quote-compact" aria-label="Quote for today">
+        <blockquote>
           "{seasonalQuote.text}"
         </blockquote>
-        <p className="mt-2 text-xs font-medium text-muted">
-          {seasonalQuote.source}
-        </p>
       </section>
 
       <DailyEmotionPicker
@@ -371,16 +354,16 @@ export function HanaPage({
         aria-labelledby={trackerViewTabId('hana', 'quests')}
         hidden={trackerView !== 'quests'}
       >
-        <TodayProgressCard
-          profile="hana"
-          complete={todayComplete}
-          total={todayTotal}
+        <HanaJourneyCard
+          totalFlowers={game.totalFlowers}
+          levelProgress={levelProgress}
+          springArc={springArc}
         />
         {activeProfilePause ? (
           <ProfilePauseBanner pause={activeProfilePause} onResume={onResumeTracking} />
         ) : null}
         {!activeProfilePause ? (
-          <div className="mt-6 space-y-8">
+          <div className="hana-quest-stack mt-4 space-y-5">
             <QuestSection
               title="Daily Quests"
               quests={visibleQuests.daily}
@@ -414,14 +397,7 @@ export function HanaPage({
           onManage={setManagedHabitId}
         />
 
-        <HanaJourneyCard
-          totalFlowers={game.totalFlowers}
-          levelProgress={levelProgress}
-          springArc={springArc}
-          onOpenGarden={onOpenGarden}
-        />
-
-        <div className="mt-8 space-y-8">
+        <div className="mt-5 space-y-5">
           <div className="rounded-card border border-border bg-surface p-4 text-sm text-muted shadow-sm">
             <span className="font-medium text-ink">Weekly skips:</span>{' '}
             {skipProgress.remaining}/{skipProgress.limit} left
@@ -742,26 +718,6 @@ function getSeasonalQuote(dateKey: string) {
     seasonalQuotes.length
 
   return seasonalQuotes[index]
-}
-
-function getQuoteLabel(quote: SeasonQuote) {
-  if (quote.kind === 'spring') {
-    return 'Spring quote'
-  }
-  if (quote.kind === 'anime-quote') {
-    return 'Your Lie in April quote'
-  }
-  return 'April-inspired note'
-}
-
-function getQuoteIcon(quote: SeasonQuote) {
-  if (quote.kind === 'spring') {
-    return '🌷'
-  }
-  if (quote.kind === 'anime-quote') {
-    return '🎼'
-  }
-  return '🎻'
 }
 
 function getCloudSyncLabel(

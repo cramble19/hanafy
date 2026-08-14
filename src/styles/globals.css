@@ -6307,3 +6307,262 @@ button.anytime-log-emblem:focus-visible {
     transition: none;
   }
 }
+
+/* Hana Cozy Minimal — approved Design Lab settings.
+   The persistent Add habit / Garden / Ledger dock intentionally stays untouched. */
+.hana-cozy-page {
+  --radius-lg: 30px;
+  --radius-md: 16px;
+  background:
+    radial-gradient(circle at 90% 4%, rgba(247, 166, 190, 0.12), transparent 16rem),
+    radial-gradient(circle at 6% 34%, rgba(120, 171, 99, 0.08), transparent 15rem),
+    transparent;
+}
+
+.hana-cozy-page > :not(.spring-decor-layer):not(.profile-action-bar) {
+  font-size: 98%;
+}
+
+.hana-cozy-profile-line,
+.hana-cozy-header,
+.hana-cozy-page .daily-emotion-picker,
+.hana-cozy-page .tracker-view-tabs,
+.hana-cozy-page .tracker-view-panel,
+.hana-cozy-page .today-utility-grid,
+.hana-cozy-page .cloud-sync-notice {
+  width: 100%;
+}
+
+.hana-cozy-round-button,
+.hana-cozy-refresh {
+  box-shadow:
+    0 18px 44px -34px rgba(65, 48, 30, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.hana-cozy-name {
+  color: #557849;
+}
+
+.hana-cozy-header {
+  padding: 0 0.1rem;
+}
+
+.hana-cozy-arc {
+  letter-spacing: 0.12em;
+}
+
+.hana-cozy-title {
+  font-size: 1.7rem;
+  line-height: 1.05;
+}
+
+.hana-cozy-date {
+  font-size: 0.78rem;
+}
+
+.hana-cozy-refresh {
+  min-height: 2.75rem;
+}
+
+.hana-cozy-sync-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hana-cozy-page .spring-quote-compact {
+  width: 100%;
+  margin: 0 0 0.55rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0.45rem 0.6rem;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+
+.hana-cozy-page .spring-quote-compact::after {
+  display: none;
+}
+
+.hana-cozy-page .spring-quote-compact blockquote {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.86rem;
+  font-style: italic;
+  letter-spacing: -0.005em;
+  line-height: 1.45;
+}
+
+.hana-cozy-page .daily-emotion-picker {
+  min-height: 3.35rem;
+  margin-bottom: 0.6rem;
+  border-radius: 30px;
+  padding: 0.38rem 0.5rem 0.38rem 0.85rem;
+  box-shadow:
+    0 24px 56px -42px rgba(65, 48, 30, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+.hana-cozy-page .daily-emotion-question {
+  font-size: 0.9rem;
+}
+
+.hana-cozy-page .tracker-view-tabs {
+  gap: 0.3rem;
+  margin-bottom: 0.7rem;
+  border: 1px solid rgba(90, 65, 25, 0.1);
+  border-radius: 9999px;
+  padding: 0.28rem;
+  background: rgba(253, 243, 227, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.hana-cozy-page .tracker-view-tabs button {
+  min-height: 2.55rem;
+  border-radius: 9999px;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.hana-cozy-page .tracker-view-tabs button::after {
+  display: none;
+}
+
+.hana-cozy-page .tracker-view-tabs button[aria-selected="true"] {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px -28px rgba(65, 48, 30, 0.68);
+}
+
+.hana-cozy-page .hana-journey-card {
+  margin: 0 0 1rem;
+  border: 1px solid rgba(120, 171, 99, 0.18);
+  border-radius: 30px;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 94% 0%, rgba(247, 166, 190, 0.1), transparent 9rem),
+    linear-gradient(135deg, rgba(232, 242, 225, 0.84), rgba(255, 255, 255, 0.94));
+  box-shadow:
+    0 26px 60px -44px rgba(65, 48, 30, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.hana-cozy-page .hana-journey-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.8rem;
+  text-align: left;
+}
+
+.hana-cozy-page .hana-journey-heading p {
+  color: var(--muted);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.hana-cozy-page .hana-journey-heading h2 {
+  margin-top: 0.22rem;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.hana-cozy-page .hana-journey-percent {
+  margin: 0;
+  color: #557849;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hana-journey-track {
+  height: 0.55rem;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(120, 171, 99, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(90, 65, 25, 0.05);
+}
+
+.hana-journey-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #668759, #d98ba0);
+  transition: width 620ms cubic-bezier(0.22, 0.72, 0.24, 1);
+}
+
+.hana-journey-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.58rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.hana-cozy-page .hana-journey-details {
+  margin-top: 0.65rem;
+}
+
+.hana-cozy-page .hana-journey-details summary {
+  margin: 0;
+  color: #557849;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hana-cozy-page .hana-journey-details > div {
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+  border-radius: 18px;
+  padding: 0.7rem;
+}
+
+.hana-cozy-page .quest-card-clean,
+.hana-cozy-page .available-quests-section,
+.hana-cozy-page .paused-habits-card,
+.hana-cozy-page .today-utility-button {
+  box-shadow:
+    0 24px 56px -44px rgba(65, 48, 30, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+.hana-cozy-page .quest-card-clean {
+  border-radius: 30px;
+}
+
+.hana-cozy-page .hana-quest-stack {
+  align-items: stretch;
+}
+
+@media (max-width: 350px) {
+  .hana-journey-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .hana-cozy-page .hana-journey-heading {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hana-journey-track > span {
+    transition: none;
+  }
+}
