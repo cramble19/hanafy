@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import {
   ANYTIME_LOG_HOLD_DELAY_MS,
   AnytimeLogSection,
+  calculateSharedWallpaperLayout,
   filterAnytimeActivities,
+  getFullWidthAnytimeCheckIds,
   isAnytimeLogManageKey,
 } from './AnytimeLogSection'
 import { DailyEmotionPicker } from './DailyEmotionPicker'
@@ -189,6 +191,66 @@ describe('settled activity states', () => {
     )
     expect(crambleHtml).toContain('aria-pressed="true"')
     expect(ANYTIME_LOG_HOLD_DELAY_MS).toBe(550)
+  })
+
+  it('uses the shared botanical wallpaper and emoji-free cards for both profiles', () => {
+    const crambleHtml = renderToStaticMarkup(
+      <AnytimeLogSection
+        profile="cramble"
+        activities={activities}
+        todayCounts={{ check: 1, count: 3, rating: 4 }}
+        onManage={() => undefined}
+        {...callbacks}
+      />,
+    )
+    const hanaHtml = renderToStaticMarkup(
+      <AnytimeLogSection
+        profile="hana"
+        activities={activities}
+        todayCounts={{ check: 1, count: 3, rating: 4 }}
+        onManage={() => undefined}
+        {...callbacks}
+      />,
+    )
+
+    for (const html of [hanaHtml, crambleHtml]) {
+      expect(html).toContain('data-anytime-wallpaper="shared-cosmos"')
+      expect(html.match(/data-anytime-wallpaper-card="true"/g)).toHaveLength(2)
+      expect(html.match(/data-board-span="full"/g)).toHaveLength(2)
+      expect(html).toContain('class="anytime-log-check-state"')
+      expect(html).toContain('data-checked="true"')
+      expect(html).toContain('cramble-field-log-cosmos')
+      expect(html).toContain('class="anytime-log-card-manage-surface"')
+      expect(html).not.toContain('class="anytime-log-emblem')
+      expect(html).not.toContain('🫶')
+      expect(html).not.toContain('💧')
+      expect(html).not.toContain('✨')
+    }
+  })
+
+  it('aligns card-sized wallpaper crops and fills otherwise orphaned check rows', () => {
+    const firstCrop = calculateSharedWallpaperLayout(400, 800, 0, 0)
+    const secondCrop = calculateSharedWallpaperLayout(400, 800, 208, 0)
+    expect(firstCrop.imageWidth).toBeGreaterThanOrEqual(400)
+    expect(firstCrop.imageHeight).toBeGreaterThanOrEqual(800)
+    expect(secondCrop.positionX).toBeCloseTo(firstCrop.positionX - 208)
+    expect(secondCrop.positionY).toBe(firstCrop.positionY)
+
+    const secondCheck: OpenActivity = {
+      ...activities[0],
+      id: 'second-check',
+      title: 'Second check',
+    }
+    expect(getFullWidthAnytimeCheckIds([activities[0], activities[1]])).toEqual(
+      new Set(['check']),
+    )
+    expect(
+      getFullWidthAnytimeCheckIds([
+        activities[0],
+        secondCheck,
+        activities[1],
+      ]),
+    ).toEqual(new Set())
   })
 
   it('maps both standard keyboard settings shortcuts without stealing toggle keys', () => {

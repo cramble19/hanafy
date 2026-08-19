@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  ChevronLeft,
   RefreshCw,
   RotateCcw,
 } from 'lucide-react'
@@ -15,6 +14,7 @@ import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { CloudSyncNotice } from '@/components/CloudSyncNotice'
+import { ProfileTopBar } from '@/components/ProfileTopBar'
 import {
   PausedHabitsCard,
   ProfilePauseBanner,
@@ -188,20 +188,7 @@ export function HanaPage({
   return (
     <div className="hana-spring-shell hana-cozy-page mx-auto min-h-full w-full max-w-md px-5 pb-8 pt-6">
       <SpringDecor />
-      <div className="hana-cozy-profile-line mb-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to home"
-          className="hana-cozy-round-button flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="hana-cozy-name flex items-center gap-1.5 text-sm font-medium text-muted">
-          <GardenBlossomIcon className="size-5" />
-          Hana
-        </span>
-      </div>
+      <ProfileTopBar profile="hana" onBack={onBack} />
 
       <header className="hana-cozy-header mb-3">
         <p className="hana-cozy-arc text-xs font-medium uppercase tracking-[0.14em] text-faint">

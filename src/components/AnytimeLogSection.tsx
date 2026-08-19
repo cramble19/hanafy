@@ -1,4 +1,4 @@
-import { Compass, Leaf, Minus, Plus, Settings2 } from 'lucide-react'
+import { Check, Compass, Leaf, Minus, Plus } from 'lucide-react'
 import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
+import crambleFieldLogWallpaper from '@/assets/cramble-field-log-cosmos.png'
 import type { DailyEmotion, OpenActivity } from '@/types'
 
 export type AnytimeLogProfile = 'hana' | 'cramble'
@@ -34,6 +35,56 @@ const RATING_EMOTIONS: readonly DailyEmotion[] = [
   'bright',
 ]
 
+const FIELD_LOG_WALLPAPER_ASPECT = 365 / 547
+
+export function calculateSharedWallpaperLayout(
+  containerWidth: number,
+  containerHeight: number,
+  cardOffsetX: number,
+  cardOffsetY: number,
+) {
+  const containerAspect = containerWidth / containerHeight
+  const imageWidth =
+    containerAspect > FIELD_LOG_WALLPAPER_ASPECT
+      ? containerWidth
+      : containerHeight * FIELD_LOG_WALLPAPER_ASPECT
+  const imageHeight = imageWidth / FIELD_LOG_WALLPAPER_ASPECT
+  const imageOriginX = (containerWidth - imageWidth) / 2
+  const imageOriginY = (containerHeight - imageHeight) / 2
+
+  return {
+    imageWidth,
+    imageHeight,
+    positionX: imageOriginX - cardOffsetX,
+    positionY: imageOriginY - cardOffsetY,
+  }
+}
+
+export function getFullWidthAnytimeCheckIds(
+  activities: OpenActivity[],
+): ReadonlySet<string> {
+  const fullWidthIds = new Set<string>()
+  let checkRun: OpenActivity[] = []
+
+  const finishCheckRun = () => {
+    if (checkRun.length % 2 === 1) {
+      fullWidthIds.add(checkRun[checkRun.length - 1].id)
+    }
+    checkRun = []
+  }
+
+  activities.forEach((activity) => {
+    if (activity.kind === 'check') {
+      checkRun.push(activity)
+      return
+    }
+    finishCheckRun()
+  })
+  finishCheckRun()
+
+  return fullWidthIds
+}
+
 export function filterAnytimeActivities(
   activities: OpenActivity[],
   todayCounts: Record<string, number>,
@@ -53,6 +104,75 @@ export function isAnytimeLogManageKey(
   shiftKey: boolean,
 ): boolean {
   return key === 'ContextMenu' || (key === 'F10' && shiftKey)
+}
+
+function useSharedWallpaperLayout(
+  resultsRef: { current: HTMLDivElement | null },
+  enabled: boolean,
+  layoutKey: string,
+) {
+  useEffect(() => {
+    const results = resultsRef.current
+    if (!enabled || !results) return
+
+    let animationFrame: number | null = null
+    const updateCardCoordinates = () => {
+      if (animationFrame !== null) cancelAnimationFrame(animationFrame)
+      animationFrame = requestAnimationFrame(() => {
+        const resultsRect = results.getBoundingClientRect()
+        const cards = results.querySelectorAll<HTMLElement>(
+          '[data-anytime-wallpaper-card="true"]',
+        )
+
+        if (resultsRect.width <= 0 || resultsRect.height <= 0) return
+
+        cards.forEach((card) => {
+          const cardRect = card.getBoundingClientRect()
+          const wallpaper = calculateSharedWallpaperLayout(
+            resultsRect.width,
+            resultsRect.height,
+            cardRect.left - resultsRect.left,
+            cardRect.top - resultsRect.top,
+          )
+          card.style.setProperty(
+            '--anytime-wallpaper-left',
+            `${wallpaper.positionX}px`,
+          )
+          card.style.setProperty(
+            '--anytime-wallpaper-top',
+            `${wallpaper.positionY}px`,
+          )
+          card.style.setProperty(
+            '--anytime-wallpaper-width',
+            `${wallpaper.imageWidth}px`,
+          )
+          card.style.setProperty(
+            '--anytime-wallpaper-height',
+            `${wallpaper.imageHeight}px`,
+          )
+        })
+        results.dataset.anytimeWallpaperReady = 'true'
+      })
+    }
+
+    updateCardCoordinates()
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(updateCardCoordinates)
+    resizeObserver?.observe(results)
+    results
+      .querySelectorAll<HTMLElement>('[data-anytime-wallpaper-card="true"]')
+      .forEach((card) => resizeObserver?.observe(card))
+    window.addEventListener('resize', updateCardCoordinates)
+
+    return () => {
+      if (animationFrame !== null) cancelAnimationFrame(animationFrame)
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', updateCardCoordinates)
+      delete results.dataset.anytimeWallpaperReady
+    }
+  }, [enabled, layoutKey, resultsRef])
 }
 
 export type AnytimeLogSectionProps = {
@@ -97,6 +217,16 @@ export function AnytimeLogSection({
   )
   const boardActivities = filteredActivities.filter(
     (activity) => activity.kind !== 'rating',
+  )
+  const wallpaperLayoutKey = `${filter}:${boardActivities
+    .map((activity) => `${activity.id}:${activity.kind}`)
+    .join('|')}`
+  const fullWidthCheckIds = getFullWidthAnytimeCheckIds(boardActivities)
+
+  useSharedWallpaperLayout(
+    resultsRef,
+    boardActivities.length > 0,
+    wallpaperLayoutKey,
   )
 
   const moveFocusBeforeRemoval = (activityId: string) => {
@@ -177,6 +307,12 @@ export function AnytimeLogSection({
             id={resultsId}
             className="anytime-log-results"
             data-filter={filter}
+            data-anytime-wallpaper="shared-cosmos"
+            style={
+              {
+                '--anytime-wallpaper-image': `url(${crambleFieldLogWallpaper})`,
+              } as CSSProperties
+            }
           >
             {ratingActivities.length > 0 ? (
               <div
@@ -200,6 +336,7 @@ export function AnytimeLogSection({
                     hideWhenRecorded={filter === 'unlogged'}
                     hideWhenCleared={filter === 'logged'}
                     onWillHide={moveFocusBeforeRemoval}
+                    fullWidthBoardCard={false}
                   />
                 ))}
               </div>
@@ -227,6 +364,10 @@ export function AnytimeLogSection({
                     hideWhenRecorded={filter === 'unlogged'}
                     hideWhenCleared={filter === 'logged'}
                     onWillHide={moveFocusBeforeRemoval}
+                    fullWidthBoardCard={
+                      activity.kind === 'check' &&
+                      fullWidthCheckIds.has(activity.id)
+                    }
                   />
                 ))}
               </div>
@@ -277,6 +418,7 @@ type CardProps = {
   hideWhenRecorded: boolean
   hideWhenCleared: boolean
   onWillHide: (activityId: string) => void
+  fullWidthBoardCard: boolean
 }
 
 function AnytimeLogCard({
@@ -293,11 +435,13 @@ function AnytimeLogCard({
   hideWhenRecorded,
   hideWhenCleared,
   onWillHide,
+  fullWidthBoardCard,
 }: CardProps) {
   const count = Number.isSafeInteger(todayCount) ? Math.max(0, todayCount) : 0
   const checked = activity.kind === 'check' && count > 0
   const recorded = count > 0
   const isRating = activity.kind === 'rating'
+  const hasSharedWallpaper = layout === 'board'
   const unit = activity.unit?.trim() || 'times'
   const countLabel = `${count} ${unit} today`
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -436,6 +580,13 @@ function AnytimeLogCard({
       data-kind={activity.kind}
       data-disabled={disabled}
       data-anytime-activity-id={activity.id}
+      data-anytime-wallpaper-card={hasSharedWallpaper ? 'true' : undefined}
+      data-board-span={
+        layout === 'board' &&
+        (activity.kind === 'count' || fullWidthBoardCard)
+          ? 'full'
+          : undefined
+      }
       role="listitem"
     >
       {activity.kind === 'check' ? (
@@ -470,36 +621,6 @@ function AnytimeLogCard({
         />
       ) : null}
 
-      {onManage && !isRating && activity.kind !== 'check' ? (
-        <button
-          type="button"
-          className="anytime-log-emblem anytime-log-manage"
-          onClick={() => onManage(activity.id)}
-          aria-label={`Manage ${activity.title}`}
-          title={`Manage ${activity.title}`}
-          style={{
-            '--activity-color': activity.color,
-          } as CSSProperties}
-        >
-          <span className="anytime-log-emoji" aria-hidden="true">
-            {activity.emoji}
-          </span>
-          <span className="anytime-log-settings-badge" aria-hidden="true">
-            <Settings2 />
-          </span>
-        </button>
-      ) : (
-        <span
-          className="anytime-log-emblem"
-          aria-hidden="true"
-          style={{
-            '--activity-color': activity.color,
-          } as CSSProperties}
-        >
-          <span className="anytime-log-emoji">{activity.emoji}</span>
-        </span>
-      )}
-
       <div className="anytime-log-copy">
         <h3>{activity.title}</h3>
         <p>{activity.description}</p>
@@ -527,6 +648,42 @@ function AnytimeLogCard({
           </span>
         ) : null}
       </div>
+
+      {activity.kind === 'check' && hasSharedWallpaper ? (
+        <span
+          className="anytime-log-check-state"
+          data-checked={checked}
+          aria-hidden="true"
+        >
+          {checked ? <Check /> : null}
+        </span>
+      ) : null}
+
+      {activity.kind === 'count' && layout === 'board' && onManage ? (
+        <button
+          type="button"
+          className="anytime-log-card-manage-surface"
+          onPointerDown={handleCheckPointerDown}
+          onPointerMove={handleCheckPointerMove}
+          onPointerUp={finishCheckPointer}
+          onPointerCancel={cancelCheckPointer}
+          onLostPointerCapture={handleCheckLostPointerCapture}
+          onClick={(event) => {
+            if (suppressNextClickRef.current) {
+              suppressNextClickRef.current = false
+              return
+            }
+            if (event.detail === 0) openManage()
+          }}
+          onContextMenu={handleCheckContextMenu}
+          onKeyDown={handleCheckKeyDown}
+          disabled={disabled}
+          aria-describedby={interactionHintId}
+          aria-keyshortcuts="Enter Space Shift+F10 ContextMenu"
+          aria-label={`Edit ${activity.title}`}
+          title="Hold to edit"
+        />
+      ) : null}
 
       {activity.kind === 'check' ? null : activity.kind === 'rating' ? (
         <div

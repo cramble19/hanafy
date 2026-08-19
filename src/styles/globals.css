@@ -6920,3 +6920,710 @@ button.anytime-log-emblem:focus-visible {
     transition: none;
   }
 }
+
+/* Cramble botanical field notes: one wallpaper, clipped by each card. */
+.anytime-log-section-cramble .anytime-log-filter {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.anytime-log-section-cramble .anytime-log-filter-option {
+  position: relative;
+  border: 0;
+  color: #a9a198;
+  background: transparent;
+}
+
+.anytime-log-section-cramble .anytime-log-filter-option[data-active='true'],
+.anytime-log-section-cramble .anytime-log-filter-option[aria-pressed='true'] {
+  color: var(--cramble-brass);
+  background: transparent;
+  box-shadow: none;
+}
+
+.anytime-log-section-cramble .anytime-log-filter-option[data-active='true']::after,
+.anytime-log-section-cramble .anytime-log-filter-option[aria-pressed='true']::after {
+  content: "";
+  position: absolute;
+  right: 50%;
+  bottom: 0.18rem;
+  width: 2.25rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--cramble-brass);
+  box-shadow: 0 0 9px rgba(214, 166, 83, 0.22);
+  transform: translateX(50%);
+}
+
+.anytime-log-section-cramble .anytime-log-results {
+  position: relative;
+}
+
+.anytime-log-section-cramble .anytime-log-board {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'] {
+  isolation: isolate;
+  border-color: rgba(214, 166, 83, 0.58);
+  border-radius: 1rem;
+  color: #fff9ee;
+  background: #181a20;
+  box-shadow:
+    0 14px 24px -18px rgba(0, 0, 0, 0.96),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.32);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(8, 13, 20, 0.43), rgba(8, 13, 20, 0.58)),
+    var(--anytime-wallpaper-image);
+  background-repeat: no-repeat;
+  background-position:
+    center,
+    var(--anytime-wallpaper-left, 0px) var(--anytime-wallpaper-top, 0px);
+  background-size:
+    100% 100%,
+    var(--anytime-wallpaper-width, 100%) var(--anytime-wallpaper-height, 100%);
+  opacity: 0;
+  filter: saturate(0.82) brightness(0.82);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-results[data-anytime-wallpaper-ready='true']
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+  opacity: 1;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  > * {
+  position: relative;
+  z-index: 1;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  > .anytime-log-card-toggle {
+  position: absolute;
+  z-index: 4;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']::after {
+  z-index: 3;
+  border-color: rgba(236, 190, 98, 0.48);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  .anytime-log-emblem {
+  width: 2.45rem;
+  min-width: 2.45rem;
+  height: 2.45rem;
+  align-self: start;
+  border-color: rgba(240, 199, 112, 0.62);
+  background: rgba(13, 18, 27, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 5px 13px -8px #000;
+  backdrop-filter: blur(5px);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  .anytime-log-emoji {
+  font-size: 1.35rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  .anytime-log-copy h3 {
+  color: #fffaf0;
+  font-size: 0.88rem;
+  font-weight: 680;
+  line-height: 1.12rem;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.9);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true']::before {
+  filter: saturate(0.4) brightness(0.66);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true'] {
+  border-color: rgba(179, 174, 162, 0.3);
+  background: #202228;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true']
+  .anytime-log-copy h3 {
+  color: #c9c2b8;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='check'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  min-height: 7.5rem;
+  align-content: center;
+  padding: 0.65rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-emblem {
+  display: none;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-copy {
+  align-self: center;
+  padding-top: 0.08rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='check'][data-board-span='full'] {
+  grid-column: 1 / -1;
+  min-height: 5.75rem;
+}
+
+.anytime-log-check-state {
+  position: absolute !important;
+  right: 0.68rem;
+  bottom: 0.68rem;
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border: 1.5px solid rgba(238, 187, 82, 0.86);
+  border-radius: 9999px;
+  color: var(--cramble-brass);
+  background: rgba(12, 17, 25, 0.68);
+  box-shadow:
+    0 5px 14px -8px #000,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(4px);
+}
+
+.anytime-log-check-state svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.anytime-log-check-state[data-checked='false'] {
+  border-color: rgba(214, 166, 83, 0.46);
+  background: rgba(12, 17, 25, 0.42);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count'] {
+  grid-column: 1 / -1;
+  grid-template-columns: 2.45rem minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  column-gap: 0.55rem;
+  min-height: 5rem;
+  padding: 0.62rem 0.68rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-emblem {
+  align-self: center;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-copy {
+  align-self: center;
+  padding-top: 0;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper {
+  position: relative;
+  z-index: 4;
+  grid-column: 3;
+  grid-template-columns: 2.55rem minmax(1.75rem, auto) 2.55rem;
+  justify-self: end;
+  border: 1px solid rgba(238, 187, 82, 0.72);
+  border-radius: 9999px;
+  background: rgba(12, 17, 25, 0.7);
+  box-shadow: 0 7px 18px -12px #000;
+  backdrop-filter: blur(6px);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper button {
+  width: 2.55rem;
+  height: 2.55rem;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper output {
+  min-width: 1.75rem;
+  color: #fffaf0;
+  font-size: 1rem;
+  line-height: 2.55rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+@media (max-width: 360px) {
+  .anytime-log-section-cramble
+    .anytime-log-card-board[data-kind='count'] {
+    grid-template-columns: 2.45rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .anytime-log-section-cramble
+    .anytime-log-card-board[data-kind='count']
+    .anytime-log-stepper {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anytime-log-section-cramble
+    .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+    transition: none;
+  }
+}
+
+/* Shared wallpaper-card treatment for both profiles. Emoji metadata remains
+   persisted, but log cards intentionally show only titles and state controls. */
+.anytime-log-section-hana .anytime-log-filter {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.anytime-log-section-hana .anytime-log-filter-option {
+  position: relative;
+  border: 0;
+  color: #746c62;
+  background: transparent;
+}
+
+.anytime-log-section-hana .anytime-log-filter-option[data-active='true'],
+.anytime-log-section-hana .anytime-log-filter-option[aria-pressed='true'] {
+  color: #527447;
+  background: transparent;
+  box-shadow: none;
+}
+
+.anytime-log-section-hana .anytime-log-filter-option[data-active='true']::after,
+.anytime-log-section-hana .anytime-log-filter-option[aria-pressed='true']::after {
+  content: "";
+  position: absolute;
+  right: 50%;
+  bottom: 0.18rem;
+  width: 2.25rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: #527447;
+  box-shadow: 0 0 9px rgba(82, 116, 71, 0.18);
+  transform: translateX(50%);
+}
+
+.anytime-log-section-hana .anytime-log-results {
+  position: relative;
+}
+
+.anytime-log-section-hana .anytime-log-board {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.52rem;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'] {
+  isolation: isolate;
+  border-color: rgba(112, 151, 91, 0.66);
+  border-radius: 1rem;
+  color: #294126;
+  background: #edf5ee;
+  box-shadow:
+    0 15px 25px -20px rgba(62, 83, 50, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.52);
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(252, 254, 249, 0.28), rgba(244, 250, 242, 0.38)),
+    var(--anytime-wallpaper-image);
+  background-repeat: no-repeat;
+  background-position:
+    center,
+    var(--anytime-wallpaper-left, 0px) var(--anytime-wallpaper-top, 0px);
+  background-size:
+    100% 100%,
+    var(--anytime-wallpaper-width, 100%) var(--anytime-wallpaper-height, 100%);
+  opacity: 0;
+  filter: saturate(0.76) brightness(1.08);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.anytime-log-section-hana
+  .anytime-log-results[data-anytime-wallpaper-ready='true']
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+  opacity: 1;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  > * {
+  position: relative;
+  z-index: 1;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  > .anytime-log-card-toggle {
+  position: absolute;
+  z-index: 4;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true']
+  .anytime-log-copy h3 {
+  color: #284426;
+  font-size: 0.88rem;
+  font-weight: 680;
+  line-height: 1.12rem;
+  text-shadow: 0 1px 5px rgba(255, 255, 255, 0.88);
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true']::before {
+  filter: saturate(0.35) brightness(0.96);
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true'] {
+  border-color: rgba(110, 129, 101, 0.42);
+  background: #e8eee7;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-anytime-wallpaper-card='true'][data-recorded='true']
+  .anytime-log-copy h3 {
+  color: #657260;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-kind='check'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  min-height: 7.5rem;
+  align-content: center;
+  padding: 0.65rem;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-copy {
+  align-self: center;
+  padding-top: 0.08rem;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-kind='check'][data-board-span='full'] {
+  grid-column: 1 / -1;
+  min-height: 5.75rem;
+}
+
+.anytime-log-section-hana .anytime-log-check-state {
+  border-color: rgba(82, 116, 71, 0.86);
+  color: #527447;
+  background: rgba(255, 253, 247, 0.78);
+  box-shadow:
+    0 5px 14px -9px rgba(43, 63, 36, 0.72),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.anytime-log-section-hana .anytime-log-check-state[data-checked='false'] {
+  border-color: rgba(82, 116, 71, 0.58);
+  background: rgba(255, 253, 247, 0.55);
+}
+
+/* Board cards do not render task emoji on either profile. Count-log editing
+   remains available through the transparent hold/keyboard surface. */
+.anytime-log-card-board .anytime-log-emblem {
+  display: none;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='count'] {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  column-gap: 0.55rem;
+  min-height: 5rem;
+  padding: 0.62rem 0.68rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-copy {
+  grid-column: 1;
+  align-self: center;
+  padding-top: 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper {
+  position: relative;
+  z-index: 4;
+  grid-column: 2;
+  justify-self: end;
+}
+
+.anytime-log-card-manage-surface {
+  position: absolute !important;
+  z-index: 3 !important;
+  inset: 0 auto 0 0;
+  width: calc(100% - 8.75rem);
+  min-width: 3rem;
+  border: 0;
+  border-radius: inherit;
+  padding: 0;
+  cursor: context-menu;
+  touch-action: manipulation;
+  color: transparent;
+  background: transparent;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.anytime-log-card-manage-surface:focus-visible {
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--focus, var(--success)) 56%, transparent);
+}
+
+.anytime-log-section-cramble .anytime-log-card-manage-surface:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(241, 200, 105, 0.62);
+}
+
+/* Rating rows keep their meaningful face scale but drop the activity emoji. */
+.anytime-log-card-rating {
+  grid-template-columns: minmax(2.8rem, 1fr) minmax(13.25rem, auto);
+}
+
+.anytime-log-card-rating .anytime-log-copy {
+  grid-column: 1;
+}
+
+.anytime-log-card-rating .anytime-log-rating {
+  grid-column: 2;
+}
+
+@media (max-width: 430px) {
+  .anytime-log-card-rating {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .anytime-log-card-rating .anytime-log-rating {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 360px) {
+  .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+    .anytime-log-card-board[data-kind='count'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+    .anytime-log-card-board[data-kind='count']
+    .anytime-log-stepper {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  .anytime-log-card-manage-surface {
+    right: 0;
+    bottom: 3.1rem;
+    width: auto;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anytime-log-section-hana
+    .anytime-log-card-board[data-anytime-wallpaper-card='true']::before {
+    transition: none;
+  }
+}
+
+/* Shared profile masthead: the name remains optically centered while the
+   left control preserves the existing route back home. */
+.profile-top-bar {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  min-height: 3.75rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  border: 0;
+  border-radius: 1rem 1rem 0.45rem 0.45rem;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-top-bar-hana {
+  background: transparent;
+}
+
+.profile-top-bar-cramble {
+  margin-bottom: 1.5rem;
+  background: transparent;
+}
+
+.profile-top-bar-back {
+  display: grid;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid rgba(106, 129, 92, 0.2);
+  border-radius: 9999px;
+  padding: 0;
+  color: #527447;
+  background: rgba(255, 255, 255, 0.5);
+  outline: none;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.profile-top-bar-back svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 2;
+}
+
+.profile-top-bar-cramble .profile-top-bar-back {
+  border-color: rgba(214, 166, 83, 0.58);
+  color: var(--cramble-brass);
+  background: rgba(18, 20, 27, 0.5);
+}
+
+.profile-top-bar-back:active {
+  transform: scale(0.95);
+}
+
+.profile-top-bar-back:focus-visible {
+  border-color: #527447;
+  box-shadow: 0 0 0 3px rgba(82, 116, 71, 0.2);
+}
+
+.profile-top-bar-cramble .profile-top-bar-back:focus-visible {
+  border-color: #f1c869;
+  box-shadow: 0 0 0 3px rgba(241, 200, 105, 0.2);
+}
+
+.profile-top-bar-name {
+  min-width: 0;
+  justify-self: center;
+  color: #527447;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+.profile-top-bar-cramble .profile-top-bar-name {
+  color: var(--cramble-brass);
+}
+
+.profile-top-bar-spacer {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-top-bar-back {
+    transition: none;
+  }
+}
+
+/* Compact tap logs use the same narrow, vertically centered pill proportions
+   in both profiles. */
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-board {
+  gap: 0.8rem;
+  padding-inline: 0.35rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check'] {
+  grid-template-rows: minmax(0, 1fr);
+  width: 86%;
+  min-height: 5.25rem;
+  justify-self: center;
+  align-content: stretch;
+  aspect-ratio: auto;
+  border-radius: 1.75rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check'][data-board-span='full'] {
+  width: 88%;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-copy {
+  display: flex;
+  min-height: 100%;
+  align-self: stretch;
+  align-items: center;
+  padding: 0 3rem 0 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-check-state {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 360px) {
+  .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+    .anytime-log-board {
+    gap: 0.6rem;
+    padding-inline: 0.2rem;
+  }
+}

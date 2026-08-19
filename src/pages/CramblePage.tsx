@@ -1,7 +1,6 @@
 import {
   BarChart3,
   CalendarDays,
-  ChevronLeft,
   Flame,
   Plus,
   RefreshCw,
@@ -18,12 +17,12 @@ import { BackfillDialog } from '@/components/BackfillDialog'
 import { ExportDataDialog } from '@/components/ExportDataDialog'
 import { PauseTrackingDialog } from '@/components/PauseTrackingDialog'
 import { CloudSyncNotice } from '@/components/CloudSyncNotice'
+import { ProfileTopBar } from '@/components/ProfileTopBar'
 import {
   PausedHabitsCard,
   ProfilePauseBanner,
   TodayUtilityActions,
 } from '@/components/TodayHabitControls'
-import { SunMark } from '@/components/icons/SunMark'
 import crambleChronicles from '@/data/crambleChronicles.json'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
@@ -189,20 +188,7 @@ export function CramblePage({
     >
       <div className="cramble-decor-layer" aria-hidden="true" />
 
-      <div className="relative z-10 mb-6 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to home"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-sm outline-none transition active:scale-95 motion-reduce:transition-none"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
-          <SunMark className="size-4 text-[color:var(--cramble-brass)]" />
-          Cramble
-        </span>
-      </div>
+      <ProfileTopBar profile="cramble" onBack={onBack} />
 
       <header className="relative z-10 mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-faint">
