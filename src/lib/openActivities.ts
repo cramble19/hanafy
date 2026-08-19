@@ -10,6 +10,7 @@ import type {
   NewOpenActivityInput,
   OpenActivity,
 } from '@/types'
+import { getDefaultEmoji } from '@/lib/emojiLibrary'
 
 export type OpenActivityProfile = 'hana' | 'cramble'
 
@@ -92,7 +93,7 @@ export function createOpenActivity(
     custom: true,
     title: input.title.trim(),
     description: input.description.trim(),
-    emoji: input.emoji?.trim() || getDefaultOpenActivityEmoji(profile, input.kind),
+    emoji: input.emoji?.trim() || getDefaultEmoji(profile),
     color: input.color?.trim() || getDefaultOpenActivityColor(profile, input.kind),
     kind: input.kind,
     unit: input.kind === 'count' ? input.unit?.trim() || null : null,
@@ -570,14 +571,6 @@ function isValidOpenActivityId(value: string) {
     value.length <= 120 &&
     !value.includes(':')
   )
-}
-
-function getDefaultOpenActivityEmoji(
-  profile: OpenActivityProfile,
-  kind: OpenActivity['kind'],
-) {
-  if (profile === 'hana') return kind === 'check' ? '🌸' : '🌿'
-  return kind === 'check' ? '⚔️' : '✦'
 }
 
 function getDefaultOpenActivityColor(

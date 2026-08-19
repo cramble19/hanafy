@@ -51,6 +51,8 @@ export function QuestCard({
   return (
     <article
       className={`quest-card-clean rounded-card border bg-surface p-3 shadow-sm ${variant === 'archive' ? 'cramble-quest-card' : ''} ${checked ? 'quest-card-complete border-transparent' : skipped ? 'quest-card-skipped border-border' : 'border-border'}`}
+      data-completed={checked}
+      data-state={checked ? 'completed' : skipped ? 'skipped' : 'remaining'}
     >
       {checked ? (
         <span className="quest-bloom-sparkles" aria-hidden="true">
@@ -63,7 +65,7 @@ export function QuestCard({
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full text-2xl"
+          className="quest-card-emblem flex size-12 shrink-0 items-center justify-center rounded-full text-2xl"
           style={{
             backgroundColor: `${quest.color}1a`,
             boxShadow: `inset 0 0 0 1.5px ${quest.color}66`,
@@ -71,7 +73,7 @@ export function QuestCard({
         >
           {quest.emoji}
         </span>
-        <span className="min-w-0 flex-1 py-0.5">
+        <span className="quest-card-copy min-w-0 flex-1 py-0.5">
           <span className="block text-lg font-medium leading-6 text-ink">
             {quest.title}
           </span>

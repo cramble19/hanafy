@@ -70,12 +70,14 @@ type NewOpenActivityInput = {
 
 ## Lifecycle contract
 
-Persisted snapshots normalize to schema version 5 and include
+Persisted snapshots normalize to schema version 6 and include
 `openActivities`, `openActivityLogs`, and `dailyEmotions`; they may also contain `habitSettings`,
 `questActivations`, finite criteria/graduation state, `trackingPauses`,
 `backfillAudit`, `deletedHabitIds`, `historyEpoch`, and
 `syncRevision`. `habitSettings` is keyed by any built-in, custom quest, or
-anytime id so pause and archive behavior stays shared. Permanent deletion
+anytime id so pause and archive behavior stays shared. Schema version 6 adds
+`emojiOverride` for source-defined scheduled quests; custom quest and anytime
+icons remain part of their persisted definitions. Permanent deletion
 removes the definition and raw history and retains a tombstone for conflict
 resurrection protection.
 
@@ -328,12 +330,12 @@ current app creates backups but does not import them yet.
 
 The API rejects unsupported state schemas and any write whose state schema is
 older than the stored snapshot. This prevents an old cached PWA bundle from
-reading a version-5 snapshot, normalizing it through an older model, and
-overwriting the anytime fields. Such a write returns the normal conflict
-response and leaves the newer database snapshot intact.
+reading a version-6 snapshot, normalizing it through an older model, and
+overwriting emoji overrides or other newer fields. Such a write returns the
+normal conflict response and leaves the newer database snapshot intact.
 
 The CSV includes separate `anytime_activity`, `anytime_log`, and
-`daily_emotion` rows. Backup format version 4 carries the complete version-5
+`daily_emotion` rows. Backup format version 4 carries the complete version-6
 state and a resolved anytime catalog; earlier formats predate one or more of
 the anytime, quest-completion, and emotion branches. The HTML
 Chronicle includes aggregate and per-habit schedule-aware history plus a neutral

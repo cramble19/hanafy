@@ -182,5 +182,7 @@ The database does not use one shared JSON for both people. It stores one current
 JSONB snapshot row for Hana and a separate current row for Cramble. Each snapshot
 contains that profile's custom habits, anytime definitions and logs, settings,
 lifecycle, reminders, pauses, correction audit, dated records, and rewards.
+Schema version 6 also preserves chosen icons for built-in quests; edited seeded
+Hana activity icons remain in their saved activity definitions.
 Built-in definitions originate in the app code, which is why the JSON export
 also embeds the resolved catalog.

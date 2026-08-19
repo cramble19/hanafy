@@ -179,6 +179,7 @@ export function getQuestCatalog(baseQuests: Quest[], state: HanaGameState) {
       const settings = state.habitSettings?.[quest.id]
       catalog.push({
         ...quest,
+        emoji: settings?.emojiOverride || quest.emoji,
         title: settings?.titleOverride || quest.title,
         description: settings?.descriptionOverride || quest.description,
       })
@@ -1471,11 +1472,16 @@ function ensureHanaDefaultOpenActivities(
     if (existingIndex >= 0) {
       const existing = result[existingIndex]
       titles.delete(existing.title.toLocaleLowerCase())
-      result[existingIndex] = {
-        ...activity,
-        createdDate: existing.createdDate,
-      }
-      titles.add(activity.title.toLocaleLowerCase())
+      const requiresEnergyRatingMigration =
+        activity.id === 'custom-hana-energy-check-in' &&
+        existing.kind !== 'rating'
+      result[existingIndex] = requiresEnergyRatingMigration
+        ? {
+            ...activity,
+            createdDate: existing.createdDate,
+          }
+        : existing
+      titles.add(result[existingIndex].title.toLocaleLowerCase())
       return result
     }
     const titleKey = activity.title.toLocaleLowerCase()
@@ -1795,6 +1801,7 @@ function readHabitSettings(value: unknown) {
         titleOverride: readTrimmedString(item.titleOverride, 80) ?? undefined,
         descriptionOverride:
           readTrimmedString(item.descriptionOverride, 280) ?? undefined,
+        emojiOverride: readTrimmedString(item.emojiOverride, 8) ?? undefined,
         cue,
         reminder: {
           enabled: reminderValue.enabled === true && Boolean(time),

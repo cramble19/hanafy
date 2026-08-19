@@ -1277,10 +1277,7 @@ export default function App() {
       return (
         <HanaPage
           game={hanaGame}
-          onToggle={toggleHana}
-          onUndoOccurrence={undoHanaOccurrence}
           onAddHabit={addHanaHabit}
-          onEditHabit={editHanaHabit}
           onAddOpenActivity={addHanaOpenActivity}
           onEditOpenActivity={editHanaOpenActivity}
           onIncrementOpenActivity={(activityId) =>
@@ -1302,9 +1299,6 @@ export default function App() {
           onUndoBackfill={undoBackfillHana}
           onBackfillOpenActivity={backfillHanaOpenActivity}
           onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
-          onSkip={toggleSkip}
-          onActivateQuest={activateHanaQuest}
-          onToggleWeed={toggleWeed}
           onOpenGarden={() => setView('garden')}
           onOpenLedger={() => setView('stats')}
           onNextDay={goToNextDay}
@@ -1351,10 +1345,7 @@ export default function App() {
     return hanaGame ? (
       <HanaPage
         game={hanaGame}
-        onToggle={toggleHana}
-        onUndoOccurrence={undoHanaOccurrence}
         onAddHabit={addHanaHabit}
-        onEditHabit={editHanaHabit}
         onAddOpenActivity={addHanaOpenActivity}
         onEditOpenActivity={editHanaOpenActivity}
         onIncrementOpenActivity={(activityId) =>
@@ -1376,9 +1367,6 @@ export default function App() {
         onUndoBackfill={undoBackfillHana}
         onBackfillOpenActivity={backfillHanaOpenActivity}
         onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
-        onSkip={toggleSkip}
-        onActivateQuest={activateHanaQuest}
-        onToggleWeed={toggleWeed}
         onOpenGarden={() => setView('garden')}
         onOpenLedger={() => setView('stats')}
         onNextDay={goToNextDay}
@@ -1400,7 +1388,22 @@ export default function App() {
 
   if (view === 'garden') {
     return hanaGame ? (
-      <GardenPage game={hanaGame} onBack={() => setView('hana')} />
+      <GardenPage
+        game={hanaGame}
+        onToggle={toggleHana}
+        onUndoOccurrence={undoHanaOccurrence}
+        onEditHabit={editHanaHabit}
+        onPauseHabit={pauseHanaHabit}
+        onResumeHabit={resumeHanaHabit}
+        onArchiveHabit={archiveHanaHabit}
+        onRestoreHabit={restoreHanaHabit}
+        onDeleteHabit={deleteHanaHabit}
+        onResumeTracking={resumeAllHana}
+        onSkip={toggleSkip}
+        onActivateQuest={activateHanaQuest}
+        onToggleWeed={toggleWeed}
+        onBack={() => setView('hana')}
+      />
     ) : (
       <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
     )

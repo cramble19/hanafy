@@ -1,14 +1,21 @@
 import { ChevronLeft } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
+import {
+  HanaQuestHubPanel,
+  type HanaQuestHubPanelProps,
+} from '@/components/HanaQuestHubPanel'
+import {
+  QuestHubTabs,
+  questHubPanelId,
+  questHubTabId,
+  type QuestHubView,
+} from '@/components/QuestHubTabs'
 import {
   getLevelProgress,
   getSpringArcProgress,
   getWeedProgress,
 } from '@/lib/hanaGame'
-import type { HanaGameState } from '@/types'
-
-type Props = {
-  game: HanaGameState
+type Props = HanaQuestHubPanelProps & {
   onBack: () => void
 }
 
@@ -35,7 +42,8 @@ const FLOWER_COLORS = [
   ['#8fb48a', '#f2b84b'],
 ] as const
 
-export function GardenPage({ game, onBack }: Props) {
+export function GardenPage({ game, onBack, ...questActions }: Props) {
+  const [view, setView] = useState<QuestHubView>('destination')
   const levelProgress = getLevelProgress(game.totalFlowers)
   const weedProgress = getWeedProgress(game)
   const springArc = getSpringArcProgress(game)
@@ -50,113 +58,149 @@ export function GardenPage({ game, onBack }: Props) {
   } as CSSProperties
   const plantedCount = Math.min(game.totalFlowers, 48)
   const flowers = Array.from({ length: plantedCount })
+  const isGardenView = view === 'destination'
 
   return (
     <div
-      className="garden-page-shell mx-auto min-h-full w-full max-w-md bg-[#0d1535] text-white"
-      style={springGardenStyle}
+      className={
+        isGardenView
+          ? 'garden-page-shell mx-auto min-h-full w-full max-w-md bg-[#0d1535] text-white'
+          : 'hana-spring-shell hana-cozy-page mx-auto min-h-full w-full max-w-md px-5 pb-10 pt-6'
+      }
+      style={isGardenView ? springGardenStyle : undefined}
     >
-      <div className="relative min-h-full overflow-hidden">
-        <div className="garden-night-sky" aria-hidden="true">
-          <div className="garden-moon" />
-          <span className="garden-comet garden-comet-one" />
-          <span className="garden-comet garden-comet-two" />
-          {STAR_POSITIONS.map(([left, top], index) => (
-            <span
-              key={`${left}-${top}`}
-              className="garden-star"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-                animationDelay: `${index * 180}ms`,
-              }}
-            />
-          ))}
-        </div>
+      <div className={`relative min-h-full ${isGardenView ? 'overflow-hidden' : ''}`}>
+        {isGardenView ? (
+          <div className="garden-night-sky" aria-hidden="true">
+            <div className="garden-moon" />
+            <span className="garden-comet garden-comet-one" />
+            <span className="garden-comet garden-comet-two" />
+            {STAR_POSITIONS.map(([left, top], index) => (
+              <span
+                key={`${left}-${top}`}
+                className="garden-star"
+                style={{
+                  left: `${left}%`,
+                  top: `${top}%`,
+                  animationDelay: `${index * 180}ms`,
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
 
-        <div className="relative z-10 px-5 pb-8 pt-6">
-          <div className="mb-6 flex items-center justify-between gap-3">
+        <div className={isGardenView ? 'relative z-10 px-5 pb-8 pt-6' : 'relative z-10'}>
+          <div className="mb-4 flex items-center gap-3">
             <button
               type="button"
               onClick={onBack}
-              aria-label="Back to Hana's quests"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-sm backdrop-blur outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-white/50 motion-reduce:transition-none"
+              aria-label="Back to Hana's Today page"
+              className={`flex size-10 shrink-0 items-center justify-center rounded-full border shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 motion-reduce:transition-none ${
+                isGardenView
+                  ? 'border-white/15 bg-white/10 text-white backdrop-blur focus-visible:ring-white/50'
+                  : 'border-border bg-surface text-ink focus-visible:ring-ink/40'
+              }`}
             >
               <ChevronLeft className="size-5" />
             </button>
-            <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-right text-xs text-white/80 backdrop-blur">
+            <h1 className={`min-w-0 flex-1 text-lg font-semibold ${isGardenView ? 'text-white' : 'text-ink'}`}>
+              Garden
+            </h1>
+            <div className={`rounded-full border px-3 py-1.5 text-right text-xs ${
+              isGardenView
+                ? 'border-white/15 bg-white/10 text-white/80 backdrop-blur'
+                : 'border-border bg-surface text-muted'
+            }`}>
               Arc {springArc.arcNumber} · {springArc.percent}% full
             </div>
           </div>
 
-          <header className="mb-5">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/55">
-              {springArc.season} night garden
-            </p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">
-              {springArc.isComplete
-                ? 'Spring is in full bloom.'
-                : 'The garden blooms quietly.'}
-            </h1>
-            <p className="mt-3 max-w-xs text-sm leading-6 text-white/68">
-              {springArc.isComplete
-                ? 'Arc 1 is complete. The next season will ask for consistency and tougher choices.'
-                : "Each flower is planted from Hana's completed quests. Evening weeds may wilt a few, but the garden keeps growing."}
-            </p>
-          </header>
+          <QuestHubTabs
+            profile="hana"
+            value={view}
+            surface={isGardenView ? 'dark' : 'light'}
+            onChange={setView}
+          />
 
           <section
-            className={`garden-stage ${springArc.isComplete ? 'garden-stage-complete' : ''}`}
-            aria-label="Hana's planted garden"
+            id={questHubPanelId('hana', 'destination')}
+            role="tabpanel"
+            aria-labelledby={questHubTabId('hana', 'destination')}
+            hidden={!isGardenView}
           >
-            <div className="spring-fullness-aura" aria-hidden="true" />
-            <div className="garden-horizon" aria-hidden="true" />
-            <div className="garden-hill garden-hill-back" aria-hidden="true" />
-            <div className="garden-hill garden-hill-front" aria-hidden="true" />
-            <CoupleSilhouette />
-            {springArc.isComplete ? (
-              <div className="spring-complete-glow" aria-hidden="true">
-                <span>♪</span>
-                <span>♬</span>
-                <span>✦</span>
-              </div>
-            ) : null}
-
-            {flowers.length === 0 ? (
-              <p className="garden-empty">
-                Complete a quest and the first flower will open here.
+            <header className="mb-5 mt-6">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/55">
+                {springArc.season} night garden
               </p>
-            ) : (
-              flowers.map((_, index) => (
-                <PlantedFlower key={index} index={index} total={flowers.length} />
-              ))
-            )}
+              <h2 className="mt-2 text-4xl font-semibold tracking-tight text-white">
+                {springArc.isComplete
+                  ? 'Spring is in full bloom.'
+                  : 'The garden blooms quietly.'}
+              </h2>
+            </header>
+
+            <section
+              className={`garden-stage ${springArc.isComplete ? 'garden-stage-complete' : ''}`}
+              aria-label="Hana's planted garden"
+            >
+              <div className="spring-fullness-aura" aria-hidden="true" />
+              <div className="garden-horizon" aria-hidden="true" />
+              <div className="garden-hill garden-hill-back" aria-hidden="true" />
+              <div className="garden-hill garden-hill-front" aria-hidden="true" />
+              <CoupleSilhouette />
+              {springArc.isComplete ? (
+                <div className="spring-complete-glow" aria-hidden="true">
+                  <span>♪</span>
+                  <span>♬</span>
+                  <span>✦</span>
+                </div>
+              ) : null}
+
+              {flowers.length === 0 ? (
+                <p className="garden-empty">
+                  Complete a quest and the first flower will open here.
+                </p>
+              ) : (
+                flowers.map((_, index) => (
+                  <PlantedFlower key={index} index={index} total={flowers.length} />
+                ))
+              )}
+            </section>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-card border border-white/12 bg-white/10 p-4 backdrop-blur">
+                <p className="text-xs font-medium uppercase tracking-wider text-white/50">
+                  Spring fullness
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
+                  {springArc.percent}%
+                </p>
+              </div>
+              <div className="rounded-card border border-white/12 bg-white/10 p-4 backdrop-blur">
+                <p className="text-xs font-medium uppercase tracking-wider text-white/50">
+                  Net flowers
+                </p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
+                  {game.totalFlowers}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 rounded-card border border-white/12 bg-white/10 p-4 text-sm leading-6 text-white/68 backdrop-blur">
+              Level {levelProgress.level} · {weedProgress.wiltedFlowers} wilted ·{' '}
+              {springArc.isComplete
+                ? `${springArc.nextSeason} season is waiting.`
+                : `${springArc.flowersRemaining} flowers until Spring is full.`}
+            </div>
           </section>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-card border border-white/12 bg-white/10 p-4 backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wider text-white/50">
-                Spring fullness
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
-                {springArc.percent}%
-              </p>
-            </div>
-            <div className="rounded-card border border-white/12 bg-white/10 p-4 backdrop-blur">
-              <p className="text-xs font-medium uppercase tracking-wider text-white/50">
-                Net flowers
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
-                {game.totalFlowers}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 rounded-card border border-white/12 bg-white/10 p-4 text-sm leading-6 text-white/68 backdrop-blur">
-            Level {levelProgress.level} · {weedProgress.wiltedFlowers} wilted ·{' '}
-            {springArc.isComplete
-              ? `${springArc.nextSeason} season is waiting.`
-              : `${springArc.flowersRemaining} flowers until Spring is full.`}
-          </div>
+          <section
+            id={questHubPanelId('hana', 'quests')}
+            role="tabpanel"
+            aria-labelledby={questHubTabId('hana', 'quests')}
+            hidden={isGardenView}
+          >
+            <HanaQuestHubPanel game={game} {...questActions} />
+          </section>
         </div>
       </div>
     </div>

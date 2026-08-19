@@ -36,7 +36,7 @@ describe('daily emotion tracking', () => {
     ).toEqual({ '2026-08-08': 'okay' })
   })
 
-  it('migrates old snapshots to schema v5 and clears emotions on progress reset', () => {
+  it('migrates old snapshots to schema v6 and clears emotions on progress reset', () => {
     const migrated = parseStoredHanaState(
       JSON.stringify({
         ...createStartedHanaState('2026-08-08'),
@@ -47,7 +47,7 @@ describe('daily emotion tracking', () => {
       '2026-08-10',
     )
 
-    expect(migrated.schemaVersion).toBe(5)
+    expect(migrated.schemaVersion).toBe(6)
     expect(migrated.dailyEmotions).toEqual({ '2026-08-08': 'good' })
     expect(resetProfileProgress(migrated, []).dailyEmotions).toEqual({})
   })

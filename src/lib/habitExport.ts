@@ -6,6 +6,7 @@ import {
 } from '@/lib/hanaGame'
 import { formatQuestCadence, getHabitRangeStats } from '@/lib/hanaStats'
 import {
+  GAME_STATE_SCHEMA_VERSION,
   getActiveHabitPause,
   getActiveProfilePause,
   getHabitSettings,
@@ -125,7 +126,7 @@ export function buildProfileBackup(
       timeZone: options.timeZone ?? getLocalTimeZone(),
     },
     source: {
-      stateSchemaVersion: state.schemaVersion ?? 5,
+      stateSchemaVersion: state.schemaVersion ?? GAME_STATE_SCHEMA_VERSION,
       databaseRevision: syncRevision ?? null,
       logicalDate: state.currentDate,
       storedPoints: state.totalFlowers,

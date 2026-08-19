@@ -22,7 +22,7 @@ import {
 } from '@/lib/questCompletion'
 
 describe('finite quest chapters', () => {
-  it('migrates v3 progress to v5 without changing records or earned rewards', () => {
+  it('migrates v3 progress to v6 without changing records or earned rewards', () => {
     const customQuest = {
       ...dailyQuest({ id: 'custom-hana-legacy-practice' }),
       custom: true as const,
@@ -46,7 +46,7 @@ describe('finite quest chapters', () => {
       '2026-08-02',
     )
 
-    expect(migrated.schemaVersion).toBe(5)
+    expect(migrated.schemaVersion).toBe(6)
     expect(migrated.dailyCompletions).toEqual(original.dailyCompletions)
     expect(migrated.customHabits[0].completionCriteria).toBeDefined()
     expect(getHabitSettings(migrated, customQuest.id).completion).toEqual(

@@ -171,12 +171,13 @@ do not create `hana_quest_statuses` rows because that projection represents
 scored goal windows; Ledger/export analytics read their snapshot history
 directly. No SQL migration is required.
 
-The API accepts only supported state schema versions (currently 1 through 5),
+The API accepts only supported state schema versions (currently 1 through 6),
 and the snapshot upsert also compares the incoming version with the stored one.
 A POST whose schema is older than the current snapshot updates zero rows and
 returns the normal 409 conflict response. This protects version-3 fields from
-an older cached PWA client that does not know how to preserve them and prevents
-an unsupported future version from locking legitimate clients out.
+an older cached PWA client that does not know how to preserve them, including
+version-6 built-in quest emoji overrides, and prevents an unsupported future
+version from locking legitimate clients out.
 
 The API rejects the whole POST if the profile is invalid, `startDate` is missing,
 or any quest/weed row is malformed or carries a different profile. Inserts derive

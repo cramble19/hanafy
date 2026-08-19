@@ -115,6 +115,8 @@ export type HabitSettings = {
   /** Optional wording overrides for source-defined habits. */
   titleOverride?: string
   descriptionOverride?: string
+  /** Optional icon override for a source-defined scheduled quest. */
+  emojiOverride?: string
   cue: string
   reminder: HabitReminder
   archivedAt: string | null

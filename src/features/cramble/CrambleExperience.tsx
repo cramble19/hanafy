@@ -1165,7 +1165,22 @@ export function CrambleExperience({ onBack }: Props) {
   }
 
   if (view === 'observatory') {
-    return <ObservatoryPage game={game} onBack={() => setView('tracker')} />
+    return (
+      <ObservatoryPage
+        game={game}
+        onToggle={toggleQuest}
+        onUndoOccurrence={undoQuestOccurrence}
+        onEditHabit={editCrambleHabit}
+        onPauseHabit={pauseCrambleHabit}
+        onResumeHabit={resumeCrambleHabit}
+        onArchiveHabit={archiveCrambleHabit}
+        onRestoreHabit={restoreCrambleHabit}
+        onDeleteHabit={deleteCrambleHabit}
+        onResumeTracking={resumeAllCramble}
+        onSkip={toggleSkip}
+        onBack={() => setView('tracker')}
+      />
+    )
   }
 
   if (view === 'ledger') {
@@ -1207,10 +1222,7 @@ export function CrambleExperience({ onBack }: Props) {
   return (
     <CramblePage
       game={game}
-      onToggle={toggleQuest}
-      onUndoOccurrence={undoQuestOccurrence}
       onAddHabit={addCrambleHabit}
-      onEditHabit={editCrambleHabit}
       onAddOpenActivity={addCrambleOpenActivity}
       onEditOpenActivity={editCrambleOpenActivity}
       onIncrementOpenActivity={(activityId) =>
@@ -1232,7 +1244,6 @@ export function CrambleExperience({ onBack }: Props) {
       onUndoBackfill={undoBackfillCramble}
       onBackfillOpenActivity={backfillCrambleOpenActivity}
       onUndoBackfillOpenActivity={undoBackfillCrambleOpenActivity}
-      onSkip={toggleSkip}
       onOpenObservatory={() => setView('observatory')}
       onOpenLedger={() => setView('ledger')}
       onNextDay={goToNextDay}

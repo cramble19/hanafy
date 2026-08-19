@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App from '@/App'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
@@ -16,7 +16,13 @@ import {
 } from '@/lib/hanaGame'
 
 describe('local-first profile opening', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 14, 12))
+  })
+
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 

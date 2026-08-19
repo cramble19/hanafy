@@ -4,6 +4,7 @@ import {
   getDefaultQuestCompletionCriteria,
   getTotalOnlyCompletionCriteria,
 } from '@/lib/questCompletionRules'
+import { getDefaultEmoji } from '@/lib/emojiLibrary'
 
 export type HabitProfile = 'hana' | 'cramble'
 export type HabitFrequency = 'oncePerPeriod' | 'timesPerPeriod'
@@ -14,6 +15,7 @@ export type HabitCompletionStyle = 'forgiving' | 'total'
 export type NewHabitInput = {
   title: string
   description: string
+  emoji?: string
   frequency: HabitFrequency
   target: number
   periodLength: number
@@ -31,6 +33,7 @@ export const CUSTOM_HABIT_LIMITS = {
   periodDays: PERIOD_TARGET_LIMITS.periodDays,
   periodWeeks: 52,
   cue: 100,
+  emoji: 8,
 } as const
 
 export function resolveHabitPeriodPreset(
@@ -59,6 +62,9 @@ export function getNewHabitValidationError(
   if (!description) return 'Add a short description of what completion means.'
   if (description.length > CUSTOM_HABIT_LIMITS.description) {
     return `Keep the description within ${CUSTOM_HABIT_LIMITS.description} characters.`
+  }
+  if ((input.emoji?.trim().length ?? 0) > CUSTOM_HABIT_LIMITS.emoji) {
+    return 'Choose a shorter icon.'
   }
   if (!['easy', 'medium', 'hard'].includes(input.difficulty)) {
     return 'Choose an objective difficulty.'
@@ -124,6 +130,7 @@ export function updateCustomHabitQuest(
     ...quest,
     title: input.title.trim(),
     description: input.description.trim(),
+    emoji: input.emoji?.trim() || quest.emoji,
     difficulty: input.difficulty,
     schedule: createSchedule(input),
     completionCriteria: createCompletionCriteria(input),
@@ -154,6 +161,7 @@ export function habitInputFromQuest(
   return {
     title: quest.title,
     description: quest.description,
+    emoji: quest.emoji,
     frequency: target === 1 ? 'oncePerPeriod' : 'timesPerPeriod',
     target,
     periodLength: isWeeklyPeriod ? 1 : periodDays,
@@ -195,7 +203,7 @@ export function createCustomHabitQuest(
 
   return {
     id,
-    emoji: profile === 'hana' ? '🌱' : '⚔️',
+    emoji: input.emoji?.trim() || getDefaultEmoji(profile),
     title: input.title.trim(),
     description: input.description.trim(),
     group: 'daily',

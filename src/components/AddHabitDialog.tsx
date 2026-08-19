@@ -23,7 +23,9 @@ import {
   type NewHabitInput,
 } from '@/lib/customHabits'
 import { FLOWERS_BY_DIFFICULTY } from '@/lib/hanaGame'
+import { resolveInitialEmoji } from '@/lib/emojiLibrary'
 import type { Difficulty } from '@/types'
+import { EmojiPicker } from './emoji-picker/EmojiPicker'
 
 type Props = {
   profile: HabitProfile
@@ -32,6 +34,7 @@ type Props = {
   onSubmit: (input: NewHabitInput) => string | null
   mode?: 'create' | 'edit'
   initialValue?: NewHabitInput
+  originalEmoji?: string
   rulesLocked?: boolean
   contentLocked?: boolean
   lifecycleStatus?: 'active' | 'paused' | 'archived'
@@ -60,6 +63,7 @@ export function AddHabitDialog({
   onSubmit,
   mode = 'create',
   initialValue,
+  originalEmoji,
   rulesLocked = false,
   contentLocked = false,
   lifecycleStatus = 'active',
@@ -81,6 +85,9 @@ export function AddHabitDialog({
   const targetHelpId = useId()
   const [title, setTitle] = useState(initialValue?.title ?? '')
   const [description, setDescription] = useState(initialValue?.description ?? '')
+  const [emoji, setEmoji] = useState(
+    () => resolveInitialEmoji(profile, initialValue?.emoji),
+  )
   const [frequency, setFrequency] =
     useState<HabitFrequency>(initialValue?.frequency ?? 'oncePerPeriod')
   const [target, setTarget] = useState(String(initialValue?.target ?? 2))
@@ -155,6 +162,7 @@ export function AddHabitDialog({
     const input: NewHabitInput = {
       title,
       description,
+      emoji,
       frequency,
       target: frequency === 'oncePerPeriod' ? 1 : Number(target),
       periodLength,
@@ -279,6 +287,19 @@ export function AddHabitDialog({
         </p>
 
         <div className="mt-5 space-y-4">
+          <EmojiPicker
+            profile={profile}
+            value={emoji}
+            onChange={setEmoji}
+            label="Quest icon"
+            additionalChoices={
+              originalEmoji
+                ? [{ emoji: originalEmoji, label: 'Original icon' }]
+                : undefined
+            }
+            disabled={contentLocked}
+          />
+
           <label className="block">
             <span className="add-habit-label">Habit name</span>
             <input

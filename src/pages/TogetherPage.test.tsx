@@ -32,6 +32,20 @@ describe('TogetherPage emotional weather', () => {
     )
 
     expect(html).toContain('Emotional weather')
+    expect(html).toContain(
+      'class="together-section-title together-emotion-title"',
+    )
+    expect(html).toContain(
+      'id="settled-rhythm-title" class="together-section-title"',
+    )
+    expect(html).not.toContain(
+      'Active days contain a saved, dated quest or item interaction.',
+    )
+    expect(html).not.toContain('Consistency trend')
+    expect(html).not.toContain('Settled goal rate over the selected range')
+    expect(html).not.toContain('Strongest rhythms')
+    expect(html).not.toContain('Three settled windows will reveal this rhythm.')
+    expect(html).toContain('together-emotion-after-rhythm')
     expect(html).toContain('How both days have felt')
     expect(html).toContain('aria-label="Emotion chart range"')
     expect(html).toMatch(/aria-pressed="true"[^>]*>7 days<\/button>/)

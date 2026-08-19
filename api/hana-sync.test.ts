@@ -9,12 +9,16 @@ const database = vi.hoisted(() => ({
   directQueries: [] as string[],
   transactionQueries: [] as string[],
   acceptedWrite: 'update' as 'update' | 'insert' | 'none',
+  storedSchemaVersion: null as number | null,
   currentRows: [] as Array<{ revision: number; write_token: string }>,
 }))
 
 vi.mock('@neondatabase/serverless', () => {
-  type FakeQuery = Promise<unknown[]> & { queryText: string }
-  const sql = ((strings: TemplateStringsArray) => {
+  type FakeQuery = Promise<unknown[]> & {
+    queryText: string
+    values: unknown[]
+  }
+  const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
     const queryText = strings.join('?')
     database.directQueries.push(queryText)
     const rows = queryText.includes('SELECT revision, write_token')
@@ -22,6 +26,7 @@ vi.mock('@neondatabase/serverless', () => {
       : []
     const query = Promise.resolve(rows) as unknown as FakeQuery
     query.queryText = queryText
+    query.values = values
     return query
   }) as {
     (strings: TemplateStringsArray, ...values: unknown[]): FakeQuery
@@ -29,19 +34,32 @@ vi.mock('@neondatabase/serverless', () => {
   }
   sql.transaction = vi.fn(async (queries: FakeQuery[]) => {
     database.transactionQueries = queries.map((query) => query.queryText)
-    return queries.map((query) =>
-      (database.acceptedWrite === 'update' &&
-        query.queryText.includes('UPDATE hana_state_snapshots')) ||
-      (database.acceptedWrite === 'insert' &&
-        query.queryText.includes('INSERT INTO hana_state_snapshots'))
+    return queries.map((query) => {
+      const isSnapshotUpdate = query.queryText.includes(
+        'UPDATE hana_state_snapshots',
+      )
+      const incomingSchemaVersion = isSnapshotUpdate
+        ? query.values.at(-1)
+        : null
+      const acceptsSchemaVersion =
+        database.storedSchemaVersion === null ||
+        (typeof incomingSchemaVersion === 'number' &&
+          database.storedSchemaVersion <= incomingSchemaVersion)
+      const acceptsWrite =
+        (database.acceptedWrite === 'update' &&
+          isSnapshotUpdate &&
+          acceptsSchemaVersion) ||
+        (database.acceptedWrite === 'insert' &&
+          query.queryText.includes('INSERT INTO hana_state_snapshots'))
+      return acceptsWrite
         ? [
             {
               revision: database.acceptedWrite === 'insert' ? 1 : 3,
               synced_at: '2026-08-11T04:00:00.000Z',
             },
           ]
-        : [],
-    )
+        : []
+    })
   })
   return { neon: () => sql }
 })
@@ -53,6 +71,7 @@ describe('profile sync API revision writes', () => {
     database.directQueries = []
     database.transactionQueries = []
     database.acceptedWrite = 'update'
+    database.storedSchemaVersion = null
     database.currentRows = []
     process.env.DATABASE_URL = 'postgresql://example.invalid/neondb'
   })
@@ -202,6 +221,54 @@ describe('profile sync API revision writes', () => {
       revision: 3,
       idempotent: true,
     })
+  })
+
+  it('rejects a schema-v5 client write after a schema-v6 snapshot exists', async () => {
+    database.storedSchemaVersion = 6
+    database.currentRows = [
+      { revision: 2, write_token: 'schema-v6-current-write' },
+    ]
+    const state = {
+      ...createStartedHanaState('2026-08-11'),
+      schemaVersion: 5,
+      syncRevision: 2,
+    }
+    const payload = createProfileCloudSyncPayload(
+      'hana',
+      state,
+      quests,
+      '2026-08-11T04:00:00.000Z',
+      'schema-v5-stale-client-write',
+    )
+    let statusCode = 200
+    let responseBody: unknown
+    const response = {
+      setHeader() {},
+      status(code: number) {
+        statusCode = code
+        return this
+      },
+      json(body: unknown) {
+        responseBody = body
+      },
+      end() {},
+    }
+
+    await handler(
+      { method: 'POST', body: { ...payload, baseRevision: 2 }, query: {} },
+      response,
+    )
+
+    expect(statusCode).toBe(409)
+    expect(responseBody).toMatchObject({
+      error: 'The profile changed on another device',
+      currentRevision: 2,
+    })
+    expect(
+      database.transactionQueries.find((query) =>
+        query.includes('UPDATE hana_state_snapshots'),
+      ),
+    ).toContain("jsonb_typeof(state -> 'schemaVersion')")
   })
 
   it('reports the current revision for a genuinely stale write', async () => {

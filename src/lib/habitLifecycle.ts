@@ -6,7 +6,7 @@ import type {
   TrackingPause,
 } from '@/types'
 
-export const GAME_STATE_SCHEMA_VERSION = 5 as const
+export const GAME_STATE_SCHEMA_VERSION = 6 as const
 export const MAX_BACKFILL_DAYS = 3
 
 export const PAUSE_REASON_OPTIONS: Array<{
@@ -251,13 +251,14 @@ export function updateHabitPreferences(
 export function updateHabitWording(
   state: GameState,
   habitId: string,
-  input: { title: string; description: string },
+  input: { title: string; description: string; emoji?: string },
 ): GameState {
   const settings = getHabitSettings(state, habitId)
   return setHabitSettings(state, habitId, {
     ...settings,
     titleOverride: input.title.trim().slice(0, 80),
     descriptionOverride: input.description.trim().slice(0, 280),
+    emojiOverride: input.emoji?.trim().slice(0, 8) || settings.emojiOverride,
   })
 }
 

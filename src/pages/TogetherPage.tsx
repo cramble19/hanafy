@@ -7,9 +7,7 @@ import { crambleQuests } from '@/data/crambleQuests'
 import { quests } from '@/data/quests'
 import {
   getCombinedStats,
-  type CombinedStatsResult,
   type ComparisonRange,
-  type ComparisonTrendBucket,
   type ProfileComparisonSummary,
 } from '@/lib/combinedStats'
 import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
@@ -138,28 +136,13 @@ export function TogetherPage({
             <ProfileRhythmCard profile="hana" summary={stats.hana} />
             <ProfileRhythmCard profile="cramble" summary={stats.cramble} />
           </div>
-          <p className="together-active-definition mt-2 text-center text-xs leading-5">
-            Active days contain a saved, dated quest or item interaction.
-          </p>
         </section>
-
-        <ConsistencyTrend stats={stats} />
 
         <EmotionalWeather
           stats={emotionStats}
           range={emotionRange}
           onRangeChange={setEmotionRange}
         />
-
-        <section aria-labelledby="strongest-rhythms-title">
-          <h2 id="strongest-rhythms-title" className="together-section-title">
-            Strongest rhythms
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <StrongestRhythmCard profile="hana" summary={stats.hana} />
-            <StrongestRhythmCard profile="cramble" summary={stats.cramble} />
-          </div>
-        </section>
 
         <p className="together-neutral-note">
           <Leaf className="size-4 shrink-0" aria-hidden="true" />
@@ -201,12 +184,15 @@ function EmotionalWeather({
 
   return (
     <section
-      className="together-emotion-card"
+      className="together-emotion-card together-emotion-after-rhythm"
       aria-labelledby="emotional-weather-title"
     >
       <div className="together-emotion-heading">
         <div>
-          <h2 id="emotional-weather-title" className="together-section-title">
+          <h2
+            id="emotional-weather-title"
+            className="together-section-title together-emotion-title"
+          >
             Emotional weather
           </h2>
           <p className="mt-1 text-xs text-muted">How both days have felt</p>
@@ -494,149 +480,6 @@ function ProfileRhythmCard({
   )
 }
 
-function ConsistencyTrend({ stats }: { stats: CombinedStatsResult }) {
-  const chart = getChartGeometry(stats.trend)
-  const hasEvidence = stats.trend.some(
-    (bucket) => bucket.hanaRate !== null || bucket.crambleRate !== null,
-  )
-  const summary = [
-    trendSummary('Hana', stats.trend.map((bucket) => bucket.hanaRate)),
-    trendSummary('Cramble', stats.trend.map((bucket) => bucket.crambleRate)),
-  ].join(' ')
-
-  return (
-    <section className="together-trend-card" aria-labelledby="consistency-title">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 id="consistency-title" className="together-section-title">
-          Consistency trend
-        </h2>
-        <div className="together-chart-legend" aria-hidden="true">
-          <span><i data-profile="hana" />Hana</span>
-          <span><i data-profile="cramble" />Cramble</span>
-        </div>
-      </div>
-      <p className="sr-only">{summary}</p>
-      <div className="relative mt-3">
-        <svg
-          viewBox="0 0 360 190"
-          className="w-full"
-          role="img"
-          aria-label="Settled goal rate over the selected range"
-        >
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const y = chart.yFor(tick)
-            return (
-              <g key={tick}>
-                <line
-                  x1="42"
-                  x2="346"
-                  y1={y}
-                  y2={y}
-                  className="together-chart-grid"
-                />
-                <text x="35" y={y + 4} textAnchor="end" className="together-chart-axis">
-                  {tick}%
-                </text>
-              </g>
-            )
-          })}
-
-          {chart.hanaSegments.map((segment, index) => (
-            <polyline
-              key={`hana-${index}`}
-              points={segment}
-              className="together-chart-line together-chart-line-hana"
-            />
-          ))}
-          {chart.crambleSegments.map((segment, index) => (
-            <polyline
-              key={`cramble-${index}`}
-              points={segment}
-              className="together-chart-line together-chart-line-cramble"
-            />
-          ))}
-
-          {stats.trend.map((bucket, index) => {
-            const x = chart.xFor(index)
-            return (
-              <g key={bucket.startDate}>
-                {bucket.hanaRate !== null ? (
-                  <circle
-                    cx={x}
-                    cy={chart.yFor(bucket.hanaRate)}
-                    r="4.2"
-                    className="together-chart-dot-hana"
-                  />
-                ) : null}
-                {bucket.crambleRate !== null ? (
-                  <rect
-                    x={x - 4}
-                    y={chart.yFor(bucket.crambleRate) - 4}
-                    width="8"
-                    height="8"
-                    rx="1.5"
-                    transform={`rotate(45 ${x} ${chart.yFor(bucket.crambleRate)})`}
-                    className="together-chart-dot-cramble"
-                  />
-                ) : null}
-                <text
-                  x={x}
-                  y="181"
-                  textAnchor="middle"
-                  className="together-chart-axis together-chart-label"
-                >
-                  {formatAxisDate(bucket.startDate)}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
-        {!hasEvidence ? (
-          <p className="together-chart-empty">Trend still forming</p>
-        ) : null}
-      </div>
-    </section>
-  )
-}
-
-function StrongestRhythmCard({
-  profile,
-  summary,
-}: {
-  profile: 'hana' | 'cramble'
-  summary: ProfileComparisonSummary
-}) {
-  const isHana = profile === 'hana'
-  const Mark = isHana ? FlowerMark : SunMark
-  const name = isHana ? 'Hana' : 'Cramble'
-
-  return (
-    <article className="together-strongest-card" data-profile={profile}>
-      <div className="flex items-center gap-2">
-        <Mark className="together-strongest-mark" />
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-ink">{name}</h3>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            {summary.strongestHabit?.title ?? 'Trend still forming'}
-          </p>
-        </div>
-      </div>
-      {summary.strongestHabit ? (
-        <div className="together-strongest-rate">
-          <span>{summary.strongestHabit.rate}%</span>
-          <small>
-            {summary.strongestHabit.settledWindows} settled goals
-          </small>
-        </div>
-      ) : (
-        <p className="together-forming-copy mt-4 text-xs leading-5">
-          Three settled windows will reveal this rhythm.
-        </p>
-      )}
-    </article>
-  )
-}
-
 function JourneyPaths() {
   return (
     <svg
@@ -665,40 +508,6 @@ function JourneyPaths() {
       <path d="M28 48l5 5m0-5-5 5M327 48l5 5m0-5-5 5" stroke="#d7ae79" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
-}
-
-function getChartGeometry(buckets: ComparisonTrendBucket[]) {
-  const xFor = (index: number) =>
-    buckets.length <= 1 ? 194 : 50 + (index * 288) / (buckets.length - 1)
-  const yFor = (rate: number) => 154 - (Math.max(0, Math.min(100, rate)) / 100) * 126
-  const segmentsFor = (key: 'hanaRate' | 'crambleRate') => {
-    const segments: string[] = []
-    let points: string[] = []
-    buckets.forEach((bucket, index) => {
-      const rate = bucket[key]
-      if (rate === null) {
-        if (points.length > 1) segments.push(points.join(' '))
-        points = []
-        return
-      }
-      points.push(`${xFor(index)},${yFor(rate)}`)
-    })
-    if (points.length > 1) segments.push(points.join(' '))
-    return segments
-  }
-
-  return {
-    xFor,
-    yFor,
-    hanaSegments: segmentsFor('hanaRate'),
-    crambleSegments: segmentsFor('crambleRate'),
-  }
-}
-
-function trendSummary(name: string, rates: Array<number | null>) {
-  const available = rates.filter((rate): rate is number => rate !== null)
-  if (available.length === 0) return `${name}'s trend is still forming.`
-  return `${name}'s settled rates in this range are ${available.join(', ')} percent.`
 }
 
 function formatAxisDate(dateKey: string) {

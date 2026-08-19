@@ -17,11 +17,13 @@ import {
   getNewOpenActivityValidationError,
   OPEN_ACTIVITY_LIMITS,
 } from '@/lib/openActivities'
+import { resolveInitialEmoji } from '@/lib/emojiLibrary'
 import type {
   NewOpenActivityInput,
   CreatableOpenActivityKind,
 } from '@/types'
 import type { AnytimeLogProfile } from './AnytimeLogSection'
+import { EmojiPicker } from './emoji-picker/EmojiPicker'
 
 type ErrorField = 'title' | 'description' | 'unit' | 'form'
 
@@ -77,6 +79,9 @@ export function AddAnytimeLogDialog({
   const [description, setDescription] = useState(
     initialValue?.description ?? '',
   )
+  const [emoji, setEmoji] = useState(
+    () => resolveInitialEmoji(profile, initialValue?.emoji),
+  )
   const [kind, setKind] = useState<CreatableOpenActivityKind>(
     initialValue?.kind ?? 'check',
   )
@@ -128,6 +133,7 @@ export function AddAnytimeLogDialog({
     const input: NewOpenActivityInput = {
       title: title.trim(),
       description: description.trim(),
+      emoji,
       kind,
       unit: kind === 'count' ? unit.trim() || null : null,
     }
@@ -257,6 +263,13 @@ export function AddAnytimeLogDialog({
         {showForm ? (
           <>
             <div className="anytime-dialog-fields">
+              <EmojiPicker
+                profile={profile}
+                value={emoji}
+                onChange={setEmoji}
+                label="Log icon"
+              />
+
               <fieldset>
                 <legend className="add-habit-label">Record as</legend>
                 <div className="anytime-record-kind-grid">

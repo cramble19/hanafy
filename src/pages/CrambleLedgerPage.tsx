@@ -492,11 +492,6 @@ export function HabitLedgerPage({
             </h1>
           </div>
         </div>
-        <p className="mt-4 text-sm leading-6 text-muted">
-          {isCramble
-            ? 'A calm record of lessons attempted, completed, and passed. The page is information—not judgment.'
-            : 'A gentle record of habits attempted, completed, and skipped. Each mark is information—not judgment.'}
-        </p>
       </header>
 
       <section className="relative z-10 mt-5" aria-label="Daily emotion record">
@@ -545,9 +540,6 @@ export function HabitLedgerPage({
             >
               Anytime records
             </h2>
-            <p className="mt-1 text-xs leading-5 text-faint">
-              Only recorded days are marked. Blank days stay neutral.
-            </p>
             <div className="section-sigil-divider" aria-hidden="true">
               <span />
               <span />
@@ -648,11 +640,6 @@ export function HabitLedgerPage({
             Archive index
           </p>
           <h2 className="mt-1 text-xl font-semibold text-ink">Quest records</h2>
-          <p className="mt-1 text-xs leading-5 text-faint">
-            Open a quest to see each goal window and every recorded day.
-            {' '}🔥 marks a live combo; {isCramble ? '🕯️' : '🥀'} invites a
-            gentle restart only after three unfinished windows.
-          </p>
           <div className="section-sigil-divider" aria-hidden="true">
             <span />
             <span />
