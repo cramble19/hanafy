@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
 import { FlowerMark } from '@/components/icons/FlowerMark'
 import { SunMark } from '@/components/icons/SunMark'
 import { TogetherMark } from '@/components/icons/TogetherMark'
@@ -187,16 +186,13 @@ export function HomePage({
         type="button"
         onClick={onSelectTogether}
         aria-label="Open combined stats for Hana and Cramble"
-        className="home-together-card mt-10 flex w-full items-center gap-4 rounded-[26px] border border-border bg-surface/90 px-5 py-4 text-left outline-none"
+        className="home-together-card mt-10 w-full rounded-[26px] border border-border bg-surface/90 px-5 py-4 outline-none"
       >
         <TogetherMark className="home-together-mark shrink-0" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-lg font-semibold text-ink">Together</span>
-          <span className="mt-0.5 block text-sm text-muted">
-            See your shared rhythm
-          </span>
+        <span className="home-together-label text-lg font-semibold text-ink">
+          Together
         </span>
-        <ChevronRight className="size-5 shrink-0 text-faint" aria-hidden="true" />
+        <span className="home-together-balance" aria-hidden="true" />
       </button>
 
       <p className="mt-10 text-center text-sm leading-6 text-muted">

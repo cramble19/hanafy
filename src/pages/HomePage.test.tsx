@@ -18,7 +18,9 @@ describe('HomePage emotion marks', () => {
     expect(html).not.toContain('home-emotion-status')
     expect(html).toContain('Whose')
     expect(html).toContain('day is it?')
-    expect(html).toContain('See your shared rhythm')
+    expect(html).toContain('>Together<')
+    expect(html).not.toContain('See your shared rhythm')
+    expect(html).not.toContain('together-mark-vine')
   })
 
   it('adds only the two floating SVG states when emotions exist', () => {

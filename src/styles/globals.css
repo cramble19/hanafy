@@ -351,8 +351,7 @@ body {
 }
 
 .together-mark-flower,
-.together-mark-sun,
-.together-mark-vine {
+.together-mark-sun {
   position: absolute;
   display: block;
 }
@@ -374,15 +373,10 @@ body {
   color: #e9a229;
 }
 
-.together-mark-vine {
-  left: 2.2rem;
-  bottom: 0;
-  z-index: 1;
-  width: 2.65rem;
-  height: 1.45rem;
-}
-
 .home-together-card {
+  display: grid;
+  grid-template-columns: 6.1rem minmax(0, 1fr) 6.1rem;
+  align-items: center;
   max-width: 22rem;
   box-shadow:
     0 18px 45px -30px rgba(87, 73, 47, 0.48),
@@ -416,8 +410,18 @@ body {
 }
 
 .home-together-mark {
+  grid-column: 1;
   width: 6.1rem;
   height: 3.5rem;
+}
+
+.home-together-label {
+  grid-column: 2;
+  text-align: center;
+}
+
+.home-together-balance {
+  grid-column: 3;
 }
 
 .quest-card-complete {
@@ -4838,7 +4842,7 @@ select.add-habit-input {
 
 @media (max-width: 360px) {
   .home-together-card {
-    gap: 0.65rem;
+    grid-template-columns: 5.25rem minmax(0, 1fr) 5.25rem;
     padding-inline: 0.9rem;
   }
 

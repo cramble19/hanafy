@@ -24,7 +24,6 @@ import {
 import crambleChronicles from '@/data/crambleChronicles.json'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
-  getCrambleChapterProgress,
   getCrambleJourneyProgress,
 } from '@/lib/crambleGame'
 import { type NewHabitInput } from '@/lib/customHabits'
@@ -151,7 +150,6 @@ export function CramblePage({
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const openActivities = getOpenActivityCatalog(game)
-  const chapter = getCrambleChapterProgress(game)
   const journey = getCrambleJourneyProgress(game)
   const activeProfilePause = getActiveProfilePause(game)
   const pausedOpenActivities = openActivities.filter(
@@ -189,23 +187,14 @@ export function CramblePage({
       <ProfileTopBar profile="cramble" onBack={onBack} />
 
       <header className="relative z-10 mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-faint">
-          The Sunward Archive · Chapter {chapter.chapterNumber}
-        </p>
-        <div className="mt-1 flex items-end justify-between gap-4">
-          <div>
-            <h1
-              ref={headingRef}
-              tabIndex={-1}
-              className="text-3xl font-semibold tracking-tight text-ink outline-none"
-            >
-              {chapter.isComplete ? 'The oath is fulfilled' : "Today's chapter"}
-            </h1>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-              <CalendarDays className="size-4" aria-hidden="true" />
-              {displayDate(game.currentDate)}
-            </p>
-          </div>
+        <h1 ref={headingRef} tabIndex={-1} className="sr-only outline-none">
+          Cramble
+        </h1>
+        <div className="flex items-center justify-between gap-4">
+          <p className="flex items-center gap-1.5 text-sm text-muted">
+            <CalendarDays className="size-4" aria-hidden="true" />
+            {displayDate(game.currentDate)}
+          </p>
           <button
             type="button"
             onClick={onSyncCloud}
@@ -214,18 +203,18 @@ export function CramblePage({
               cloudSyncStatus === 'syncing' ||
               cloudSyncStatus === 'disabled'
             }
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink shadow-sm outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
+            className="inline-grid size-11 shrink-0 place-items-center rounded-full border border-border bg-transparent p-0 text-ink outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
             aria-label="Refresh Cramble's progress from database"
+            title="Refresh"
           >
             <RefreshCw
-              className={`size-3.5 ${
+              className={`size-4 ${
                 cloudSyncStatus === 'loading' || cloudSyncStatus === 'syncing'
                   ? 'animate-spin motion-reduce:animate-none'
                   : ''
               }`}
               aria-hidden="true"
             />
-            Refresh
           </button>
         </div>
         <p

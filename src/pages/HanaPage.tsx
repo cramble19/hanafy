@@ -213,13 +213,14 @@ export function HanaPage({
               cloudSyncStatus === 'disabled' ||
               cloudSyncStatus === 'preview'
             }
-            className="hana-cozy-refresh inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold text-ink outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+            className="hana-cozy-refresh inline-grid size-11 shrink-0 place-items-center rounded-full border border-border bg-transparent p-0 text-ink outline-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
             aria-label="Refresh Hana's progress from database"
+            title="Refresh"
           >
             <RefreshCw
-              className={`size-3.5 ${cloudSyncStatus === 'loading' || cloudSyncStatus === 'syncing' ? 'animate-spin' : ''}`}
+              className={`size-4 ${cloudSyncStatus === 'loading' || cloudSyncStatus === 'syncing' ? 'animate-spin' : ''}`}
+              aria-hidden="true"
             />
-            Refresh
           </button>
         </div>
         <p className="hana-cozy-sync-status mt-2 text-xs text-faint">{getCloudSyncLabel(cloudSyncStatus, lastCloudSyncAt)}</p>

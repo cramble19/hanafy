@@ -49,7 +49,10 @@ describe('local-first profile opening', () => {
       <CrambleExperience onBack={() => undefined} />,
     )
 
-    expect(html).toContain("Today&#x27;s chapter")
+    expect(html).toContain('Friday, August 14')
+    expect(html).toContain("Refresh Cramble&#x27;s progress from database")
+    expect(html).not.toContain("Today&#x27;s chapter")
+    expect(html).not.toContain('The Sunward Archive')
     expect(html).not.toContain("Opening Cramble&#x27;s archive")
   })
 
