@@ -16,6 +16,42 @@ type Props = {
   crambleEmotion?: DailyEmotion | null
 }
 
+const MEMORY_IMAGES = [
+  {
+    src: '/couple-watercolor.png',
+    alt: 'A watercolor portrait of us together',
+  },
+  {
+    src: '/couple-hands.jpg',
+    alt: 'Our hands held together',
+  },
+] as const
+
+const MEMORY_ROTATION_INTERVAL_MS = 2_000
+
+export function getNextMemoryImageIndex(current: number) {
+  return (current + 1) % MEMORY_IMAGES.length
+}
+
+export function MemoryPhotoCarousel({ activeIndex }: { activeIndex: number }) {
+  return (
+    <div className="home-memory-frame" aria-live="off">
+      {MEMORY_IMAGES.map((image, index) => {
+        const isActive = index === activeIndex
+        return (
+          <img
+            key={image.src}
+            src={image.src}
+            alt={isActive ? image.alt : ''}
+            aria-hidden={!isActive}
+            className={`home-memory-image ${isActive ? 'is-active' : ''}`}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 export function HomePage({
   onSelectHana,
   onSelectCramble,
@@ -25,6 +61,7 @@ export function HomePage({
   crambleEmotion = null,
 }: Props) {
   const [showPhoto, setShowPhoto] = useState(false)
+  const [memoryImageIndex, setMemoryImageIndex] = useState(0)
   const hanaButtonRef = useRef<HTMLButtonElement>(null)
   const crambleButtonRef = useRef<HTMLButtonElement>(null)
   const togetherButtonRef = useRef<HTMLButtonElement>(null)
@@ -41,6 +78,38 @@ export function HomePage({
     }
   }, [focusTarget])
 
+  useEffect(() => {
+    if (!showPhoto) {
+      setMemoryImageIndex(0)
+      return
+    }
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let rotationTimer: number | null = null
+
+    const stopRotation = () => {
+      if (rotationTimer !== null) window.clearInterval(rotationTimer)
+      rotationTimer = null
+    }
+    const startRotation = () => {
+      stopRotation()
+      if (document.hidden || reducedMotion.matches) return
+      rotationTimer = window.setInterval(() => {
+        setMemoryImageIndex(getNextMemoryImageIndex)
+      }, MEMORY_ROTATION_INTERVAL_MS)
+    }
+
+    document.addEventListener('visibilitychange', startRotation)
+    reducedMotion.addEventListener('change', startRotation)
+    startRotation()
+
+    return () => {
+      stopRotation()
+      document.removeEventListener('visibilitychange', startRotation)
+      reducedMotion.removeEventListener('change', startRotation)
+    }
+  }, [showPhoto])
+
   return (
     <div className="home-shell mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-6 py-12">
       <div className="home-orb home-orb-flower" aria-hidden="true" />
@@ -53,7 +122,10 @@ export function HomePage({
         <h1 className="mt-3 text-4xl font-semibold tracking-tight text-ink">
           <button
             type="button"
-            onClick={() => setShowPhoto(true)}
+            onClick={() => {
+              setMemoryImageIndex(0)
+              setShowPhoto(true)
+            }}
             className="home-whose rounded-control outline-none transition hover:text-muted focus-visible:ring-2 focus-visible:ring-ink/35 motion-reduce:transition-none"
             aria-label="Open a hidden memory"
           >
@@ -143,11 +215,7 @@ export function HomePage({
             className="home-memory-card"
             onClick={(event) => event.stopPropagation()}
           >
-            <img
-              src="/couple-watercolor.png"
-              alt="A watercolor portrait of us together"
-              className="aspect-[4/3] w-full rounded-[22px] object-cover"
-            />
+            <MemoryPhotoCarousel activeIndex={memoryImageIndex} />
             <div className="px-2 pb-2 pt-4 text-center">
               <p className="text-sm font-medium text-ink">
                 A little garden for us.

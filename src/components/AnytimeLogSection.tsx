@@ -1,4 +1,4 @@
-import { Check, Compass, Leaf, Minus, Plus } from 'lucide-react'
+import { Compass, Leaf, Minus, Plus } from 'lucide-react'
 import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react'
 import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
-import crambleFieldLogWallpaper from '@/assets/cramble-field-log-cosmos.png'
+import flowerLogWallpaper from '@/assets/flower-log-wallpaper.jpg'
 import type { DailyEmotion, OpenActivity } from '@/types'
 
 export type AnytimeLogProfile = 'hana' | 'cramble'
@@ -60,29 +60,58 @@ export function calculateSharedWallpaperLayout(
   }
 }
 
-export function getFullWidthAnytimeCheckIds(
-  activities: OpenActivity[],
-): ReadonlySet<string> {
-  const fullWidthIds = new Set<string>()
-  let checkRun: OpenActivity[] = []
+export type AnytimeLogMosaicGroup = {
+  feature: OpenActivity
+  compact: OpenActivity[]
+  featureSide: 'left' | 'right'
+}
 
-  const finishCheckRun = () => {
-    if (checkRun.length % 2 === 1) {
-      fullWidthIds.add(checkRun[checkRun.length - 1].id)
-    }
-    checkRun = []
+/**
+ * Builds three-item mosaics in saved order. Rating controls use the feature
+ * slot; count logs can use either size so sparse real-world lists do not leave
+ * accidental holes. A second rating starts a fresh group because two five-face
+ * scales cannot share one compact cluster.
+ */
+export function groupAnytimeActivitiesForMosaic(
+  activities: OpenActivity[],
+): AnytimeLogMosaicGroup[] {
+  const groups: AnytimeLogMosaicGroup[] = []
+  let pending: OpenActivity[] = []
+
+  const finishGroup = () => {
+    if (pending.length === 0) return
+
+    const ratingIndex = pending.findIndex(
+      (activity) => activity.kind === 'rating',
+    )
+    const countIndex = pending.findIndex(
+      (activity) => activity.kind === 'count',
+    )
+    const featureIndex = ratingIndex >= 0 ? ratingIndex : countIndex
+    const resolvedFeatureIndex = featureIndex >= 0 ? featureIndex : 0
+    const feature = pending[resolvedFeatureIndex]
+    const compact = pending.filter((_, index) => index !== resolvedFeatureIndex)
+
+    groups.push({
+      feature,
+      compact,
+      featureSide: groups.length % 2 === 0 ? 'left' : 'right',
+    })
+    pending = []
   }
 
   activities.forEach((activity) => {
-    if (activity.kind === 'check') {
-      checkRun.push(activity)
-      return
-    }
-    finishCheckRun()
-  })
-  finishCheckRun()
+    const hasRatingLog = pending.some(
+      (pendingActivity) => pendingActivity.kind === 'rating',
+    )
+    if (activity.kind === 'rating' && hasRatingLog) finishGroup()
 
-  return fullWidthIds
+    pending.push(activity)
+    if (pending.length === 3) finishGroup()
+  })
+  finishGroup()
+
+  return groups
 }
 
 export function filterAnytimeActivities(
@@ -212,17 +241,11 @@ export function AnytimeLogSection({
     todayCounts,
     filter,
   )
-  const ratingActivities = filteredActivities.filter(
-    (activity) => activity.kind === 'rating',
-  )
-  const boardActivities = filteredActivities.filter(
-    (activity) => activity.kind !== 'rating',
-  )
+  const boardActivities = filteredActivities
+  const mosaicGroups = groupAnytimeActivitiesForMosaic(boardActivities)
   const wallpaperLayoutKey = `${filter}:${boardActivities
     .map((activity) => `${activity.id}:${activity.kind}`)
     .join('|')}`
-  const fullWidthCheckIds = getFullWidthAnytimeCheckIds(boardActivities)
-
   useSharedWallpaperLayout(
     resultsRef,
     boardActivities.length > 0,
@@ -307,69 +330,58 @@ export function AnytimeLogSection({
             id={resultsId}
             className="anytime-log-results"
             data-filter={filter}
-            data-anytime-wallpaper="shared-cosmos"
+            data-anytime-wallpaper="shared-flower"
             style={
               {
-                '--anytime-wallpaper-image': `url(${crambleFieldLogWallpaper})`,
+                '--anytime-wallpaper-image': `url(${flowerLogWallpaper})`,
               } as CSSProperties
             }
           >
-            {ratingActivities.length > 0 ? (
-              <div
-                className="anytime-log-rating-list"
-                role="list"
-                aria-label="Rating logs"
-              >
-                {ratingActivities.map((activity) => (
-                  <AnytimeLogCard
-                    key={activity.id}
-                    layout="rating"
-                    profile={profile}
-                    activity={activity}
-                    todayCount={todayCounts[activity.id] ?? 0}
-                    disabled={disabled}
-                    onIncrement={onIncrement}
-                    onDecrement={onDecrement}
-                    onSetRating={onSetRating}
-                    onManage={onManage}
-                    interactionHintId={interactionHintId}
-                    hideWhenRecorded={filter === 'unlogged'}
-                    hideWhenCleared={filter === 'logged'}
-                    onWillHide={moveFocusBeforeRemoval}
-                    fullWidthBoardCard={false}
-                  />
-                ))}
-              </div>
-            ) : null}
-
             {boardActivities.length > 0 ? (
               <div
                 className="anytime-log-board"
                 role="list"
                 aria-label="Anytime logs"
               >
-                {boardActivities.map((activity) => (
-                  <AnytimeLogCard
-                    key={activity.id}
-                    layout="board"
-                    profile={profile}
-                    activity={activity}
-                    todayCount={todayCounts[activity.id] ?? 0}
-                    disabled={disabled}
-                    onIncrement={onIncrement}
-                    onDecrement={onDecrement}
-                    onSetRating={onSetRating}
-                    onManage={onManage}
-                    interactionHintId={interactionHintId}
-                    hideWhenRecorded={filter === 'unlogged'}
-                    hideWhenCleared={filter === 'logged'}
-                    onWillHide={moveFocusBeforeRemoval}
-                    fullWidthBoardCard={
-                      activity.kind === 'check' &&
-                      fullWidthCheckIds.has(activity.id)
-                    }
-                  />
-                ))}
+                {mosaicGroups.map((group) => {
+                  const orderedActivities =
+                    group.featureSide === 'left'
+                      ? [group.feature, ...group.compact]
+                      : [...group.compact, group.feature]
+
+                  return (
+                    <div
+                      key={group.feature.id}
+                      className="anytime-log-mosaic-group"
+                      data-feature-side={group.featureSide}
+                      role="presentation"
+                    >
+                      {orderedActivities.map((activity) => (
+                        <AnytimeLogCard
+                          key={activity.id}
+                          layout="board"
+                          mosaicSize={
+                            activity.id === group.feature.id
+                              ? 'feature'
+                              : 'compact'
+                          }
+                          profile={profile}
+                          activity={activity}
+                          todayCount={todayCounts[activity.id] ?? 0}
+                          disabled={disabled}
+                          onIncrement={onIncrement}
+                          onDecrement={onDecrement}
+                          onSetRating={onSetRating}
+                          onManage={onManage}
+                          interactionHintId={interactionHintId}
+                          hideWhenRecorded={filter === 'unlogged'}
+                          hideWhenCleared={filter === 'logged'}
+                          onWillHide={moveFocusBeforeRemoval}
+                        />
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
             ) : null}
 
@@ -406,6 +418,7 @@ export function AnytimeLogSection({
 
 type CardProps = {
   layout: 'rating' | 'board'
+  mosaicSize?: 'feature' | 'compact'
   profile: AnytimeLogProfile
   activity: OpenActivity
   todayCount: number
@@ -418,11 +431,11 @@ type CardProps = {
   hideWhenRecorded: boolean
   hideWhenCleared: boolean
   onWillHide: (activityId: string) => void
-  fullWidthBoardCard: boolean
 }
 
 function AnytimeLogCard({
   layout,
+  mosaicSize,
   profile,
   activity,
   todayCount,
@@ -435,7 +448,6 @@ function AnytimeLogCard({
   hideWhenRecorded,
   hideWhenCleared,
   onWillHide,
-  fullWidthBoardCard,
 }: CardProps) {
   const count = Number.isSafeInteger(todayCount) ? Math.max(0, todayCount) : 0
   const checked = activity.kind === 'check' && count > 0
@@ -581,12 +593,7 @@ function AnytimeLogCard({
       data-disabled={disabled}
       data-anytime-activity-id={activity.id}
       data-anytime-wallpaper-card={hasSharedWallpaper ? 'true' : undefined}
-      data-board-span={
-        layout === 'board' &&
-        (activity.kind === 'count' || fullWidthBoardCard)
-          ? 'full'
-          : undefined
-      }
+      data-mosaic-size={layout === 'board' ? mosaicSize : undefined}
       role="listitem"
     >
       {activity.kind === 'check' ? (
@@ -648,16 +655,6 @@ function AnytimeLogCard({
           </span>
         ) : null}
       </div>
-
-      {activity.kind === 'check' && hasSharedWallpaper ? (
-        <span
-          className="anytime-log-check-state"
-          data-checked={checked}
-          aria-hidden="true"
-        >
-          {checked ? <Check /> : null}
-        </span>
-      ) : null}
 
       {activity.kind === 'count' && layout === 'board' && onManage ? (
         <button

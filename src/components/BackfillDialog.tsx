@@ -234,9 +234,6 @@ export function BackfillDialog({
                 const unit = activity.unit || (value === 1 ? 'time' : 'times')
                 return (
                   <div key={activity.id} className="backfill-habit-row">
-                    <span className="text-xl" aria-hidden="true">
-                      {activity.emoji}
-                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">
                         {activity.title}

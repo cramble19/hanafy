@@ -5,7 +5,7 @@ import {
   AnytimeLogSection,
   calculateSharedWallpaperLayout,
   filterAnytimeActivities,
-  getFullWidthAnytimeCheckIds,
+  groupAnytimeActivitiesForMosaic,
   isAnytimeLogManageKey,
 } from './AnytimeLogSection'
 import { DailyEmotionPicker } from './DailyEmotionPicker'
@@ -24,7 +24,6 @@ const activities: OpenActivity[] = [
     custom: true,
     title: 'Saw a friend',
     description: 'A warm moment',
-    emoji: '🫶',
     color: '#d98ba0',
     kind: 'check',
     unit: null,
@@ -35,7 +34,6 @@ const activities: OpenActivity[] = [
     custom: true,
     title: 'Glasses of water',
     description: 'A small refill',
-    emoji: '💧',
     color: '#78ab63',
     kind: 'count',
     unit: 'glasses',
@@ -46,7 +44,6 @@ const activities: OpenActivity[] = [
     custom: true,
     title: 'Energy',
     description: 'Notice the day',
-    emoji: '✨',
     color: '#d6a653',
     kind: 'rating',
     unit: null,
@@ -125,7 +122,7 @@ describe('settled activity states', () => {
     ).toBe(activities)
   })
 
-  it('renders an accessible quick-log filter, rating lane, and dense activity board', () => {
+  it('renders an accessible quick-log filter and alternating activity mosaic', () => {
     const html = renderToStaticMarkup(
       <AnytimeLogSection
         profile="hana"
@@ -140,13 +137,13 @@ describe('settled activity states', () => {
     expect(html).toContain('aria-label="Filter anytime logs"')
     expect(html.match(/class="anytime-log-filter-option"/g)).toHaveLength(3)
     expect(html).toContain('data-active="true" aria-pressed="true"')
-    expect(html).toContain('class="anytime-log-rating-list"')
     expect(html).toContain('class="anytime-log-board"')
-    expect(html.indexOf('anytime-log-rating-list')).toBeLessThan(
-      html.indexOf('anytime-log-board'),
-    )
-    expect(html.match(/anytime-log-card-rating/g)).toHaveLength(1)
-    expect(html.match(/anytime-log-card-board/g)).toHaveLength(2)
+    expect(html).not.toContain('class="anytime-log-rating-list"')
+    expect(html.match(/class="anytime-log-mosaic-group"/g)).toHaveLength(1)
+    expect(html).toContain('data-feature-side="left"')
+    expect(html.match(/anytime-log-card-board/g)).toHaveLength(3)
+    expect(html.match(/data-mosaic-size="feature"/g)).toHaveLength(1)
+    expect(html.match(/data-mosaic-size="compact"/g)).toHaveLength(2)
     expect(html).toContain('anytime-log-card-toggle')
     expect(html).not.toContain('anytime-log-check-button-compact')
     expect(html).toContain('aria-keyshortcuts="Enter Space Shift+F10 ContextMenu"')
@@ -214,12 +211,12 @@ describe('settled activity states', () => {
     )
 
     for (const html of [hanaHtml, crambleHtml]) {
-      expect(html).toContain('data-anytime-wallpaper="shared-cosmos"')
-      expect(html.match(/data-anytime-wallpaper-card="true"/g)).toHaveLength(2)
-      expect(html.match(/data-board-span="full"/g)).toHaveLength(2)
-      expect(html).toContain('class="anytime-log-check-state"')
-      expect(html).toContain('data-checked="true"')
-      expect(html).toContain('cramble-field-log-cosmos')
+      expect(html).toContain('data-anytime-wallpaper="shared-flower"')
+      expect(html.match(/data-anytime-wallpaper-card="true"/g)).toHaveLength(3)
+      expect(html).not.toContain('data-board-span=')
+      expect(html).not.toContain('anytime-log-check-state')
+      expect(html).not.toContain('data-checked=')
+      expect(html).toContain('flower-log-wallpaper')
       expect(html).toContain('class="anytime-log-card-manage-surface"')
       expect(html).not.toContain('class="anytime-log-emblem')
       expect(html).not.toContain('🫶')
@@ -228,7 +225,7 @@ describe('settled activity states', () => {
     }
   })
 
-  it('aligns card-sized wallpaper crops and fills otherwise orphaned check rows', () => {
+  it('aligns card-sized wallpaper crops and groups adjustable logs as feature tiles', () => {
     const firstCrop = calculateSharedWallpaperLayout(400, 800, 0, 0)
     const secondCrop = calculateSharedWallpaperLayout(400, 800, 208, 0)
     expect(firstCrop.imageWidth).toBeGreaterThanOrEqual(400)
@@ -241,16 +238,36 @@ describe('settled activity states', () => {
       id: 'second-check',
       title: 'Second check',
     }
-    expect(getFullWidthAnytimeCheckIds([activities[0], activities[1]])).toEqual(
-      new Set(['check']),
-    )
-    expect(
-      getFullWidthAnytimeCheckIds([
-        activities[0],
-        secondCheck,
-        activities[1],
-      ]),
-    ).toEqual(new Set())
+    const thirdCheck: OpenActivity = {
+      ...activities[0],
+      id: 'third-check',
+      title: 'Third check',
+    }
+    const groups = groupAnytimeActivitiesForMosaic([
+      activities[0],
+      activities[1],
+      secondCheck,
+      activities[2],
+      thirdCheck,
+    ])
+    expect(groups.map((group) => group.feature.id)).toEqual(['count', 'rating'])
+    expect(groups.map((group) => group.compact.map((activity) => activity.id))).toEqual([
+      ['check', 'second-check'],
+      ['third-check'],
+    ])
+    expect(groups.map((group) => group.featureSide)).toEqual(['left', 'right'])
+
+    const sparseGroup = groupAnytimeActivitiesForMosaic([
+      activities[2],
+      activities[0],
+      activities[1],
+    ])
+    expect(sparseGroup).toHaveLength(1)
+    expect(sparseGroup[0].feature.id).toBe('rating')
+    expect(sparseGroup[0].compact.map((activity) => activity.id)).toEqual([
+      'check',
+      'count',
+    ])
   })
 
   it('maps both standard keyboard settings shortcuts without stealing toggle keys', () => {

@@ -13,7 +13,6 @@ import {
   parseStoredHanaState,
 } from '@/lib/hanaGame'
 import {
-  createOpenActivity,
   updateOpenActivityDefinition,
 } from '@/lib/openActivities'
 
@@ -61,28 +60,37 @@ describe('emoji persistence', () => {
     ).toBe('🐝')
   })
 
-  it('creates and edits an anytime-log icon', () => {
-    const created = createOpenActivity(
-      {
-        title: 'Read outside',
-        description: 'Read a few pages outdoors.',
-        kind: 'check',
-        emoji: '📖',
-      },
-      'cramble',
-      '2026-08-19',
+  it('drops legacy anytime-log icons without losing definitions or logs', () => {
+    const legacyId = 'open-cramble-legacy-icon'
+    const restored = parseStoredHanaState(
+      JSON.stringify({
+        ...createStartedHanaState('2026-08-19'),
+        openActivities: [{
+          id: legacyId,
+          custom: true,
+          title: 'Read outside',
+          description: 'Read a few pages outdoors.',
+          emoji: '📖',
+          color: '#8baebb',
+          kind: 'check',
+          unit: null,
+          createdDate: '2026-08-19',
+        }],
+        openActivityLogs: {
+          '2026-08-19': { [legacyId]: 1 },
+        },
+      }),
       [],
-      'open-cramble-emoji-test',
+      '2026-08-19',
     )
-    const updated = updateOpenActivityDefinition(created, {
-      title: created.title,
-      description: created.description,
-      kind: 'check',
-      emoji: '🕯️',
-    })
 
-    expect(created.emoji).toBe('📖')
-    expect(updated.emoji).toBe('🕯️')
+    expect(restored.openActivities).toEqual([
+      expect.objectContaining({ id: legacyId, title: 'Read outside' }),
+    ])
+    expect(restored.openActivities[0]).not.toHaveProperty('emoji')
+    expect(restored.openActivityLogs).toEqual({
+      '2026-08-19': { [legacyId]: 1 },
+    })
   })
 
   it('keeps edits to a seeded Hana anytime log after normalization', () => {
@@ -100,7 +108,6 @@ describe('emoji persistence', () => {
       title: 'A day worth celebrating',
       description: 'Record a day that felt meaningfully productive.',
       kind: 'check',
-      emoji: '🍓',
     })
     const restored = parseStoredHanaState(
       JSON.stringify({
@@ -118,11 +125,13 @@ describe('emoji persistence', () => {
     ).toEqual(expect.objectContaining({
       title: 'A day worth celebrating',
       description: 'Record a day that felt meaningfully productive.',
-      emoji: '🍓',
     }))
+    expect(
+      restored.openActivities.find(({ id }) => id === updated.id),
+    ).not.toHaveProperty('emoji')
   })
 
-  it('keeps non-UI creation fallbacks deterministic', () => {
+  it('keeps scheduled-quest creation fallbacks deterministic', () => {
     expect(
       createCustomHabitQuest(
         habitInput(),
@@ -132,19 +141,6 @@ describe('emoji persistence', () => {
         'custom-hana-default-emoji',
       ).emoji,
     ).toBe(getDefaultEmoji('hana'))
-    expect(
-      createOpenActivity(
-        {
-          title: 'Read outside',
-          description: 'Read a few pages outdoors.',
-          kind: 'check',
-        },
-        'cramble',
-        '2026-08-19',
-        [],
-        'open-cramble-default-emoji',
-      ).emoji,
-    ).toBe(getDefaultEmoji('cramble'))
   })
 })
 

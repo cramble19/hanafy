@@ -383,7 +383,6 @@ export function HanaPage({
             description: managedActivity.description,
             kind: managedActivity.kind,
             unit: managedActivity.unit,
-            emoji: managedActivity.emoji,
             color: managedActivity.color,
           }}
           kindLocked={hasOpenActivityHistory(game, managedActivity.id)}

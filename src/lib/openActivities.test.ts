@@ -50,7 +50,7 @@ describe('deadline-free anytime logs', () => {
         createdDate: '2026-08-07',
       }),
     )
-    expect(activity.emoji).toBeTruthy()
+    expect(activity).not.toHaveProperty('emoji')
     expect(activity.color).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
@@ -134,7 +134,6 @@ describe('deadline-free anytime logs', () => {
       custom: true,
       title: 'Energy level',
       description: 'How was your energy today?',
-      emoji: '⚡',
       color: '#9fb683',
       kind: 'rating',
       unit: null,
@@ -370,7 +369,7 @@ describe('deadline-free anytime logs', () => {
   })
 
   it('removes unapproved Hana defaults and migrates energy to a five-point rating', () => {
-    const oldDefaults: OpenActivity[] = [
+    const oldDefaults = [
       ['custom-hana-kind-moment', 'Kind Moment', 'check'],
       ['custom-hana-music-moment', 'Music Moment', 'check'],
       ['custom-hana-energy-check-in', 'Energy Check-in', 'count'],

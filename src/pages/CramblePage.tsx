@@ -1,12 +1,10 @@
 import {
   BarChart3,
   CalendarDays,
-  Flame,
   Plus,
   RefreshCw,
   RotateCcw,
   Star,
-  Sword,
 } from 'lucide-react'
 import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
@@ -239,17 +237,8 @@ export function CramblePage({
         </p>
       </header>
 
-      <section className="cramble-codex-card relative z-10 mb-5 rounded-card border border-border bg-surface p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-faint">
-            From the archive
-          </p>
-          <ForgeMark />
-        </div>
-        <blockquote className="mt-2 text-sm leading-6 text-ink">
-          “{line.text}”
-        </blockquote>
-        <p className="mt-2 text-xs font-medium text-muted">The Sunward Archive</p>
+      <section className="cramble-quote-compact relative z-10" aria-label="Quote for today">
+        <blockquote>“{line.text}”</blockquote>
       </section>
 
       <DailyEmotionPicker
@@ -405,7 +394,6 @@ export function CramblePage({
             description: managedActivity.description,
             kind: managedActivity.kind,
             unit: managedActivity.unit,
-            emoji: managedActivity.emoji,
             color: managedActivity.color,
           }}
           kindLocked={hasOpenActivityHistory(game, managedActivity.id)}
@@ -472,17 +460,6 @@ export function CramblePage({
         />
       ) : null}
     </div>
-  )
-}
-
-function ForgeMark() {
-  return (
-    <span className="cramble-forge-mark" aria-hidden="true">
-      <Sword className="cramble-forge-sword" />
-      <Flame className="cramble-forge-flame" />
-      <span className="cramble-forge-spark cramble-forge-spark-one" />
-      <span className="cramble-forge-spark cramble-forge-spark-two" />
-    </span>
   )
 }
 

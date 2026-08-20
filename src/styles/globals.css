@@ -139,6 +139,25 @@ body {
   box-shadow: 0 24px 80px rgba(43, 38, 32, 0.22);
   animation: memory-card-in 260ms cubic-bezier(0.2, 0, 0, 1) both;
 }
+.home-memory-frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 22px;
+  background: var(--surface-2);
+}
+.home-memory-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 620ms ease;
+}
+.home-memory-image.is-active {
+  opacity: 1;
+}
 
 .hana-spring-shell {
   position: relative;
@@ -1749,93 +1768,21 @@ select.add-habit-input {
     0 8px 20px -16px rgba(0, 0, 0, 0.7);
 }
 
-.cramble-forge-mark {
-  pointer-events: none;
-  position: relative;
-  display: block;
-  width: 3.25rem;
-  height: 2.15rem;
-  flex-shrink: 0;
+.cramble-archive-shell .cramble-quote-compact {
+  width: 100%;
+  margin: 0 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  color: var(--muted);
+  text-align: center;
 }
 
-.cramble-forge-sword {
-  position: absolute;
-  right: 0.75rem;
-  bottom: 0.1rem;
-  width: 1.75rem;
-  height: 1.75rem;
-  color: var(--cramble-brass);
-  transform: rotate(-42deg);
-  transform-origin: 50% 80%;
-  filter: drop-shadow(0 0 0.35rem rgba(214, 166, 83, 0.22));
-  animation: cramble-sword-guard 5.8s ease-in-out infinite;
-}
-
-.cramble-forge-flame {
-  position: absolute;
-  right: 0.05rem;
-  top: 0.1rem;
-  width: 1.05rem;
-  height: 1.05rem;
-  color: var(--cramble-ember);
-  transform-origin: 50% 100%;
-  filter: drop-shadow(0 0 0.45rem rgba(232, 120, 61, 0.32));
-  animation: cramble-flame-breathe 2.8s ease-in-out infinite;
-}
-
-.cramble-forge-spark {
-  position: absolute;
-  right: 0.62rem;
-  top: 0.9rem;
-  width: 0.22rem;
-  height: 0.22rem;
-  border-radius: 9999px;
-  background: var(--observatory-gold);
-  opacity: 0;
-  animation: cramble-ember-rise 3.4s ease-out infinite;
-}
-
-.cramble-forge-spark-two {
-  right: 0.18rem;
-  top: 1.15rem;
-  animation-delay: 1.6s;
-}
-
-@keyframes cramble-sword-guard {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-42deg);
-  }
-  50% {
-    transform: translateY(-2px) rotate(-38deg);
-  }
-}
-
-@keyframes cramble-flame-breathe {
-  0%,
-  100% {
-    opacity: 0.62;
-    transform: scale(0.88) rotate(-3deg);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06) rotate(3deg);
-  }
-}
-
-@keyframes cramble-ember-rise {
-  0%,
-  35% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scale(0.65);
-  }
-  50% {
-    opacity: 0.82;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(-0.35rem, -0.85rem, 0) scale(1);
-  }
+.cramble-archive-shell .cramble-quote-compact blockquote {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.86rem;
+  font-style: italic;
+  letter-spacing: -0.005em;
+  line-height: 1.45;
 }
 
 .cramble-primary-button {
@@ -3761,6 +3708,7 @@ select.add-habit-input {
   .sun-rays,
   .home-memory-overlay,
   .home-memory-card,
+  .home-memory-image,
   .flower-pulse,
   .hana-journey-milestone-icon,
   .quest-bloom-sparkles span,
@@ -3773,9 +3721,6 @@ select.add-habit-input {
   .garden-hill,
   .garden-couple,
   .spring-complete-glow span,
-  .cramble-forge-sword,
-  .cramble-forge-flame,
-  .cramble-forge-spark,
   .cramble-journey-fire i,
   .add-habit-panel,
   .habit-momentum-emoji,
@@ -3791,10 +3736,8 @@ select.add-habit-input {
   .tracker-view-tabs button::after {
     transition: none;
   }
-  .cramble-forge-spark {
-    opacity: 0;
-  }
   .profile-action-button,
+  .home-memory-image,
   .habit-add-button,
   .add-habit-pattern,
   .add-habit-schedule-option,
@@ -7102,34 +7045,6 @@ button.anytime-log-emblem:focus-visible {
   min-height: 5.75rem;
 }
 
-.anytime-log-check-state {
-  position: absolute !important;
-  right: 0.68rem;
-  bottom: 0.68rem;
-  display: grid;
-  width: 2.45rem;
-  height: 2.45rem;
-  place-items: center;
-  border: 1.5px solid rgba(238, 187, 82, 0.86);
-  border-radius: 9999px;
-  color: var(--cramble-brass);
-  background: rgba(12, 17, 25, 0.68);
-  box-shadow:
-    0 5px 14px -8px #000,
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(4px);
-}
-
-.anytime-log-check-state svg {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-.anytime-log-check-state[data-checked='false'] {
-  border-color: rgba(214, 166, 83, 0.46);
-  background: rgba(12, 17, 25, 0.42);
-}
-
 .anytime-log-section-cramble
   .anytime-log-card-board[data-kind='count'] {
   grid-column: 1 / -1;
@@ -7359,20 +7274,6 @@ button.anytime-log-emblem:focus-visible {
   min-height: 5.75rem;
 }
 
-.anytime-log-section-hana .anytime-log-check-state {
-  border-color: rgba(82, 116, 71, 0.86);
-  color: #527447;
-  background: rgba(255, 253, 247, 0.78);
-  box-shadow:
-    0 5px 14px -9px rgba(43, 63, 36, 0.72),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
-}
-
-.anytime-log-section-hana .anytime-log-check-state[data-checked='false'] {
-  border-color: rgba(82, 116, 71, 0.58);
-  background: rgba(255, 253, 247, 0.55);
-}
-
 /* Board cards do not render task emoji on either profile. Count-log editing
    remains available through the transparent hold/keyboard surface. */
 .anytime-log-card-board .anytime-log-emblem {
@@ -7578,52 +7479,371 @@ button.anytime-log-emblem:focus-visible {
   }
 }
 
-/* Compact tap logs use the same narrow, vertically centered pill proportions
-   in both profiles. */
+/* Logged state and count controls stay calm without changing mosaic geometry. */
 .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-  .anytime-log-board {
-  gap: 0.8rem;
-  padding-inline: 0.35rem;
+  .anytime-log-card-board[data-kind='check'][data-recorded='true'] {
+  border-color: color-mix(in srgb, var(--border) 56%, transparent);
+  box-shadow: none;
 }
 
 .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-  .anytime-log-card-board[data-kind='check'] {
-  grid-template-rows: minmax(0, 1fr);
-  width: 86%;
-  min-height: 5.25rem;
-  justify-self: center;
-  align-content: stretch;
-  aspect-ratio: auto;
+  .anytime-log-card-board[data-kind='check'][data-recorded='true']
+  .anytime-log-copy h3 {
+  opacity: 0.56;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='count']
+  .anytime-log-stepper button {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Approved compact mosaic: a 138px feature tile beside two centered 65px
+   pills. Feature placement alternates by group on both profile themes. */
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  padding-inline: 0;
+}
+
+.anytime-log-mosaic-group {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.14fr) minmax(0, 0.86fr);
+  grid-template-rows: 65px 65px;
+  gap: 8px;
+}
+
+.anytime-log-mosaic-group[data-feature-side='right'] {
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+}
+
+.anytime-log-mosaic-group[data-feature-side='left']
+  > .anytime-log-card-board[data-mosaic-size='feature'] {
+  grid-column: 1;
+}
+
+.anytime-log-mosaic-group[data-feature-side='left']
+  > .anytime-log-card-board[data-mosaic-size='compact'] {
+  grid-column: 2;
+}
+
+.anytime-log-mosaic-group[data-feature-side='right']
+  > .anytime-log-card-board[data-mosaic-size='feature'] {
+  grid-column: 2;
+}
+
+.anytime-log-mosaic-group[data-feature-side='right']
+  > .anytime-log-card-board[data-mosaic-size='compact'] {
+  grid-column: 1;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-mosaic-group
+  > .anytime-log-card-board[data-mosaic-size='feature'] {
+  grid-row: 1 / span 2;
+  width: 100%;
+  height: 138px;
+  min-height: 0;
+  justify-self: stretch;
   border-radius: 1.75rem;
 }
 
-.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-  .anytime-log-card-board[data-kind='check'][data-board-span='full'] {
-  width: 88%;
+.anytime-log-mosaic-group[data-feature-side='left']
+  > .anytime-log-card-board[data-mosaic-size='compact']:nth-child(2),
+.anytime-log-mosaic-group[data-feature-side='right']
+  > .anytime-log-card-board[data-mosaic-size='compact']:nth-child(1) {
+  grid-row: 1;
+}
+
+.anytime-log-mosaic-group[data-feature-side='left']
+  > .anytime-log-card-board[data-mosaic-size='compact']:nth-child(3),
+.anytime-log-mosaic-group[data-feature-side='right']
+  > .anytime-log-card-board[data-mosaic-size='compact']:nth-child(2) {
+  grid-row: 2;
 }
 
 .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-  .anytime-log-card-board[data-kind='check']
+  .anytime-log-mosaic-group
+  > .anytime-log-card-board[data-mosaic-size='compact'] {
+  width: 100%;
+  height: 65px;
+  min-height: 0;
+  justify-self: stretch;
+  border-radius: 1.75rem;
+  padding: 0.55rem 0.8rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact']
   .anytime-log-copy {
   display: flex;
   min-height: 100%;
   align-self: stretch;
   align-items: center;
-  padding: 0 3rem 0 0;
+  justify-content: center;
+  padding: 0;
+  text-align: center;
 }
 
 .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-  .anytime-log-card-board[data-kind='check']
-  .anytime-log-check-state {
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
+  .anytime-log-card-board[data-mosaic-size='compact']
+  .anytime-log-copy h3 {
+  font-size: 0.78rem;
+  font-weight: 430;
+  line-height: 1rem;
+  text-shadow: none;
+  -webkit-line-clamp: 2;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-mosaic-group
+  > .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0.2rem 0.45rem 0.12rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-copy {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  justify-content: center;
+  text-align: center;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-copy h3 {
+  display: block;
+  overflow: hidden;
+  font-size: 0.66rem;
+  font-weight: 430;
+  line-height: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-stepper {
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: 2.75rem minmax(1.15rem, auto) 2.75rem;
+  align-self: end;
+  justify-self: center;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-stepper button {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-stepper output {
+  min-width: 1.15rem;
+  font-size: 0.78rem;
+  line-height: 2.75rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='compact'][data-kind='count']
+  .anytime-log-card-manage-surface {
+  inset: 0 0 2.75rem;
+  width: auto;
+  min-width: 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='check'] {
+  padding: 0.9rem 1rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='check']
+  .anytime-log-copy {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  text-align: left;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='check']
+  .anytime-log-copy h3 {
+  font-size: 0.88rem;
+  font-weight: 520;
+  line-height: 1.12rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='check']
+  .anytime-log-copy p {
+  display: -webkit-box;
+  margin-top: 0.45rem;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 0.96rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0.75rem 0.8rem 0.58rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-copy {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  padding: 0;
+  text-align: center;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-copy h3 {
+  font-size: 0.84rem;
+  font-weight: 520;
+  line-height: 1.08rem;
+  text-shadow: none;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-stepper {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: center;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-stepper button {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-stepper output {
+  line-height: 2.5rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='count']
+  .anytime-log-card-manage-surface {
+  inset: 0 0 3.15rem;
+  width: auto;
+  min-width: 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating'] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  row-gap: 0.85rem;
+  padding: 0.75rem 0.65rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-copy {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  padding: 0;
+  text-align: center;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-copy h3 {
+  font-size: 0.82rem;
+  font-weight: 520;
+  line-height: 1.05rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-rating {
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-columns: repeat(5, 2rem);
+  align-self: center;
+  justify-content: center;
+  gap: 0.12rem;
+  margin: 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-rating button {
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  border-radius: 9999px;
+  padding: 0;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-rating-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+  .anytime-log-rating-scale {
+  display: none;
 }
 
 @media (max-width: 360px) {
+  .anytime-log-mosaic-group {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  }
+
+  .anytime-log-mosaic-group[data-feature-side='right'] {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  }
+
   .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
-    .anytime-log-board {
-    gap: 0.6rem;
-    padding-inline: 0.2rem;
+    .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+    .anytime-log-rating {
+    grid-template-columns: repeat(5, 1.8rem);
+  }
+
+  .anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+    .anytime-log-card-board[data-mosaic-size='feature'][data-kind='rating']
+    .anytime-log-rating button {
+    width: 1.8rem;
+    min-width: 1.8rem;
   }
 }

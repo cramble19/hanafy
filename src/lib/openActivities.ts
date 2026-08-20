@@ -10,7 +10,6 @@ import type {
   NewOpenActivityInput,
   OpenActivity,
 } from '@/types'
-import { getDefaultEmoji } from '@/lib/emojiLibrary'
 
 export type OpenActivityProfile = 'hana' | 'cramble'
 
@@ -31,7 +30,6 @@ export const OPEN_ACTIVITY_LIMITS = {
   title: 60,
   description: 180,
   unit: 24,
-  emoji: 8,
   /** Practical per-day ceiling that protects exports and chart scales. */
   dailyCount: 999_999,
 } as const
@@ -55,9 +53,6 @@ export function getNewOpenActivityValidationError(
   }
   if ((input.unit?.trim().length ?? 0) > OPEN_ACTIVITY_LIMITS.unit) {
     return `Keep the unit within ${OPEN_ACTIVITY_LIMITS.unit} characters.`
-  }
-  if ((input.emoji?.trim().length ?? 0) > OPEN_ACTIVITY_LIMITS.emoji) {
-    return 'Choose a shorter symbol.'
   }
   if (input.color && !/^#[0-9a-f]{6}$/i.test(input.color.trim())) {
     return 'Choose a valid activity color.'
@@ -93,7 +88,6 @@ export function createOpenActivity(
     custom: true,
     title: input.title.trim(),
     description: input.description.trim(),
-    emoji: input.emoji?.trim() || getDefaultEmoji(profile),
     color: input.color?.trim() || getDefaultOpenActivityColor(profile, input.kind),
     kind: input.kind,
     unit: input.kind === 'count' ? input.unit?.trim() || null : null,
@@ -116,7 +110,6 @@ export function updateOpenActivityDefinition(
     ...activity,
     title: input.title.trim(),
     description: input.description.trim(),
-    emoji: input.emoji?.trim() || activity.emoji,
     color: input.color?.trim() || activity.color,
     kind: input.kind,
     unit: input.kind === 'count' ? input.unit?.trim() || null : null,
@@ -475,7 +468,6 @@ function readOpenActivity(value: unknown): OpenActivity | null {
     value.description,
     OPEN_ACTIVITY_LIMITS.description,
   )
-  const emoji = readTrimmedString(value.emoji, OPEN_ACTIVITY_LIMITS.emoji)
   const color = readTrimmedString(value.color, 7)
   const createdDate = isDateKey(value.createdDate) ? value.createdDate : null
   const kind =
@@ -494,7 +486,6 @@ function readOpenActivity(value: unknown): OpenActivity | null {
     value.custom !== true ||
     !title ||
     !description ||
-    !emoji ||
     !color?.match(/^#[0-9a-f]{6}$/i) ||
     !createdDate ||
     !kind
@@ -507,7 +498,6 @@ function readOpenActivity(value: unknown): OpenActivity | null {
     custom: true,
     title,
     description,
-    emoji,
     color,
     kind,
     unit: kind === 'count' ? unit : null,

@@ -171,7 +171,6 @@ export type OpenActivity = {
   custom: true
   title: string
   description: string
-  emoji: string
   color: string
   kind: OpenActivityKind
   /** Optional display unit for counted activities, such as pages or sets. */
@@ -185,7 +184,6 @@ export type NewOpenActivityInput = {
   description: string
   kind: CreatableOpenActivityKind
   unit?: string | null
-  emoji?: string
   color?: string
 }
 

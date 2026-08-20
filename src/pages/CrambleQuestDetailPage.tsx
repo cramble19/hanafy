@@ -559,17 +559,7 @@ function OpenActivityDetailPage({
       <DetailTopBar onBack={onBack} label="Anytime record" />
 
       <header className="habit-ledger-card cramble-ledger-detail-header relative z-10 rounded-[24px] border border-border bg-surface p-5 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span
-            className="cramble-ledger-detail-emblem grid size-14 shrink-0 place-items-center rounded-full text-3xl"
-            style={{
-              backgroundColor: `${activity.color}1f`,
-              boxShadow: `inset 0 0 0 1px ${activity.color}66`,
-            }}
-            aria-hidden="true"
-          >
-            {activity.emoji}
-          </span>
+        <div className="flex items-start">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-faint">
               Anytime · {activity.kind === 'check' ? 'Once today' : activity.kind === 'rating' ? 'Rating 1-5' : 'Count'}

@@ -124,7 +124,6 @@ describe('habit chronicle HTML export', () => {
       custom: true,
       title: 'Pages <read>',
       description: 'Record pages & keep going.',
-      emoji: '📖',
       color: '#8ba07b',
       kind: 'count',
       unit: 'pages',

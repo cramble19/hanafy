@@ -11,7 +11,6 @@ const activity: OpenActivity = {
   custom: true,
   title: 'Quiet tea',
   description: 'A small pause',
-  emoji: '🍵',
   color: '#78ab63',
   kind: 'check',
   unit: null,

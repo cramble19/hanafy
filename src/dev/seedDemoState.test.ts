@@ -8,7 +8,11 @@ import {
 } from '@/lib/crambleGame'
 import { parseStoredHanaState, STORAGE_KEY } from '@/lib/hanaGame'
 import { HANA_PENDING_STORAGE_KEY } from '@/lib/profileCache'
-import { createDemoProfileStates, seedLocalDemoProfiles } from './seedDemoState'
+import {
+  createDemoProfileStates,
+  seedLocalDemoProfiles,
+  seedLocalPreviewProfiles,
+} from './seedDemoState'
 
 describe('localhost demo profiles', () => {
   it('creates started profiles with mixed quest and anytime-log states', () => {
@@ -66,5 +70,44 @@ describe('localhost demo profiles', () => {
         CRAMBLE_QUEST_PLAN_OPTIONS,
       ).startDate,
     ).toBeTruthy()
+  })
+
+  it('loads production-content definitions into local caches without copying history', () => {
+    const values = new Map<string, string>()
+    const storage = {
+      setItem(key: string, value: string) {
+        values.set(key, value)
+      },
+      removeItem(key: string) {
+        values.delete(key)
+      },
+    }
+    const activity = {
+      id: 'local-preview-check',
+      custom: true as const,
+      title: 'Preview check',
+      description: 'Visible only in local preview.',
+      color: '#d98ba0',
+      kind: 'check' as const,
+      unit: null,
+      createdDate: '2026-08-19',
+    }
+
+    const profiles = seedLocalPreviewProfiles(
+      storage,
+      {
+        hana: { openActivities: [activity], todayCounts: { [activity.id]: 1 } },
+        cramble: { openActivities: [activity], todayCounts: {} },
+      },
+      '2026-08-20',
+    )
+
+    expect(profiles.hana.openActivities).toEqual([activity])
+    expect(profiles.hana.openActivityLogs).toEqual({
+      '2026-08-20': { [activity.id]: 1 },
+    })
+    expect(profiles.cramble.openActivityLogs).toEqual({ '2026-08-20': {} })
+    expect(values.has(HANA_PENDING_STORAGE_KEY)).toBe(false)
+    expect(values.has(CRAMBLE_PENDING_STORAGE_KEY)).toBe(false)
   })
 })

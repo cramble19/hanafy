@@ -535,7 +535,6 @@ function renderOpenActivity({
   return `<article class="habit anytime ${lifecycle}" style="--habit:${safeColor(activity.color)}">
     <header class="habit-head">
       <div class="habit-title">
-        <span class="emoji" aria-hidden="true">${escapeHtml(activity.emoji)}</span>
         <div>
           <h3>${escapeHtml(activity.title)}</h3>
           <p class="description">${escapeHtml(activity.description)}</p>

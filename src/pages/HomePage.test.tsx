@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { HomePage } from '@/pages/HomePage'
+import {
+  getNextMemoryImageIndex,
+  HomePage,
+  MemoryPhotoCarousel,
+} from '@/pages/HomePage'
 
 const callbacks = {
   onSelectHana: vi.fn(),
@@ -34,5 +38,22 @@ describe('HomePage emotion marks', () => {
     expect(html).toContain('data-emotion="okay"')
     expect(html).not.toContain('Good today')
     expect(html).not.toContain('Okay today')
+  })
+})
+
+describe('HomePage hidden memory carousel', () => {
+  it('renders both memories while exposing only the active image', () => {
+    const html = renderToStaticMarkup(<MemoryPhotoCarousel activeIndex={1} />)
+
+    expect(html).toContain('/couple-watercolor.png')
+    expect(html).toContain('/couple-hands.jpg')
+    expect(html).toContain('alt="Our hands held together"')
+    expect(html).toContain('aria-hidden="true"')
+    expect(html).not.toContain('<button')
+  })
+
+  it('alternates between the two images', () => {
+    expect(getNextMemoryImageIndex(0)).toBe(1)
+    expect(getNextMemoryImageIndex(1)).toBe(0)
   })
 })

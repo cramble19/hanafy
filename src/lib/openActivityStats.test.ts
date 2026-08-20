@@ -152,7 +152,6 @@ function createActivity(
     id: 'open-gym',
     title: 'Gym visit',
     description: 'Any movement session counts.',
-    emoji: '🏋️',
     color: '#839c72',
     kind: 'check',
     createdDate: '2026-08-01',

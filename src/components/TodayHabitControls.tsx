@@ -9,7 +9,7 @@ import { PAUSE_REASON_OPTIONS } from '@/lib/habitLifecycle'
 import { LOGICAL_DAY_START_HOUR } from '@/lib/logicalDay'
 import type { Quest, TrackingPause } from '@/types'
 
-type PausedTrackerItem = Pick<Quest, 'id' | 'title' | 'emoji'>
+type PausedTrackerItem = Pick<Quest, 'id' | 'title'> & { emoji?: string }
 
 export function TodayProgressCard({
   profile,
@@ -138,7 +138,9 @@ export function PausedHabitsCard({
       <div className="mt-3 space-y-2">
         {habits.map((habit) => (
           <div key={habit.id} className="paused-habit-row">
-            <span className="text-xl" aria-hidden="true">{habit.emoji}</span>
+            {habit.emoji ? (
+              <span className="text-xl" aria-hidden="true">{habit.emoji}</span>
+            ) : null}
             <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{habit.title}</span>
             <button type="button" onClick={() => onManage(habit.id)} aria-label={`Manage ${habit.title}`} className="paused-habit-icon-button">
               <Settings className="size-4" aria-hidden="true" />

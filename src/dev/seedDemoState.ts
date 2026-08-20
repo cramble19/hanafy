@@ -16,13 +16,23 @@ import {
 } from '@/lib/hanaGame'
 import { createOpenActivity } from '@/lib/openActivities'
 import { HANA_PENDING_STORAGE_KEY } from '@/lib/profileCache'
-import type { DailyEmotion, HanaGameState } from '@/types'
+import type { DailyEmotion, HanaGameState, OpenActivity } from '@/types'
 
 type DemoStorage = Pick<Storage, 'removeItem' | 'setItem'>
 
 export type DemoProfileStates = {
   hana: HanaGameState
   cramble: HanaGameState
+}
+
+type LocalPreviewProfile = {
+  openActivities: OpenActivity[]
+  todayCounts: Record<string, number>
+}
+
+export type LocalPreviewPayload = {
+  hana: LocalPreviewProfile
+  cramble: LocalPreviewProfile
 }
 
 export function seedLocalDemoProfiles(
@@ -35,6 +45,98 @@ export function seedLocalDemoProfiles(
   storage.removeItem(HANA_PENDING_STORAGE_KEY)
   storage.removeItem(CRAMBLE_PENDING_STORAGE_KEY)
   return profiles
+}
+
+export function seedLocalPreviewProfiles(
+  storage: DemoStorage,
+  value: unknown,
+  dateKey = todayKey(),
+) {
+  const preview = parseLocalPreviewPayload(value)
+  const profiles = createDemoProfileStates(dateKey)
+  const merged = {
+    hana: mergeLocalPreview(profiles.hana, preview.hana, dateKey),
+    cramble: mergeLocalPreview(profiles.cramble, preview.cramble, dateKey),
+  }
+
+  storage.setItem(STORAGE_KEY, JSON.stringify(merged.hana))
+  storage.setItem(CRAMBLE_STORAGE_KEY, JSON.stringify(merged.cramble))
+  storage.removeItem(HANA_PENDING_STORAGE_KEY)
+  storage.removeItem(CRAMBLE_PENDING_STORAGE_KEY)
+  return merged
+}
+
+function parseLocalPreviewPayload(value: unknown): LocalPreviewPayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Local preview data is missing.')
+  }
+
+  const candidate = value as Partial<LocalPreviewPayload>
+  return {
+    hana: parseLocalPreviewProfile(candidate.hana),
+    cramble: parseLocalPreviewProfile(candidate.cramble),
+  }
+}
+
+function parseLocalPreviewProfile(value: unknown): LocalPreviewProfile {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Local preview profile is missing.')
+  }
+
+  const candidate = value as Partial<LocalPreviewProfile>
+  if (!Array.isArray(candidate.openActivities)) {
+    throw new Error('Local preview activities are invalid.')
+  }
+
+  const openActivities = candidate.openActivities.filter(isOpenActivity)
+  if (openActivities.length !== candidate.openActivities.length) {
+    throw new Error('Local preview contains an invalid activity.')
+  }
+
+  const activityIds = new Set(openActivities.map(({ id }) => id))
+  const todayCounts = Object.fromEntries(
+    Object.entries(candidate.todayCounts ?? {}).filter(
+      ([id, count]) =>
+        activityIds.has(id) &&
+        typeof count === 'number' &&
+        Number.isSafeInteger(count) &&
+        count >= 0,
+    ),
+  )
+
+  return { openActivities, todayCounts }
+}
+
+function isOpenActivity(value: unknown): value is OpenActivity {
+  if (!value || typeof value !== 'object') return false
+  const activity = value as Partial<OpenActivity>
+  return (
+    typeof activity.id === 'string' &&
+    activity.id.length > 0 &&
+    activity.custom === true &&
+    typeof activity.title === 'string' &&
+    typeof activity.description === 'string' &&
+    typeof activity.color === 'string' &&
+    (activity.kind === 'check' ||
+      activity.kind === 'count' ||
+      activity.kind === 'rating') &&
+    (activity.unit === null || typeof activity.unit === 'string') &&
+    typeof activity.createdDate === 'string'
+  )
+}
+
+function mergeLocalPreview(
+  state: HanaGameState,
+  preview: LocalPreviewProfile,
+  dateKey: string,
+): HanaGameState {
+  return {
+    ...state,
+    openActivities: preview.openActivities,
+    openActivityLogs: {
+      [dateKey]: preview.todayCounts,
+    },
+  }
 }
 
 export function createDemoProfileStates(dateKey: string): DemoProfileStates {
@@ -80,7 +182,6 @@ function createHanaDemoState(startDate: string, dateKey: string) {
     {
       title: 'Pages read outside',
       description: 'A few pages read in fresh air.',
-      emoji: '📖',
       kind: 'count',
       unit: 'pages',
     },
@@ -167,7 +268,6 @@ function createCrambleDemoState(startDate: string, dateKey: string) {
     {
       title: 'Pages entered in the archive',
       description: 'Count every page read without making it an oath.',
-      emoji: '📜',
       kind: 'count',
       unit: 'pages',
     },
@@ -180,7 +280,6 @@ function createCrambleDemoState(startDate: string, dateKey: string) {
     {
       title: 'Shared a kind moment',
       description: 'Record a small kindness worth remembering.',
-      emoji: '✨',
       kind: 'check',
     },
     'cramble',
@@ -192,7 +291,6 @@ function createCrambleDemoState(startDate: string, dateKey: string) {
     {
       title: 'Campfire tea',
       description: 'A quiet cup taken without hurry.',
-      emoji: '☕',
       kind: 'check',
     },
     'cramble',

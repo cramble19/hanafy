@@ -1,11 +1,22 @@
-import { defineConfig } from 'vite'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  const localPreviewDirectory = loadEnv(mode, process.cwd(), '')
+    .HANAFY_LOCAL_PREVIEW_DIR
+  const localPreviewPlugin =
+    command === 'serve' && localPreviewDirectory
+      ? createLocalPreviewPlugin(localPreviewDirectory)
+      : null
+
+  return {
   plugins: [
+    ...(localPreviewPlugin ? [localPreviewPlugin] : []),
     react(),
     tailwindcss(),
     VitePWA({
@@ -54,7 +65,7 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}'],
       },
     }),
   ],
@@ -63,4 +74,54 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  }
 })
+
+function createLocalPreviewPlugin(directory: string): Plugin {
+  return {
+    name: 'hanafy-local-production-content-preview',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__hanafy-local-preview', async (_request, response) => {
+        try {
+          const [hana, cramble] = await Promise.all([
+            readPreviewProfile(join(directory, 'hana.json')),
+            readPreviewProfile(join(directory, 'cramble.json')),
+          ])
+          response.statusCode = 200
+          response.setHeader('Cache-Control', 'no-store')
+          response.setHeader('Content-Type', 'application/json; charset=utf-8')
+          response.end(JSON.stringify({ hana, cramble }))
+        } catch (error) {
+          console.warn('Could not serve the local Hanafy preview.', error)
+          response.statusCode = 404
+          response.end('Local preview unavailable')
+        }
+      })
+    },
+  }
+}
+
+async function readPreviewProfile(path: string) {
+  const payload = JSON.parse(await readFile(path, 'utf8'))
+  const state = payload?.snapshot?.state
+  if (!state || !Array.isArray(state.openActivities)) {
+    throw new Error(`Invalid local preview snapshot: ${path}`)
+  }
+
+  const openActivities = state.openActivities.map((activity: Record<string, unknown>) => ({
+    id: activity.id,
+    custom: true,
+    title: activity.title,
+    description: activity.description,
+    color: activity.color,
+    kind: activity.kind,
+    unit: activity.unit ?? null,
+    createdDate: activity.createdDate,
+  }))
+
+  return {
+    openActivities,
+    todayCounts: state.openActivityLogs?.[state.currentDate] ?? {},
+  }
+}
