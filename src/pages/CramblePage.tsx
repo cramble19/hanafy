@@ -5,6 +5,7 @@ import {
   RefreshCw,
   RotateCcw,
   Star,
+  Sunrise,
 } from 'lucide-react'
 import { useState } from 'react'
 import { AddHabitDialog } from '@/components/AddHabitDialog'
@@ -94,6 +95,7 @@ type Props = {
     activityId: string,
   ) => string | null
   onOpenObservatory: () => void
+  onOpenSomeday: () => void
   onOpenLedger: () => void
   onNextDay: () => void
   onReset: () => void
@@ -128,6 +130,7 @@ export function CramblePage({
   onBackfillOpenActivity,
   onUndoBackfillOpenActivity,
   onOpenObservatory,
+  onOpenSomeday,
   onOpenLedger,
   onNextDay,
   onReset,
@@ -335,6 +338,19 @@ export function CramblePage({
             <span className="profile-action-detail">
               {journey.percent}% of the Sunward Road crossed
             </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSomeday}
+          className="profile-action-button"
+          aria-label="Open Cramble's Someday list"
+        >
+          <span className="cramble-action-icon" aria-hidden="true">
+            <Sunrise className="size-4" />
+          </span>
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Someday</span>
           </span>
         </button>
         <button

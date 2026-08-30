@@ -46,7 +46,7 @@ describe('finite quest chapters', () => {
       '2026-08-02',
     )
 
-    expect(migrated.schemaVersion).toBe(6)
+    expect(migrated.schemaVersion).toBe(7)
     expect(migrated.dailyCompletions).toEqual(original.dailyCompletions)
     expect(migrated.customHabits[0].completionCriteria).toBeDefined()
     expect(getHabitSettings(migrated, customQuest.id).completion).toEqual(

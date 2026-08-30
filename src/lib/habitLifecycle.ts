@@ -6,7 +6,7 @@ import type {
   TrackingPause,
 } from '@/types'
 
-export const GAME_STATE_SCHEMA_VERSION = 6 as const
+export const GAME_STATE_SCHEMA_VERSION = 7 as const
 export const MAX_BACKFILL_DAYS = 3
 
 export const PAUSE_REASON_OPTIONS: Array<{

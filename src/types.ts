@@ -189,6 +189,26 @@ export type NewOpenActivityInput = {
 
 export type DailyEmotion = 'heavy' | 'low' | 'okay' | 'good' | 'bright'
 
+export type SomedayTiming = 'timeless' | 'beforeAge'
+
+export type SomedayItem = {
+  id: string
+  title: string
+  timing: SomedayTiming
+  /** Present only for age-based wishes. */
+  targetAge: number | null
+  /** Logical tracker date when this wish was added. */
+  createdDate: string
+  /** Logical tracker date when it became a memory. */
+  completedDate: string | null
+}
+
+export type NewSomedayItemInput = {
+  title: string
+  timing: SomedayTiming
+  targetAge?: number | null
+}
+
 export type GardenWeed = {
   id: string
   emoji: string
@@ -218,6 +238,8 @@ export type GameState = {
   openActivityLogs: Record<string, Record<string, number>>
   /** One optional neutral emotion record per 04:00-to-04:00 tracker day. */
   dailyEmotions: Record<string, DailyEmotion>
+  /** Life wishes, kept separate for each profile and never removed on completion. */
+  somedayItems?: SomedayItem[]
   /** Profile-wide neutral intervals. */
   trackingPauses?: TrackingPause[]
   /** Provenance for corrections entered after their performed date. */

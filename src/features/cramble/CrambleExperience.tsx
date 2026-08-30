@@ -73,12 +73,18 @@ import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
+import { SomedayPage } from '@/pages/SomedayPage'
 import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
 import type {
   DailyEmotion,
   HanaGameState,
+  NewSomedayItemInput,
   NewOpenActivityInput,
 } from '@/types'
+import {
+  addSomedayItem as appendSomedayItem,
+  toggleSomedayItem,
+} from '@/lib/someday'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
@@ -101,6 +107,7 @@ type CrambleView =
   | 'ledger'
   | 'ledgerDetail'
   | 'emotionHistory'
+  | 'someday'
 type Props = {
   onBack: () => void
 }
@@ -1007,6 +1014,23 @@ export function CrambleExperience({ onBack }: Props) {
     if (nextState !== previous) void commitGameState(nextState)
   }
 
+  const addCrambleSomedayItem = (input: NewSomedayItemInput) => {
+    const previous = gameRef.current
+    if (!previous || !hasHanaStarted(previous)) {
+      return "Begin Cramble's First Oath before adding to Someday."
+    }
+    const result = appendSomedayItem(previous, input)
+    if (!result.error) void commitGameState(result.state)
+    return result.error
+  }
+
+  const toggleCrambleSomedayItem = (itemId: string) => {
+    const previous = gameRef.current
+    if (!previous) return
+    const nextState = toggleSomedayItem(previous, itemId)
+    if (nextState !== previous) void commitGameState(nextState)
+  }
+
   const pauseCrambleHabit = (habitId: string, input: PauseInput) => {
     const previous = gameRef.current
     if (previous) void commitGameState(startHabitPause(previous, habitId, input))
@@ -1199,6 +1223,21 @@ export function CrambleExperience({ onBack }: Props) {
     )
   }
 
+  if (view === 'someday') {
+    return (
+      <SomedayPage
+        profile="cramble"
+        items={game.somedayItems ?? []}
+        onAdd={addCrambleSomedayItem}
+        onToggle={toggleCrambleSomedayItem}
+        onBack={() => setView('tracker')}
+        onOpenToday={() => setView('tracker')}
+        onOpenDestination={() => setView('observatory')}
+        onOpenLedger={() => setView('ledger')}
+      />
+    )
+  }
+
   if (view === 'emotionHistory') {
     return (
       <EmotionHistoryPage
@@ -1245,6 +1284,7 @@ export function CrambleExperience({ onBack }: Props) {
       onBackfillOpenActivity={backfillCrambleOpenActivity}
       onUndoBackfillOpenActivity={undoBackfillCrambleOpenActivity}
       onOpenObservatory={() => setView('observatory')}
+      onOpenSomeday={() => setView('someday')}
       onOpenLedger={() => setView('ledger')}
       onNextDay={goToNextDay}
       onReset={reset}

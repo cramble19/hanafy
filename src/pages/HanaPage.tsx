@@ -2,6 +2,7 @@ import {
   CalendarDays,
   RefreshCw,
   RotateCcw,
+  Sunrise,
 } from 'lucide-react'
 import { useState } from 'react'
 import { quests } from '@/data/quests'
@@ -95,6 +96,7 @@ type Props = {
     activityId: string,
   ) => string | null
   onOpenGarden: () => void
+  onOpenSomeday: () => void
   onOpenLedger: () => void
   onNextDay: () => void
   onReset: () => void
@@ -136,6 +138,7 @@ export function HanaPage({
   onBackfillOpenActivity,
   onUndoBackfillOpenActivity,
   onOpenGarden,
+  onOpenSomeday,
   onOpenLedger,
   onNextDay,
   onReset,
@@ -338,6 +341,19 @@ export function HanaPage({
             <span className="profile-action-detail">
               {game.totalFlowers} flowers planted · {skipProgress.remaining} skips left
             </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSomeday}
+          className="profile-action-button"
+          aria-label="Open Hana's Someday list"
+        >
+          <span className="someday-nav-icon" aria-hidden="true">
+            <Sunrise className="size-5" />
+          </span>
+          <span className="profile-action-copy">
+            <span className="profile-action-label">Someday</span>
           </span>
         </button>
         <button

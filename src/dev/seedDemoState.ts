@@ -16,7 +16,12 @@ import {
 } from '@/lib/hanaGame'
 import { createOpenActivity } from '@/lib/openActivities'
 import { HANA_PENDING_STORAGE_KEY } from '@/lib/profileCache'
-import type { DailyEmotion, HanaGameState, OpenActivity } from '@/types'
+import type {
+  DailyEmotion,
+  HanaGameState,
+  OpenActivity,
+  SomedayItem,
+} from '@/types'
 
 type DemoStorage = Pick<Storage, 'removeItem' | 'setItem'>
 
@@ -218,6 +223,7 @@ function createHanaDemoState(startDate: string, dateKey: string) {
         'any-physical-effort': { [startDate]: true },
       },
       dailyEmotions: emotionHistory(previousDates, dateKey, 'good'),
+      somedayItems: demoSomedayItems('hana', startDate, dateKey),
       openActivityLogs: {
         [dateKey]: {
           'custom-hana-energy-check-in': 4,
@@ -325,6 +331,7 @@ function createCrambleDemoState(startDate: string, dateKey: string) {
         },
       },
       dailyEmotions: emotionHistory(previousDates, dateKey, 'bright'),
+      somedayItems: demoSomedayItems('cramble', startDate, dateKey),
       openActivityLogs: {
         [dateKey]: {
           [pagesRead.id]: 12,
@@ -373,4 +380,54 @@ function emotionHistory(
     [previousDates[2]]: 'low',
     [dateKey]: todayEmotion,
   } satisfies Record<string, DailyEmotion>
+}
+
+function demoSomedayItems(
+  profile: 'hana' | 'cramble',
+  createdDate: string,
+  completedDate: string,
+): SomedayItem[] {
+  const prefix = `demo-${profile}-someday`
+  return [
+    {
+      id: `${prefix}-cherry-blossoms`,
+      title: 'See cherry blossoms in Japan',
+      timing: 'timeless',
+      targetAge: null,
+      createdDate,
+      completedDate: null,
+    },
+    {
+      id: `${prefix}-swim`,
+      title: 'Learn to swim',
+      timing: 'beforeAge',
+      targetAge: 35,
+      createdDate,
+      completedDate: null,
+    },
+    {
+      id: `${prefix}-half-marathon`,
+      title: 'Run a half marathon',
+      timing: 'beforeAge',
+      targetAge: 35,
+      createdDate,
+      completedDate: null,
+    },
+    {
+      id: `${prefix}-garden`,
+      title: 'Start a small garden',
+      timing: 'beforeAge',
+      targetAge: 40,
+      createdDate,
+      completedDate: null,
+    },
+    {
+      id: `${prefix}-mountains`,
+      title: 'Take dad to the mountains',
+      timing: 'timeless',
+      targetAge: null,
+      createdDate,
+      completedDate,
+    },
+  ]
 }

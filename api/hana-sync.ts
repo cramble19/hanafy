@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 
-const CURRENT_STATE_SCHEMA_VERSION = 6
+const CURRENT_STATE_SCHEMA_VERSION = 7
 
 type ApiRequest = {
   method?: string
@@ -506,7 +506,8 @@ function hasRequiredStateShape(
   }
 
   if (schemaVersion >= 4 && !isRecord(state.questActivations)) return false
-  return schemaVersion < 5 || isRecord(state.dailyEmotions)
+  if (schemaVersion >= 5 && !isRecord(state.dailyEmotions)) return false
+  return schemaVersion < 7 || Array.isArray(state.somedayItems)
 }
 
 function readDeletedHabitIds(state: unknown) {

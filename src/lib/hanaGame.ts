@@ -9,6 +9,7 @@ import type {
   PauseReason,
   TrackingPause,
   OpenActivity,
+  SomedayItem,
   Weekday,
 } from '@/types'
 import {
@@ -111,6 +112,7 @@ export function createInitialHanaState(): HanaGameState {
     openActivities: [],
     openActivityLogs: {},
     dailyEmotions: {},
+    somedayItems: [],
     trackingPauses: [],
     backfillAudit: [],
     activeDailyQuests: {},
@@ -158,6 +160,7 @@ export function resetProfileProgress(
       ),
       questActivations: { ...(state.questActivations ?? {}) },
       openActivities: [...(state.openActivities ?? [])],
+      somedayItems: [...(state.somedayItems ?? [])],
     },
     quests,
     options,
@@ -1363,6 +1366,7 @@ function normalizeHanaState(
       openActivities,
     ),
     dailyEmotions: normalizeDailyEmotions(value.dailyEmotions),
+    somedayItems: readSomedayItems(value.somedayItems),
     trackingPauses: readTrackingPauses(value.trackingPauses),
     backfillAudit: readBackfillAudit(value.backfillAudit),
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),
@@ -1495,6 +1499,40 @@ function ensureHanaDefaultOpenActivities(
     result.push(activity)
     return result
   }, [...retainedActivities])
+}
+
+function readSomedayItems(value: unknown): SomedayItem[] {
+  if (!Array.isArray(value)) return []
+  const seenIds = new Set<string>()
+  return value.reduce<SomedayItem[]>((items, entry) => {
+    if (!isRecord(entry) || items.length >= 250) return items
+    const id = readTrimmedString(entry.id, 120)
+    const title = readTrimmedString(entry.title, 100)
+    const timing = entry.timing === 'timeless' || entry.timing === 'beforeAge'
+      ? entry.timing
+      : null
+    const targetAge = timing === 'beforeAge' && Number.isInteger(entry.targetAge)
+      && (entry.targetAge as number) >= 1 && (entry.targetAge as number) <= 120
+      ? entry.targetAge as number
+      : timing === 'timeless'
+        ? null
+        : undefined
+    const createdDate = isDateKey(entry.createdDate) ? entry.createdDate : null
+    const completedDate = entry.completedDate === null
+      ? null
+      : isDateKey(entry.completedDate)
+        ? entry.completedDate
+        : undefined
+    if (
+      !id || !title || !timing || targetAge === undefined || !createdDate ||
+      completedDate === undefined || seenIds.has(id)
+    ) {
+      return items
+    }
+    seenIds.add(id)
+    items.push({ id, title, timing, targetAge, createdDate, completedDate })
+    return items
+  }, [])
 }
 
 function readCustomHabits(value: unknown, baseQuests: Quest[]) {

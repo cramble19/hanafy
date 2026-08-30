@@ -70,13 +70,19 @@ import { GardenPage } from '@/pages/GardenPage'
 import { StatsPage } from '@/pages/StatsPage'
 import { QuestDetailPage } from '@/pages/QuestDetailPage'
 import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
+import { SomedayPage } from '@/pages/SomedayPage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
 import type {
   DailyEmotion,
   HanaGameState,
   NewOpenActivityInput,
+  NewSomedayItemInput,
 } from '@/types'
+import {
+  addSomedayItem as appendSomedayItem,
+  toggleSomedayItem,
+} from '@/lib/someday'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
@@ -107,6 +113,7 @@ type View =
   | 'stats'
   | 'questDetail'
   | 'emotionHistory'
+  | 'someday'
   | 'cramble'
   | 'together'
 type CloudSyncStatus =
@@ -1053,6 +1060,23 @@ export default function App() {
     if (nextState !== previousState) void commitHanaState(nextState)
   }
 
+  const addHanaSomedayItem = (input: NewSomedayItemInput) => {
+    const previousState = hanaGameRef.current
+    if (!previousState || !hasHanaStarted(previousState)) {
+      return "Start Hana's Health Overhaul before adding to Someday."
+    }
+    const result = appendSomedayItem(previousState, input)
+    if (!result.error) void commitHanaState(result.state)
+    return result.error
+  }
+
+  const toggleHanaSomedayItem = (itemId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const nextState = toggleSomedayItem(previousState, itemId)
+    if (nextState !== previousState) void commitHanaState(nextState)
+  }
+
   const pauseHanaHabit = (habitId: string, input: PauseInput) => {
     const previousState = hanaGameRef.current
     if (previousState) void commitHanaState(startHabitPause(previousState, habitId, input))
@@ -1300,6 +1324,7 @@ export default function App() {
           onBackfillOpenActivity={backfillHanaOpenActivity}
           onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
           onOpenGarden={() => setView('garden')}
+          onOpenSomeday={() => setView('someday')}
           onOpenLedger={() => setView('stats')}
           onNextDay={goToNextDay}
           onReset={resetHana}
@@ -1368,6 +1393,7 @@ export default function App() {
         onBackfillOpenActivity={backfillHanaOpenActivity}
         onUndoBackfillOpenActivity={undoBackfillHanaOpenActivity}
         onOpenGarden={() => setView('garden')}
+        onOpenSomeday={() => setView('someday')}
         onOpenLedger={() => setView('stats')}
         onNextDay={goToNextDay}
         onReset={resetHana}
@@ -1433,6 +1459,23 @@ export default function App() {
         game={hanaGame}
         questId={selectedQuestId}
         onBack={() => setView('stats')}
+      />
+    ) : (
+      <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
+    )
+  }
+
+  if (view === 'someday') {
+    return hanaGame ? (
+      <SomedayPage
+        profile="hana"
+        items={hanaGame.somedayItems ?? []}
+        onAdd={addHanaSomedayItem}
+        onToggle={toggleHanaSomedayItem}
+        onBack={() => setView('hana')}
+        onOpenToday={() => setView('hana')}
+        onOpenDestination={() => setView('garden')}
+        onOpenLedger={() => setView('stats')}
       />
     ) : (
       <HanaLoadingPage status={cloudSyncStatus} onBack={() => setView('home')} />
