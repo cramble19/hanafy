@@ -3,8 +3,10 @@ import { createStartedHanaState, parseStoredHanaState } from '@/lib/hanaGame'
 import { quests } from '@/data/quests'
 import {
   addSomedayItem,
+  deleteSomedayItem,
   getNewSomedayItemValidationError,
   toggleSomedayItem,
+  updateSomedayItem,
 } from '@/lib/someday'
 
 describe('Someday life wishes', () => {
@@ -56,6 +58,54 @@ describe('Someday life wishes', () => {
       completedDate: '2026-08-29',
     }))
     expect(toggleSomedayItem(completed, itemId).somedayItems?.[0].completedDate).toBeNull()
+  })
+
+  it('edits timing without changing identity or completion history', () => {
+    const completed = toggleSomedayItem(
+      addSomedayItem(createStartedHanaState('2026-08-29'), {
+        title: 'Learn pottery',
+        timing: 'timeless',
+      }).state,
+      'missing',
+    )
+    const itemId = completed.somedayItems?.[0].id as string
+    const stateWithMemory = toggleSomedayItem(completed, itemId)
+    const result = updateSomedayItem(stateWithMemory, itemId, {
+      title: 'Learn wheel pottery',
+      timing: 'beforeAge',
+      targetAge: 38,
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.state.somedayItems?.[0]).toEqual(expect.objectContaining({
+      id: itemId,
+      title: 'Learn wheel pottery',
+      timing: 'beforeAge',
+      targetAge: 38,
+      createdDate: '2026-08-29',
+      completedDate: '2026-08-29',
+    }))
+  })
+
+  it('validates edits against other items and deletes only the selected item', () => {
+    const first = addSomedayItem(createStartedHanaState('2026-08-29'), {
+      title: 'Learn pottery',
+      timing: 'timeless',
+    }).state
+    const second = addSomedayItem(first, {
+      title: 'See the northern lights',
+      timing: 'timeless',
+    }).state
+    const [firstItem, secondItem] = second.somedayItems ?? []
+
+    expect(updateSomedayItem(second, secondItem.id, {
+      title: ' learn pottery ',
+      timing: 'timeless',
+    }).error).toBe('That is already in Someday.')
+
+    const deleted = deleteSomedayItem(second, firstItem.id)
+    expect(deleted.somedayItems).toEqual([secondItem])
+    expect(deleteSomedayItem(deleted, 'missing')).toBe(deleted)
   })
 
   it('migrates older snapshots without losing existing data', () => {

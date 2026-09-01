@@ -9,7 +9,17 @@ import {
   Star,
   Sunrise,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { AddSomedayDialog } from '@/components/AddSomedayDialog'
 import { ProfileTopBar } from '@/components/ProfileTopBar'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
@@ -19,6 +29,8 @@ type Props = {
   profile: 'hana' | 'cramble'
   items: SomedayItem[]
   onAdd: (input: NewSomedayItemInput) => string | null
+  onUpdate: (itemId: string, input: NewSomedayItemInput) => string | null
+  onDelete: (itemId: string) => void
   onToggle: (itemId: string) => void
   onBack: () => void
   onOpenToday: () => void
@@ -30,6 +42,8 @@ export function SomedayPage({
   profile,
   items,
   onAdd,
+  onUpdate,
+  onDelete,
   onToggle,
   onBack,
   onOpenToday,
@@ -37,12 +51,18 @@ export function SomedayPage({
   onOpenLedger,
 }: Props) {
   const [isAdding, setIsAdding] = useState(false)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const headingRef = usePageHeadingFocus()
+  const interactionHintId = useId()
   const activeItems = items.filter((item) => !item.completedDate)
   const completedItems = [...items]
     .filter((item) => item.completedDate)
     .sort((a, b) => (b.completedDate ?? '').localeCompare(a.completedDate ?? ''))
   const groups = useMemo(() => groupActiveItems(activeItems), [activeItems])
+  const activeItemNumbers = useMemo(() => new Map(
+    groups.flatMap((group) => group.items).map((item, index) => [item.id, index + 1]),
+  ), [groups])
+  const editingItem = items.find((item) => item.id === editingItemId)
   const destination = profile === 'hana' ? 'Garden' : 'Observatory'
 
   return (
@@ -58,6 +78,10 @@ export function SomedayPage({
         <header className="someday-header">
           <h1 ref={headingRef} tabIndex={-1}>Someday</h1>
           <p>A quiet place for the life you want to live.</p>
+          <div className="someday-waiting-summary">
+            <strong>{activeItems.length} {activeItems.length === 1 ? 'thing' : 'things'} waiting</strong>
+            <span id={interactionHintId}>Tap to complete · Hold to edit</span>
+          </div>
         </header>
 
         {groups.length ? (
@@ -69,7 +93,10 @@ export function SomedayPage({
                 note={group.note}
                 type={group.type}
                 items={group.items}
+                itemNumbers={activeItemNumbers}
                 onToggle={onToggle}
+                onEdit={setEditingItemId}
+                interactionHintId={interactionHintId}
               />
             ))}
           </section>
@@ -88,12 +115,14 @@ export function SomedayPage({
             </div>
             <div className="someday-memory-list">
               {completedItems.map((item) => (
-                <button
-                  type="button"
+                <SomedayPressButton
                   className="someday-memory-row"
                   key={item.id}
-                  onClick={() => onToggle(item.id)}
-                  aria-label={`Mark ${item.title} as unfinished`}
+                  item={item}
+                  completed
+                  onToggle={onToggle}
+                  onEdit={setEditingItemId}
+                  interactionHintId={interactionHintId}
                 >
                   <span className="someday-check is-complete" aria-hidden="true">
                     <Check />
@@ -102,13 +131,20 @@ export function SomedayPage({
                     <strong>{item.title}</strong>
                     <small>Completed · {formatCompletionDate(item.completedDate)}</small>
                   </span>
-                </button>
+                </SomedayPressButton>
               ))}
             </div>
           </section>
         ) : null}
 
-        <button type="button" onClick={() => setIsAdding(true)} className="someday-add-button">
+        <button
+          type="button"
+          onClick={() => {
+            setEditingItemId(null)
+            setIsAdding(true)
+          }}
+          className="someday-add-button"
+        >
           <Plus aria-hidden="true" />
           Add something
         </button>
@@ -140,12 +176,18 @@ export function SomedayPage({
         </button>
       </nav>
 
-      {isAdding ? (
+      {isAdding || editingItem ? (
         <AddSomedayDialog
           profile={profile}
           existingItems={items}
-          onClose={() => setIsAdding(false)}
+          item={editingItem}
+          onClose={() => {
+            setIsAdding(false)
+            setEditingItemId(null)
+          }}
           onSubmit={onAdd}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
         />
       ) : null}
     </div>
@@ -194,8 +236,16 @@ function SomedayGroup({
   note,
   type,
   items,
+  itemNumbers,
   onToggle,
-}: Omit<Group, 'key'> & { onToggle: (itemId: string) => void }) {
+  onEdit,
+  interactionHintId,
+}: Omit<Group, 'key'> & {
+  itemNumbers: Map<string, number>
+  onToggle: (itemId: string) => void
+  onEdit: (itemId: string) => void
+  interactionHintId: string
+}) {
   return (
     <div className="someday-group">
       <div className="someday-group-heading">
@@ -209,19 +259,160 @@ function SomedayGroup({
       </div>
       <div className="someday-group-items">
         {items.map((item) => (
-          <button
-            type="button"
+          <SomedayPressButton
             className="someday-item-row"
             key={item.id}
-            onClick={() => onToggle(item.id)}
-            aria-label={`Mark ${item.title} complete`}
+            item={item}
+            completed={false}
+            onToggle={onToggle}
+            onEdit={onEdit}
+            interactionHintId={interactionHintId}
           >
-            <span className="someday-check" aria-hidden="true" />
+            <span className="someday-item-number" aria-hidden="true">
+              {String(itemNumbers.get(item.id) ?? 0).padStart(2, '0')}
+            </span>
             <strong>{item.title}</strong>
-          </button>
+          </SomedayPressButton>
         ))}
       </div>
     </div>
+  )
+}
+
+const SOMEDAY_HOLD_DELAY_MS = 520
+const SOMEDAY_HOLD_MOVE_TOLERANCE_PX = 10
+
+function SomedayPressButton({
+  className,
+  item,
+  completed,
+  onToggle,
+  onEdit,
+  interactionHintId,
+  children,
+}: {
+  className: string
+  item: SomedayItem
+  completed: boolean
+  onToggle: (itemId: string) => void
+  onEdit: (itemId: string) => void
+  interactionHintId: string
+  children: ReactNode
+}) {
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pressStartRef = useRef<{
+    pointerId: number
+    clientX: number
+    clientY: number
+  } | null>(null)
+  const suppressNextClickRef = useRef(false)
+  const lastEditTimeRef = useRef(0)
+
+  const clearHoldTimer = () => {
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+  }
+
+  useEffect(() => () => clearHoldTimer(), [])
+
+  const openEditor = () => {
+    lastEditTimeRef.current = Date.now()
+    onEdit(item.id)
+  }
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    clearHoldTimer()
+    suppressNextClickRef.current = false
+    pressStartRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    holdTimerRef.current = setTimeout(() => {
+      if (!pressStartRef.current) return
+      holdTimerRef.current = null
+      suppressNextClickRef.current = true
+      openEditor()
+    }, SOMEDAY_HOLD_DELAY_MS)
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = pressStartRef.current
+    if (!start || start.pointerId !== event.pointerId) return
+    if (Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY)
+      <= SOMEDAY_HOLD_MOVE_TOLERANCE_PX) return
+    clearHoldTimer()
+    pressStartRef.current = null
+    suppressNextClickRef.current = true
+  }
+
+  const finishPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (pressStartRef.current?.pointerId !== event.pointerId) return
+    clearHoldTimer()
+    pressStartRef.current = null
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
+
+  const cancelPointer = () => {
+    clearHoldTimer()
+    pressStartRef.current = null
+    suppressNextClickRef.current = true
+  }
+
+  const handleContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    clearHoldTimer()
+    pressStartRef.current = null
+    suppressNextClickRef.current = true
+    if (Date.now() - lastEditTimeRef.current < 800) return
+    openEditor()
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const opensEditor = event.key === 'F2' || event.key === 'ContextMenu' ||
+      (event.key === 'F10' && event.shiftKey)
+    if (!opensEditor) return
+    event.preventDefault()
+    openEditor()
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointer}
+      onPointerCancel={cancelPointer}
+      onLostPointerCapture={() => {
+        const interrupted = pressStartRef.current !== null
+        clearHoldTimer()
+        pressStartRef.current = null
+        if (interrupted) suppressNextClickRef.current = true
+      }}
+      onClick={() => {
+        if (suppressNextClickRef.current) {
+          suppressNextClickRef.current = false
+          return
+        }
+        onToggle(item.id)
+      }}
+      onContextMenu={handleContextMenu}
+      onKeyDown={handleKeyDown}
+      aria-describedby={interactionHintId}
+      aria-keyshortcuts="Enter Space F2 Shift+F10 ContextMenu"
+      aria-pressed={completed}
+      aria-label={`${completed ? 'Restore' : 'Complete'} ${item.title}. Hold or press F2 to edit.`}
+      title={`${completed ? 'Tap to restore' : 'Tap to complete'} · Hold to edit`}
+    >
+      {children}
+    </button>
   )
 }
 

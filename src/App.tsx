@@ -81,7 +81,9 @@ import type {
 } from '@/types'
 import {
   addSomedayItem as appendSomedayItem,
+  deleteSomedayItem,
   toggleSomedayItem,
+  updateSomedayItem,
 } from '@/lib/someday'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
@@ -1077,6 +1079,21 @@ export default function App() {
     if (nextState !== previousState) void commitHanaState(nextState)
   }
 
+  const updateHanaSomedayItem = (itemId: string, input: NewSomedayItemInput) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return 'Hana is unavailable right now.'
+    const result = updateSomedayItem(previousState, itemId, input)
+    if (!result.error && result.state !== previousState) void commitHanaState(result.state)
+    return result.error
+  }
+
+  const deleteHanaSomedayItem = (itemId: string) => {
+    const previousState = hanaGameRef.current
+    if (!previousState) return
+    const nextState = deleteSomedayItem(previousState, itemId)
+    if (nextState !== previousState) void commitHanaState(nextState)
+  }
+
   const pauseHanaHabit = (habitId: string, input: PauseInput) => {
     const previousState = hanaGameRef.current
     if (previousState) void commitHanaState(startHabitPause(previousState, habitId, input))
@@ -1471,6 +1488,8 @@ export default function App() {
         profile="hana"
         items={hanaGame.somedayItems ?? []}
         onAdd={addHanaSomedayItem}
+        onUpdate={updateHanaSomedayItem}
+        onDelete={deleteHanaSomedayItem}
         onToggle={toggleHanaSomedayItem}
         onBack={() => setView('hana')}
         onOpenToday={() => setView('hana')}

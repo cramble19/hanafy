@@ -96,6 +96,58 @@ export function toggleSomedayItem(
   }
 }
 
+export function updateSomedayItem(
+  state: GameState,
+  itemId: string,
+  input: NewSomedayItemInput,
+): { state: GameState; error: string | null } {
+  const items = state.somedayItems ?? []
+  const item = items.find((candidate) => candidate.id === itemId)
+  if (!item) return { state, error: 'That Someday item no longer exists.' }
+
+  const error = getNewSomedayItemValidationError(
+    input,
+    items.filter((candidate) => candidate.id !== itemId),
+  )
+  if (error) return { state, error }
+
+  const title = input.title.trim().slice(0, SOMEDAY_LIMITS.title)
+  const targetAge = input.timing === 'beforeAge' && Number.isInteger(input.targetAge)
+    ? input.targetAge as number
+    : null
+  if (
+    item.title === title &&
+    item.timing === input.timing &&
+    item.targetAge === targetAge
+  ) {
+    return { state, error: null }
+  }
+
+  return {
+    state: {
+      ...state,
+      somedayItems: items.map((candidate) =>
+        candidate.id === itemId
+          ? { ...candidate, title, timing: input.timing, targetAge }
+          : candidate,
+      ),
+    },
+    error: null,
+  }
+}
+
+export function deleteSomedayItem(
+  state: GameState,
+  itemId: string,
+): GameState {
+  const items = state.somedayItems ?? []
+  if (!items.some((candidate) => candidate.id === itemId)) return state
+  return {
+    ...state,
+    somedayItems: items.filter((candidate) => candidate.id !== itemId),
+  }
+}
+
 function createEventId(prefix: string) {
   const randomId = globalThis.crypto?.randomUUID?.() ??
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`

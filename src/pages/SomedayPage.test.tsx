@@ -45,6 +45,8 @@ describe('SomedayPage', () => {
         profile={profile}
         items={items}
         onAdd={() => null}
+        onUpdate={() => null}
+        onDelete={() => undefined}
         onToggle={() => undefined}
         onBack={() => undefined}
         onOpenToday={() => undefined}
@@ -53,6 +55,11 @@ describe('SomedayPage', () => {
       />,
     )
     expect(html).toContain('Someday')
+    expect(html).toContain('3 things waiting')
+    expect(html).toContain('Tap to complete · Hold to edit')
+    expect(html).toContain('01')
+    expect(html).toContain('02')
+    expect(html).toContain('03')
     expect(html).toContain('Anytime')
     expect(html.indexOf('Before 35')).toBeLessThan(html.indexOf('Before 40'))
     expect(html).toContain('Memories made')

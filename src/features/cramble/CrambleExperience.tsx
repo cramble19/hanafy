@@ -83,7 +83,9 @@ import type {
 } from '@/types'
 import {
   addSomedayItem as appendSomedayItem,
+  deleteSomedayItem,
   toggleSomedayItem,
+  updateSomedayItem,
 } from '@/lib/someday'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
@@ -1031,6 +1033,21 @@ export function CrambleExperience({ onBack }: Props) {
     if (nextState !== previous) void commitGameState(nextState)
   }
 
+  const updateCrambleSomedayItem = (itemId: string, input: NewSomedayItemInput) => {
+    const previous = gameRef.current
+    if (!previous) return 'Cramble is unavailable right now.'
+    const result = updateSomedayItem(previous, itemId, input)
+    if (!result.error && result.state !== previous) void commitGameState(result.state)
+    return result.error
+  }
+
+  const deleteCrambleSomedayItem = (itemId: string) => {
+    const previous = gameRef.current
+    if (!previous) return
+    const nextState = deleteSomedayItem(previous, itemId)
+    if (nextState !== previous) void commitGameState(nextState)
+  }
+
   const pauseCrambleHabit = (habitId: string, input: PauseInput) => {
     const previous = gameRef.current
     if (previous) void commitGameState(startHabitPause(previous, habitId, input))
@@ -1229,6 +1246,8 @@ export function CrambleExperience({ onBack }: Props) {
         profile="cramble"
         items={game.somedayItems ?? []}
         onAdd={addCrambleSomedayItem}
+        onUpdate={updateCrambleSomedayItem}
+        onDelete={deleteCrambleSomedayItem}
         onToggle={toggleCrambleSomedayItem}
         onBack={() => setView('tracker')}
         onOpenToday={() => setView('tracker')}

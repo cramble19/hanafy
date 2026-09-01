@@ -1,4 +1,4 @@
-import { Hourglass, Infinity, Plus, X } from 'lucide-react'
+import { Hourglass, Infinity, Plus, Save, Trash2, X } from 'lucide-react'
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
 import {
   getNewSomedayItemValidationError,
@@ -9,25 +9,33 @@ import type { NewSomedayItemInput, SomedayItem } from '@/types'
 type Props = {
   profile: 'hana' | 'cramble'
   existingItems: SomedayItem[]
+  item?: SomedayItem
   onClose: () => void
   onSubmit: (input: NewSomedayItemInput) => string | null
+  onUpdate?: (itemId: string, input: NewSomedayItemInput) => string | null
+  onDelete?: (itemId: string) => void
 }
 
 export function AddSomedayDialog({
   profile,
   existingItems,
+  item,
   onClose,
   onSubmit,
+  onUpdate,
+  onDelete,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const ageRef = useRef<HTMLInputElement>(null)
   const headingId = useId()
   const descriptionId = useId()
-  const [title, setTitle] = useState('')
-  const [timing, setTiming] = useState<NewSomedayItemInput['timing']>('timeless')
-  const [age, setAge] = useState('')
+  const [title, setTitle] = useState(item?.title ?? '')
+  const [timing, setTiming] = useState<NewSomedayItemInput['timing']>(item?.timing ?? 'timeless')
+  const [age, setAge] = useState(item?.targetAge?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const isEditing = item !== undefined
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -58,14 +66,23 @@ export function AddSomedayDialog({
       timing,
       targetAge: timing === 'beforeAge' ? Number(age) : null,
     }
-    const validationError = getNewSomedayItemValidationError(input, existingItems)
+    const validationError = getNewSomedayItemValidationError(
+      input,
+      isEditing
+        ? existingItems.filter((candidate) => candidate.id !== item.id)
+        : existingItems,
+    )
     if (validationError) {
       setError(validationError)
       if (!title.trim()) titleRef.current?.focus()
       else if (timing === 'beforeAge') ageRef.current?.focus()
       return
     }
-    const submitError = onSubmit(input)
+    const submitError = isEditing
+      ? onUpdate
+        ? onUpdate(item.id, input)
+        : 'Editing is unavailable right now.'
+      : onSubmit(input)
     if (submitError) {
       setError(submitError)
       return
@@ -90,15 +107,19 @@ export function AddSomedayDialog({
       <form className="someday-dialog-panel" onSubmit={submit}>
         <div className="someday-dialog-heading">
           <div>
-            <p className="someday-dialog-eyebrow">A new possibility</p>
-            <h2 id={headingId}>Add something</h2>
+            <p className="someday-dialog-eyebrow">
+              {isEditing ? 'Someday item' : 'A new possibility'}
+            </p>
+            <h2 id={headingId}>{isEditing ? 'Edit something' : 'Add something'}</h2>
           </div>
           <button type="button" onClick={close} aria-label="Close Someday form">
             <X aria-hidden="true" />
           </button>
         </div>
         <p id={descriptionId} className="someday-dialog-intro">
-          Keep it timeless, or give it an age that matters to you.
+          {isEditing
+            ? 'Change the wording or move it to a different horizon.'
+            : 'Keep it timeless, or give it an age that matters to you.'}
         </p>
 
         <label className="someday-field">
@@ -165,10 +186,39 @@ export function AddSomedayDialog({
         ) : null}
 
         {error ? <p className="someday-dialog-error" role="alert">{error}</p> : null}
-        <button type="submit" className="someday-submit-button">
-          <Plus aria-hidden="true" />
-          Add to Someday
-        </button>
+        {isEditing && confirmingDelete ? (
+          <div className="someday-delete-confirmation" role="alert">
+            <span>Delete this item?</span>
+            <button type="button" onClick={() => setConfirmingDelete(false)}>Keep</button>
+            <button
+              type="button"
+              className="is-destructive"
+              onClick={() => {
+                onDelete?.(item.id)
+                close()
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <div className={`someday-dialog-actions${isEditing ? ' is-editing' : ''}`}>
+            {isEditing ? (
+              <button
+                type="button"
+                className="someday-delete-button"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <Trash2 aria-hidden="true" />
+                Delete
+              </button>
+            ) : null}
+            <button type="submit" className="someday-submit-button">
+              {isEditing ? <Save aria-hidden="true" /> : <Plus aria-hidden="true" />}
+              {isEditing ? 'Save changes' : 'Add to Someday'}
+            </button>
+          </div>
+        )}
       </form>
     </dialog>
   )
