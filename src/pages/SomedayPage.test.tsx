@@ -63,6 +63,7 @@ describe('SomedayPage', () => {
     expect(html).toContain('Anytime')
     expect(html.indexOf('Before 35')).toBeLessThan(html.indexOf('Before 40'))
     expect(html).toContain('Memories made')
+    expect(html).toContain('1 memory made')
     expect(html.indexOf('Memories made')).toBeLessThan(html.indexOf('Add something'))
     expect(html).toContain('Completed · Aug 16, 2026')
     expect(html).toContain(profile === 'hana' ? 'Garden' : 'Observatory')

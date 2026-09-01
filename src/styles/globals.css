@@ -7815,6 +7815,20 @@ button.anytime-log-emblem:focus-visible {
   letter-spacing: -0.025em;
 }
 
+.someday-memories-count {
+  display: inline-grid;
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  place-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.55rem;
+  color: var(--someday-accent);
+  background: color-mix(in srgb, var(--someday-accent) 12%, var(--surface));
+  font-size: 0.76rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
 .someday-memory-list {
   margin-top: 0.65rem;
 }

@@ -112,6 +112,12 @@ export function SomedayPage({
             <div className="someday-memories-heading">
               <Sprout aria-hidden="true" />
               <h2 id="someday-memories-title">Memories made</h2>
+              <span
+                className="someday-memories-count"
+                aria-label={`${completedItems.length} ${completedItems.length === 1 ? 'memory' : 'memories'} made`}
+              >
+                {completedItems.length}
+              </span>
             </div>
             <div className="someday-memory-list">
               {completedItems.map((item) => (
