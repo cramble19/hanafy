@@ -104,7 +104,7 @@ type Props = {
   lastCloudSyncAt: string | null
   hasPendingCloudSave: boolean
   saveConfirmedAt: number | null
-  onBack: () => void
+  onBack?: () => void
 }
 
 const chronicleLines = crambleChronicles as ChronicleLine[]

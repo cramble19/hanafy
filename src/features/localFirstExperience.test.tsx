@@ -24,6 +24,7 @@ describe('local-first profile opening', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('renders both home emotions on the first render from device snapshots', () => {
@@ -54,6 +55,19 @@ describe('local-first profile opening', () => {
     expect(html).not.toContain("Today&#x27;s chapter")
     expect(html).not.toContain('The Sunward Archive')
     expect(html).not.toContain("Opening Cramble&#x27;s archive")
+  })
+
+  it('opens Cramble directly when built for the dedicated frontend', () => {
+    vi.stubEnv('VITE_APP_ENTRY', 'cramble')
+    const { cramble } = createProfiles()
+    installStorage({ [CRAMBLE_STORAGE_KEY]: JSON.stringify(cramble) })
+
+    const html = renderToStaticMarkup(<App />)
+
+    expect(html).toContain('Friday, August 14')
+    expect(html).toContain('profile-top-bar-cramble')
+    expect(html).not.toContain('aria-label="Back to home"')
+    expect(html).not.toContain('Whose day is it?')
   })
 
   it('opens Together from both cached profiles without gathering first', () => {

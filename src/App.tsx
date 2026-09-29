@@ -131,7 +131,8 @@ type CloudSyncStatus =
 type HomeFocusTarget = 'hana' | 'cramble' | 'together' | null
 
 export default function App() {
-  const [view, setView] = useState<View>('home')
+  const crambleDirectEntry = import.meta.env.VITE_APP_ENTRY === 'cramble'
+  const [view, setView] = useState<View>(crambleDirectEntry ? 'cramble' : 'home')
   const [homeFocusTarget, setHomeFocusTarget] =
     useState<HomeFocusTarget>(null)
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
@@ -145,7 +146,7 @@ export default function App() {
     useState<DailyEmotion | null>(() =>
       readLocalProfileEmotion('cramble', homeLogicalDate),
     )
-  useHabitReminders('hana', hanaGame, quests)
+  useHabitReminders('hana', crambleDirectEntry ? null : hanaGame, quests)
   const hanaGameRef = useRef<HanaGameState | null>(hanaGame)
   const pendingDbSaveRef = useRef<PendingProfileSync | null>(
     initialHanaLocal?.pending ?? null,
@@ -592,10 +593,12 @@ export default function App() {
   }, [flushQueuedDbSave, hydrateFromDb])
 
   useEffect(() => {
+    if (crambleDirectEntry) return
     void hydrateFromDb()
-  }, [hydrateFromDb])
+  }, [crambleDirectEntry, hydrateFromDb])
 
   useEffect(() => {
+    if (crambleDirectEntry) return undefined
     let rolloverTimer: number | null = null
     const syncToToday = () => {
       const currentDate = todayKey()
@@ -643,7 +646,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', syncWhenVisible)
       if (rolloverTimer !== null) window.clearTimeout(rolloverTimer)
     }
-  }, [commitHanaState])
+  }, [commitHanaState, crambleDirectEntry])
 
   useEffect(() => {
     if (view !== 'home') return undefined
@@ -679,7 +682,7 @@ export default function App() {
   }, [homeLogicalDate, view])
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
+    if (import.meta.env.DEV || crambleDirectEntry) {
       return undefined
     }
 
@@ -719,6 +722,7 @@ export default function App() {
     }
   }, [
     cachePendingHanaGame,
+    crambleDirectEntry,
     flushQueuedDbSave,
     hydrateFromDb,
     readPendingHanaGame,
@@ -1514,7 +1518,11 @@ export default function App() {
   }
 
   if (view === 'cramble') {
-    return <CrambleExperience onBack={() => setView('home')} />
+    return (
+      <CrambleExperience
+        onBack={crambleDirectEntry ? undefined : () => setView('home')}
+      />
+    )
   }
 
   if (view === 'together') {

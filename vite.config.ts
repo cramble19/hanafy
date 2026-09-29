@@ -7,8 +7,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ command, mode }) => {
-  const localPreviewDirectory = loadEnv(mode, process.cwd(), '')
-    .HANAFY_LOCAL_PREVIEW_DIR
+  const environment = loadEnv(mode, process.cwd(), '')
+  const localPreviewDirectory = environment.HANAFY_LOCAL_PREVIEW_DIR
+  const crambleDirectEntry = environment.VITE_APP_ENTRY === 'cramble'
   const localPreviewPlugin =
     command === 'serve' && localPreviewDirectory
       ? createLocalPreviewPlugin(localPreviewDirectory)
@@ -31,11 +32,13 @@ export default defineConfig(({ command, mode }) => {
       ],
       manifest: {
         id: '/',
-        name: 'Hanafy - Hana & Cramble',
-        short_name: 'Hanafy',
-        description: 'Two gentle habit adventures for Hana and Cramble.',
-        theme_color: '#fffaf0',
-        background_color: '#fffaf0',
+        name: crambleDirectEntry ? 'Cramble - Sunward Archive' : 'Hanafy - Hana & Cramble',
+        short_name: crambleDirectEntry ? 'Cramble' : 'Hanafy',
+        description: crambleDirectEntry
+          ? "Cramble's Sunward Archive."
+          : 'Two gentle habit adventures for Hana and Cramble.',
+        theme_color: crambleDirectEntry ? '#1b1b25' : '#fffaf0',
+        background_color: crambleDirectEntry ? '#1b1b25' : '#fffaf0',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { crambleQuests } from '../src/data/crambleQuests'
 import { quests } from '../src/data/quests'
@@ -74,6 +74,84 @@ describe('profile sync API revision writes', () => {
     database.storedSchemaVersion = null
     database.currentRows = []
     process.env.DATABASE_URL = 'postgresql://example.invalid/neondb'
+    delete process.env.HANAFY_API_UPSTREAM
+  })
+
+  afterEach(() => {
+    delete process.env.HANAFY_API_UPSTREAM
+    vi.unstubAllGlobals()
+  })
+
+  it('forwards only Cramble reads through the dedicated frontend', async () => {
+    process.env.HANAFY_API_UPSTREAM = 'https://hanafy-green.vercel.app'
+    const upstreamFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify({ ok: true, snapshot: null }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', upstreamFetch)
+    let statusCode = 200
+    let responseBody: unknown
+    const response = {
+      setHeader() {},
+      status(code: number) { statusCode = code; return this },
+      json(body: unknown) { responseBody = body },
+      end() {},
+    }
+
+    await handler({ method: 'GET', query: { profileId: 'cramble' } }, response)
+
+    expect(statusCode).toBe(200)
+    expect(responseBody).toEqual({ ok: true, snapshot: null })
+    expect(upstreamFetch).toHaveBeenCalledOnce()
+    expect(String(upstreamFetch.mock.calls[0][0])).toBe(
+      'https://hanafy-green.vercel.app/api/hana-sync?profileId=cramble',
+    )
+    expect(database.directQueries).toHaveLength(0)
+
+    await handler({ method: 'GET', query: { profileId: 'hana' } }, response)
+    expect(statusCode).toBe(400)
+    expect(upstreamFetch).toHaveBeenCalledOnce()
+  })
+
+  it('preserves the write token and revision when forwarding Cramble saves', async () => {
+    process.env.HANAFY_API_UPSTREAM = 'https://hanafy-green.vercel.app'
+    const state = {
+      ...createStartedHanaState('2026-08-11'),
+      syncRevision: 2,
+    }
+    const payload = createProfileCloudSyncPayload(
+      'cramble', state, crambleQuests, '2026-08-11T04:00:00.000Z',
+      'direct-frontend-write-test',
+    )
+    const upstreamFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify({ ok: true, revision: 3 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', upstreamFetch)
+    let statusCode = 200
+    const response = {
+      setHeader() {},
+      status(code: number) { statusCode = code; return this },
+      json() {},
+      end() {},
+    }
+
+    await handler(
+      { method: 'POST', body: { ...payload, baseRevision: 2 } },
+      response,
+    )
+
+    expect(statusCode).toBe(200)
+    const requestInit = upstreamFetch.mock.calls[0][1]
+    const forwarded = JSON.parse(String(requestInit?.body))
+    expect(forwarded.profileId).toBe('cramble')
+    expect(forwarded.baseRevision).toBe(2)
+    expect(forwarded.writeToken).toBe('direct-frontend-write-test')
+    expect(database.directQueries).toHaveLength(0)
   })
 
   it('reads a profile without running schema DDL in the request path', async () => {

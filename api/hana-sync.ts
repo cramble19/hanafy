@@ -61,6 +61,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return
   }
 
+  if (process.env.HANAFY_API_UPSTREAM) {
+    await forwardCrambleRequest(req, res, process.env.HANAFY_API_UPSTREAM)
+    return
+  }
+
   const databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL
   if (!databaseUrl) {
     res.status(500).json({ error: 'Missing DATABASE_URL or POSTGRES_URL' })
@@ -394,6 +399,42 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   } catch (error) {
     console.error('Profile sync failed', error)
     res.status(500).json({ error: 'Profile sync failed' })
+  }
+}
+
+async function forwardCrambleRequest(
+  req: ApiRequest,
+  res: ApiResponse,
+  upstreamOrigin: string,
+) {
+  const payload = req.method === 'POST' ? parsePayload(req.body) : null
+  if (
+    (req.method === 'GET' && readProfileId(req.query?.profileId) !== 'cramble') ||
+    (req.method === 'POST' && payload?.profileId !== 'cramble')
+  ) {
+    res.status(400).json({ error: 'This frontend is for Cramble only' })
+    return
+  }
+
+  try {
+    const upstreamUrl = new URL('/api/hana-sync', upstreamOrigin)
+    if (upstreamUrl.protocol !== 'https:') {
+      res.status(500).json({ error: 'Invalid API upstream' })
+      return
+    }
+    if (req.method === 'GET') upstreamUrl.searchParams.set('profileId', 'cramble')
+
+    const response = await fetch(upstreamUrl, {
+      method: req.method,
+      headers: req.method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+      body: payload ? JSON.stringify(payload) : undefined,
+      redirect: 'error',
+      signal: AbortSignal.timeout(12_000),
+    })
+    const result = await response.json()
+    res.status(response.status).json(result)
+  } catch {
+    res.status(502).json({ error: 'Could not reach Hanafy sync service' })
   }
 }
 

@@ -17,4 +17,11 @@ describe('ProfileTopBar', () => {
       expect(html).not.toMatch(/level|lv\s*\d/i)
     },
   )
+
+  it('keeps the Cramble name centered without a home action', () => {
+    const html = renderToStaticMarkup(<ProfileTopBar profile="cramble" />)
+
+    expect(html).toContain('profile-top-bar-spacer')
+    expect(html).not.toContain('aria-label="Back to home"')
+  })
 })

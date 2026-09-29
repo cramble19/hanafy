@@ -6,6 +6,10 @@ import App from './App'
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
 
 async function bootstrap() {
+  if (import.meta.env.VITE_APP_ENTRY === 'cramble') {
+    document.title = 'Cramble'
+  }
+
   if (import.meta.env.DEV) {
     const url = new URL(window.location.href)
 

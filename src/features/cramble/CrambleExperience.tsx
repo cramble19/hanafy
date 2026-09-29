@@ -111,7 +111,7 @@ type CrambleView =
   | 'emotionHistory'
   | 'someday'
 type Props = {
-  onBack: () => void
+  onBack?: () => void
 }
 
 export function CrambleExperience({ onBack }: Props) {
@@ -1322,7 +1322,7 @@ function CrambleLoadingPage({
   onBack,
 }: {
   status: CrambleSyncStatus
-  onBack: () => void
+  onBack?: () => void
 }) {
   const headingRef = usePageHeadingFocus()
 
@@ -1331,14 +1331,16 @@ function CrambleLoadingPage({
       className="cramble-archive-shell mx-auto flex min-h-full w-full max-w-md flex-col px-5 pb-10 pt-6"
       aria-busy={status === 'loading' || status === 'syncing'}
     >
-      <button
-        type="button"
-        onClick={onBack}
-        className="relative z-10 flex min-h-11 items-center justify-center gap-1 rounded-full border border-border bg-surface px-4 text-sm font-medium text-ink shadow-sm outline-none transition active:scale-95 motion-reduce:transition-none"
-      >
-        <ChevronLeft className="size-4" aria-hidden="true" />
-        Back
-      </button>
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="relative z-10 flex min-h-11 items-center justify-center gap-1 rounded-full border border-border bg-surface px-4 text-sm font-medium text-ink shadow-sm outline-none transition active:scale-95 motion-reduce:transition-none"
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" />
+          Back
+        </button>
+      )}
       <div className="relative z-10 grid flex-1 place-items-center text-center">
         <div className="cramble-codex-card rounded-card border border-border bg-surface p-6 shadow-sm">
           <div className="cramble-compass-medallion mx-auto grid size-16 place-items-center rounded-full">

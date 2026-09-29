@@ -2,7 +2,7 @@ import { BookOpen, ChevronLeft, Compass } from 'lucide-react'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 
 type Props = {
-  onBack: () => void
+  onBack?: () => void
   onStart: () => void
   isSaving: boolean
   isOffline: boolean
@@ -24,15 +24,17 @@ export function CrambleStartPage({
       aria-busy={isSaving}
     >
       <div className="cramble-decor-layer" aria-hidden="true" />
-      <div className="relative z-10 mb-8 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to home"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface/90 text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
+      <div className={`relative z-10 mb-8 flex items-center ${onBack ? 'justify-between' : 'justify-center'}`}>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to home"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface/90 text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+        )}
         <span className="rounded-full border border-border bg-surface/75 px-3 py-1.5 text-xs font-semibold text-muted shadow-sm backdrop-blur">
           The Sunward Archive
         </span>
