@@ -8561,3 +8561,156 @@ button.anytime-log-emblem:focus-visible {
     min-width: 1.8rem;
   }
 }
+
+/* Parchment log states: the page keeps its own theme, while log cards are
+   flower-free and recorded entries change surface instead of fading away. */
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board {
+  background-image: none;
+  box-shadow: 0 10px 22px -19px rgba(30, 27, 25, 0.55);
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board::before,
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board::after {
+  content: none;
+}
+
+.anytime-log-section-cramble .anytime-log-card-board:not([data-recorded='true']) {
+  border-color: #716044;
+  color: #f5ede2;
+  background: #282832;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board:not([data-recorded='true'])
+  .anytime-log-copy h3 {
+  color: #f5ede2;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board:not([data-recorded='true'])
+  .anytime-log-copy p {
+  color: #bdb2a8;
+}
+
+.anytime-log-section-hana .anytime-log-card-board:not([data-recorded='true']) {
+  border-color: #b7c8ad;
+  color: #304533;
+  background: #f8faf4;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board:not([data-recorded='true'])
+  .anytime-log-copy h3 {
+  color: #304533;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board:not([data-recorded='true'])
+  .anytime-log-copy p {
+  color: #68766a;
+}
+
+.anytime-log-section-cramble .anytime-log-card-board[data-recorded='true'] {
+  border-color: #d3bd93;
+  color: #38342f;
+  background: linear-gradient(150deg, #f3e9d4, #dcd2bd);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.anytime-log-section-hana .anytime-log-card-board[data-recorded='true'] {
+  border-color: #91ab84;
+  color: #304632;
+  background: linear-gradient(150deg, #eaf2e3, #d6e4cd);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check'][data-recorded='true']
+  .anytime-log-copy h3 {
+  color: inherit;
+  opacity: 1;
+  text-shadow: none;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-copy p,
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-today-count {
+  color: #655d50;
+}
+
+.anytime-log-section-hana
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-copy p,
+.anytime-log-section-hana
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-today-count {
+  color: #526851;
+}
+
+.anytime-log-section:is(.anytime-log-section-hana, .anytime-log-section-cramble)
+  .anytime-log-card-board[data-kind='check']
+  .anytime-log-copy {
+  flex-direction: column;
+}
+
+.anytime-log-recorded-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+  color: #775b2f;
+  font-size: 0.64rem;
+  font-weight: 550;
+  line-height: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.anytime-log-recorded-label svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  stroke-width: 2;
+}
+
+.anytime-log-section-hana .anytime-log-recorded-label {
+  color: #496a44;
+}
+
+.anytime-log-card-board[data-mosaic-size='compact']
+  .anytime-log-recorded-label {
+  margin-top: 0.15rem;
+  font-size: 0.6rem;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-stepper button,
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-stepper output {
+  color: #775b2f;
+  text-shadow: none;
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-rating button {
+  border-color: #c5b18b;
+  color: #655d50;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.anytime-log-section-cramble
+  .anytime-log-card-board[data-recorded='true']
+  .anytime-log-rating button[aria-pressed='true'] {
+  border-color: #876937;
+  color: #fffaf0;
+  background: #876937;
+}

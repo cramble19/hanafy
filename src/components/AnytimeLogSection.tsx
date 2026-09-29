@@ -1,6 +1,5 @@
-import { Compass, Leaf, Minus, Plus } from 'lucide-react'
+import { Check, Compass, Leaf, Minus, Plus } from 'lucide-react'
 import {
-  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
@@ -9,7 +8,6 @@ import {
   useState,
 } from 'react'
 import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
-import flowerLogWallpaper from '@/assets/flower-log-wallpaper.jpg'
 import type { DailyEmotion, OpenActivity } from '@/types'
 
 export type AnytimeLogProfile = 'hana' | 'cramble'
@@ -34,31 +32,6 @@ const RATING_EMOTIONS: readonly DailyEmotion[] = [
   'good',
   'bright',
 ]
-
-const FIELD_LOG_WALLPAPER_ASPECT = 365 / 547
-
-export function calculateSharedWallpaperLayout(
-  containerWidth: number,
-  containerHeight: number,
-  cardOffsetX: number,
-  cardOffsetY: number,
-) {
-  const containerAspect = containerWidth / containerHeight
-  const imageWidth =
-    containerAspect > FIELD_LOG_WALLPAPER_ASPECT
-      ? containerWidth
-      : containerHeight * FIELD_LOG_WALLPAPER_ASPECT
-  const imageHeight = imageWidth / FIELD_LOG_WALLPAPER_ASPECT
-  const imageOriginX = (containerWidth - imageWidth) / 2
-  const imageOriginY = (containerHeight - imageHeight) / 2
-
-  return {
-    imageWidth,
-    imageHeight,
-    positionX: imageOriginX - cardOffsetX,
-    positionY: imageOriginY - cardOffsetY,
-  }
-}
 
 export type AnytimeLogMosaicGroup = {
   feature: OpenActivity
@@ -135,75 +108,6 @@ export function isAnytimeLogManageKey(
   return key === 'ContextMenu' || (key === 'F10' && shiftKey)
 }
 
-function useSharedWallpaperLayout(
-  resultsRef: { current: HTMLDivElement | null },
-  enabled: boolean,
-  layoutKey: string,
-) {
-  useEffect(() => {
-    const results = resultsRef.current
-    if (!enabled || !results) return
-
-    let animationFrame: number | null = null
-    const updateCardCoordinates = () => {
-      if (animationFrame !== null) cancelAnimationFrame(animationFrame)
-      animationFrame = requestAnimationFrame(() => {
-        const resultsRect = results.getBoundingClientRect()
-        const cards = results.querySelectorAll<HTMLElement>(
-          '[data-anytime-wallpaper-card="true"]',
-        )
-
-        if (resultsRect.width <= 0 || resultsRect.height <= 0) return
-
-        cards.forEach((card) => {
-          const cardRect = card.getBoundingClientRect()
-          const wallpaper = calculateSharedWallpaperLayout(
-            resultsRect.width,
-            resultsRect.height,
-            cardRect.left - resultsRect.left,
-            cardRect.top - resultsRect.top,
-          )
-          card.style.setProperty(
-            '--anytime-wallpaper-left',
-            `${wallpaper.positionX}px`,
-          )
-          card.style.setProperty(
-            '--anytime-wallpaper-top',
-            `${wallpaper.positionY}px`,
-          )
-          card.style.setProperty(
-            '--anytime-wallpaper-width',
-            `${wallpaper.imageWidth}px`,
-          )
-          card.style.setProperty(
-            '--anytime-wallpaper-height',
-            `${wallpaper.imageHeight}px`,
-          )
-        })
-        results.dataset.anytimeWallpaperReady = 'true'
-      })
-    }
-
-    updateCardCoordinates()
-    const resizeObserver =
-      typeof ResizeObserver === 'undefined'
-        ? null
-        : new ResizeObserver(updateCardCoordinates)
-    resizeObserver?.observe(results)
-    results
-      .querySelectorAll<HTMLElement>('[data-anytime-wallpaper-card="true"]')
-      .forEach((card) => resizeObserver?.observe(card))
-    window.addEventListener('resize', updateCardCoordinates)
-
-    return () => {
-      if (animationFrame !== null) cancelAnimationFrame(animationFrame)
-      resizeObserver?.disconnect()
-      window.removeEventListener('resize', updateCardCoordinates)
-      delete results.dataset.anytimeWallpaperReady
-    }
-  }, [enabled, layoutKey, resultsRef])
-}
-
 export type AnytimeLogSectionProps = {
   profile: AnytimeLogProfile
   activities: OpenActivity[]
@@ -243,15 +147,6 @@ export function AnytimeLogSection({
   )
   const boardActivities = filteredActivities
   const mosaicGroups = groupAnytimeActivitiesForMosaic(boardActivities)
-  const wallpaperLayoutKey = `${filter}:${boardActivities
-    .map((activity) => `${activity.id}:${activity.kind}`)
-    .join('|')}`
-  useSharedWallpaperLayout(
-    resultsRef,
-    boardActivities.length > 0,
-    wallpaperLayoutKey,
-  )
-
   const moveFocusBeforeRemoval = (activityId: string) => {
     const cards = Array.from(
       resultsRef.current?.querySelectorAll<HTMLElement>(
@@ -330,12 +225,6 @@ export function AnytimeLogSection({
             id={resultsId}
             className="anytime-log-results"
             data-filter={filter}
-            data-anytime-wallpaper="shared-flower"
-            style={
-              {
-                '--anytime-wallpaper-image': `url(${flowerLogWallpaper})`,
-              } as CSSProperties
-            }
           >
             {boardActivities.length > 0 ? (
               <div
@@ -453,7 +342,6 @@ function AnytimeLogCard({
   const checked = activity.kind === 'check' && count > 0
   const recorded = count > 0
   const isRating = activity.kind === 'rating'
-  const hasSharedWallpaper = layout === 'board'
   const unit = activity.unit?.trim() || 'times'
   const countLabel = `${count} ${unit} today`
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -592,7 +480,6 @@ function AnytimeLogCard({
       data-kind={activity.kind}
       data-disabled={disabled}
       data-anytime-activity-id={activity.id}
-      data-anytime-wallpaper-card={hasSharedWallpaper ? 'true' : undefined}
       data-mosaic-size={layout === 'board' ? mosaicSize : undefined}
       role="listitem"
     >
@@ -643,16 +530,24 @@ function AnytimeLogCard({
           </span>
         ) : null}
         {activity.kind === 'check' ? (
-          <span
-            className="sr-only"
-            data-anytime-recorded-status
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {recorded
-              ? `${activity.title} recorded today.`
-              : `${activity.title} not recorded today.`}
-          </span>
+          <>
+            {recorded ? (
+              <span className="anytime-log-recorded-label" aria-hidden="true">
+                <Check />
+                {mosaicSize === 'compact' ? 'Recorded' : 'Recorded today'}
+              </span>
+            ) : null}
+            <span
+              className="sr-only"
+              data-anytime-recorded-status
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {recorded
+                ? `${activity.title} recorded today.`
+                : `${activity.title} not recorded today.`}
+            </span>
+          </>
         ) : null}
       </div>
 

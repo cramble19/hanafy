@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   ANYTIME_LOG_HOLD_DELAY_MS,
   AnytimeLogSection,
-  calculateSharedWallpaperLayout,
   filterAnytimeActivities,
   groupAnytimeActivitiesForMosaic,
   isAnytimeLogManageKey,
@@ -190,7 +189,7 @@ describe('settled activity states', () => {
     expect(ANYTIME_LOG_HOLD_DELAY_MS).toBe(550)
   })
 
-  it('uses the shared botanical wallpaper and emoji-free cards for both profiles', () => {
+  it('uses flower-free cards and a visible recorded state for both profiles', () => {
     const crambleHtml = renderToStaticMarkup(
       <AnytimeLogSection
         profile="cramble"
@@ -211,12 +210,13 @@ describe('settled activity states', () => {
     )
 
     for (const html of [hanaHtml, crambleHtml]) {
-      expect(html).toContain('data-anytime-wallpaper="shared-flower"')
-      expect(html.match(/data-anytime-wallpaper-card="true"/g)).toHaveLength(3)
+      expect(html).not.toContain('data-anytime-wallpaper')
       expect(html).not.toContain('data-board-span=')
       expect(html).not.toContain('anytime-log-check-state')
       expect(html).not.toContain('data-checked=')
-      expect(html).toContain('flower-log-wallpaper')
+      expect(html).not.toContain('flower-log-wallpaper')
+      expect(html).toContain('class="anytime-log-recorded-label"')
+      expect(html).toContain('Recorded')
       expect(html).toContain('class="anytime-log-card-manage-surface"')
       expect(html).not.toContain('class="anytime-log-emblem')
       expect(html).not.toContain('🫶')
@@ -225,14 +225,7 @@ describe('settled activity states', () => {
     }
   })
 
-  it('aligns card-sized wallpaper crops and groups adjustable logs as feature tiles', () => {
-    const firstCrop = calculateSharedWallpaperLayout(400, 800, 0, 0)
-    const secondCrop = calculateSharedWallpaperLayout(400, 800, 208, 0)
-    expect(firstCrop.imageWidth).toBeGreaterThanOrEqual(400)
-    expect(firstCrop.imageHeight).toBeGreaterThanOrEqual(800)
-    expect(secondCrop.positionX).toBeCloseTo(firstCrop.positionX - 208)
-    expect(secondCrop.positionY).toBe(firstCrop.positionY)
-
+  it('groups adjustable logs as feature tiles', () => {
     const secondCheck: OpenActivity = {
       ...activities[0],
       id: 'second-check',
