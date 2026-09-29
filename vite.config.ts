@@ -18,6 +18,19 @@ export default defineConfig(({ command, mode }) => {
   return {
   plugins: [
     ...(localPreviewPlugin ? [localPreviewPlugin] : []),
+    ...(crambleDirectEntry
+      ? [{
+          name: 'cramble-direct-entry-metadata',
+          transformIndexHtml(html: string) {
+            return html
+              .replace('<title>Hanafy</title>', '<title>Cramble</title>')
+              .replace('content="Two gentle habit adventures for Hana and Cramble."', 'content="Cramble\'s Sunward Archive."')
+              .replace('<meta name="application-name" content="Hanafy" />', '<meta name="application-name" content="Cramble" />')
+              .replace('<meta name="apple-mobile-web-app-title" content="Hanafy" />', '<meta name="apple-mobile-web-app-title" content="Cramble" />')
+              .replace('<meta name="theme-color" content="#fffaf0" />', '<meta name="theme-color" content="#1b1b25" />')
+          },
+        } satisfies Plugin]
+      : []),
     react(),
     tailwindcss(),
     VitePWA({
