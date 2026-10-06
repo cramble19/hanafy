@@ -225,6 +225,14 @@ describe('profile sync API revision writes', () => {
     ).not.toMatch(/CREATE TABLE|ALTER TABLE|DO \$\$/)
   })
 
+  it('reads Cramble through independently stored domains without affecting Hana', async () => {
+    const response = { setHeader() {}, status() { return this }, json() {}, end() {} }
+    await handler({ method: 'GET', query: { profileId: 'cramble' } }, response)
+    expect(database.directQueries).toHaveLength(1)
+    expect(database.directQueries[0]).toContain('FROM cramble_composed_state')
+    expect(database.directQueries[0]).not.toMatch(/CREATE|INSERT|UPDATE|DELETE/)
+  })
+
   it('creates Hana on her first save at revision zero', async () => {
     database.acceptedWrite = 'insert'
     const state = createStartedHanaState('2026-08-11')

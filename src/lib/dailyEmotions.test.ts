@@ -3,6 +3,7 @@ import {
   getDailyEmotion,
   normalizeDailyEmotions,
   setDailyEmotion,
+  recordRecentEmotion,
 } from '@/lib/dailyEmotions'
 import {
   createStartedHanaState,
@@ -11,6 +12,31 @@ import {
 } from '@/lib/hanaGame'
 
 describe('daily emotion tracking', () => {
+  it('records and replaces a recent emotion without changing any other records', () => {
+    const state = { ...createStartedHanaState('2026-10-01'), currentDate: '2026-10-06',
+      dailyEmotions: { '2026-10-06': 'good' as const, '2026-10-04': 'low' as const },
+      openActivityLogs: { '2026-10-04': { 'open-cramble-gym': 1 } },
+      dailyCompletions: { '2026-10-04': { gym: true } } }
+    const result = recordRecentEmotion(state, '2026-10-04', 'bright')
+    expect(result.error).toBeNull()
+    expect(result.state.dailyEmotions).toEqual({ '2026-10-06': 'good', '2026-10-04': 'bright' })
+    expect(result.state.openActivityLogs).toBe(state.openActivityLogs)
+    expect(result.state.dailyCompletions).toBe(state.dailyCompletions)
+    expect(result.state.totalFlowers).toBe(state.totalFlowers)
+    expect(recordRecentEmotion(result.state, '2026-10-04', 'bright').state).toBe(result.state)
+  })
+
+  it('limits corrections to three previous days, including a month boundary', () => {
+    const state = { ...createStartedHanaState('2026-09-01'), currentDate: '2026-10-02' }
+    for (const date of ['2026-09-29', '2026-09-30', '2026-10-01']) {
+      expect(recordRecentEmotion(state, date, 'okay').error).toBeNull()
+    }
+    for (const date of ['2026-09-28', '2026-10-02', '2026-10-03', '2026-02-30', 'invalid']) {
+      expect(recordRecentEmotion(state, date, 'okay').state).toBe(state)
+      expect(recordRecentEmotion(state, date, 'okay').error).toBeTruthy()
+    }
+    expect(recordRecentEmotion({ ...state, startDate: '2026-10-01' }, '2026-09-30', 'good').error).toBeTruthy()
+  })
   it('records and updates one neutral emotion on the current tracker day', () => {
     const state = {
       ...createStartedHanaState('2026-08-10'),

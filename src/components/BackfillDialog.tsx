@@ -13,7 +13,9 @@ import {
   getOpenActivityDateValidationError,
   getOpenActivityValue,
 } from '@/lib/openActivities'
-import type { HanaGameState, Quest } from '@/types'
+import type { DailyEmotion, HanaGameState, Quest } from '@/types'
+import { DailyEmotionPicker } from '@/components/DailyEmotionPicker'
+import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
 
 type Props = {
   profile: 'hana' | 'cramble'
@@ -24,6 +26,8 @@ type Props = {
   onUndo: (dateKey: string, habitId: string) => string | null
   onRecordActivity: (dateKey: string, activityId: string) => string | null
   onUndoActivity: (dateKey: string, activityId: string) => string | null
+  onRecordEmotion?: (dateKey: string, emotion: DailyEmotion) => string | null
+  activitiesOnly?: boolean
 }
 
 export function BackfillDialog({
@@ -35,6 +39,8 @@ export function BackfillDialog({
   onUndo,
   onRecordActivity,
   onUndoActivity,
+  onRecordEmotion,
+  activitiesOnly = false,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -67,7 +73,7 @@ export function BackfillDialog({
   }
 
   const catalog = getQuestCatalog(baseQuests, game)
-  const eligible = selectedDate
+  const eligible = selectedDate && !activitiesOnly
     ? catalog.filter((quest) => {
         if (quest.group !== 'daily') return false
         if (getBackfillValidationError(game, quest, selectedDate)) return false
@@ -148,6 +154,17 @@ export function BackfillDialog({
           <p className="add-habit-label">
             {selectedDate ? displayDate(selectedDate) : 'No earlier tracker day'}
           </p>
+          {selectedDate && onRecordEmotion && (
+            <section className="backfill-emotion" aria-labelledby="recent-emotion-title">
+              <h3 id="recent-emotion-title">How did this day feel?</h3>
+              <DailyEmotionPicker profile={profile} value={game.dailyEmotions[selectedDate] ?? null}
+                label={`Emotion for ${displayDate(selectedDate)}`} showLabels
+                onChange={(emotion) => setError(onRecordEmotion(selectedDate, emotion))} />
+              <p role="status">{game.dailyEmotions[selectedDate]
+                ? `${DAILY_EMOTION_LABELS[game.dailyEmotions[selectedDate]]} recorded for ${formatShortDate(selectedDate)}.`
+                : 'No emotion recorded for this day.'}</p>
+            </section>
+          )}
           {eligible.length ? (
             <div className="space-y-2" aria-labelledby="recent-scheduled-heading">
               <h3 id="recent-scheduled-heading" className="add-habit-label">

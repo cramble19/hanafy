@@ -72,6 +72,7 @@ import { QuestDetailPage } from '@/pages/QuestDetailPage'
 import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
 import { SomedayPage } from '@/pages/SomedayPage'
 import { CrambleExperience } from '@/features/cramble/CrambleExperience'
+import { readCrambleRoute } from '@/hooks/useCrambleNavigation'
 import { TogetherExperience } from '@/features/together/TogetherExperience'
 import type {
   DailyEmotion,
@@ -132,7 +133,15 @@ type HomeFocusTarget = 'hana' | 'cramble' | 'together' | null
 
 export default function App() {
   const crambleDirectEntry = import.meta.env.VITE_APP_ENTRY === 'cramble'
-  const [view, setView] = useState<View>(crambleDirectEntry ? 'cramble' : 'home')
+  const [view, setView] = useState<View>(() => crambleDirectEntry ||
+    (typeof window !== 'undefined' && readCrambleRoute(window.history?.state)) ? 'cramble' : 'home')
+  useEffect(() => {
+    const restoreCramble = (event: PopStateEvent) => {
+      if (readCrambleRoute(event.state)) setView('cramble')
+    }
+    window.addEventListener('popstate', restoreCramble)
+    return () => window.removeEventListener('popstate', restoreCramble)
+  }, [])
   const [homeFocusTarget, setHomeFocusTarget] =
     useState<HomeFocusTarget>(null)
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)

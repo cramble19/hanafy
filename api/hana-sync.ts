@@ -82,7 +82,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return
       }
 
-      const rows = await sql`
+      const rows = profileId === 'cramble' ? await sql`
+        SELECT profile_id, current_date_key, total_flowers, state, revision, synced_at
+        FROM cramble_composed_state WHERE profile_id = ${profileId} LIMIT 1
+      ` : await sql`
         SELECT
           profile_id,
           current_date_key,

@@ -1,15 +1,10 @@
 import {
-  Activity,
-  BarChart3,
   CalendarDays,
   Plus,
   RefreshCw,
   RotateCcw,
-  Star,
-  Sunrise,
 } from 'lucide-react'
 import { useState } from 'react'
-import { AddHabitDialog } from '@/components/AddHabitDialog'
 import { AddAnytimeLogDialog } from '@/components/AddAnytimeLogDialog'
 import { AnytimeLogSection } from '@/components/AnytimeLogSection'
 import { DailyEmotionPicker } from '@/components/DailyEmotionPicker'
@@ -25,9 +20,6 @@ import {
 } from '@/components/TodayHabitControls'
 import crambleChronicles from '@/data/crambleChronicles.json'
 import { crambleQuests } from '@/data/crambleQuests'
-import {
-  getCrambleJourneyProgress,
-} from '@/lib/crambleGame'
 import { type NewHabitInput } from '@/lib/customHabits'
 import {
   getActiveHabitPause,
@@ -78,6 +70,7 @@ type Props = {
   onDecrementOpenActivity: (activityId: string) => void
   onSetOpenActivityRating: (activityId: string, rating: number) => void
   onSetDailyEmotion: (emotion: DailyEmotion) => void
+  onRecordRecentEmotion?: (dateKey: string, emotion: DailyEmotion) => string | null
   onPauseHabit: (habitId: string, input: PauseInput) => void
   onResumeHabit: (habitId: string) => void
   onArchiveHabit: (habitId: string) => void
@@ -113,13 +106,13 @@ const chronicleLines = crambleChronicles as ChronicleLine[]
 
 export function CramblePage({
   game,
-  onAddHabit,
   onAddOpenActivity,
   onEditOpenActivity,
   onIncrementOpenActivity,
   onDecrementOpenActivity,
   onSetOpenActivityRating,
   onSetDailyEmotion,
+  onRecordRecentEmotion,
   onPauseHabit,
   onResumeHabit,
   onArchiveHabit,
@@ -131,10 +124,6 @@ export function CramblePage({
   onUndoBackfill,
   onBackfillOpenActivity,
   onUndoBackfillOpenActivity,
-  onOpenObservatory,
-  onOpenSomeday,
-  onOpenLedger,
-  onOpenRhythm,
   onNextDay,
   onReset,
   onSyncCloud,
@@ -147,7 +136,6 @@ export function CramblePage({
   const [addDialogInitialView, setAddDialogInitialView] = useState<
     'chooser' | 'anytime' | null
   >(null)
-  const [isScheduledHabitOpen, setIsScheduledHabitOpen] = useState(false)
   const [managedActivityId, setManagedActivityId] = useState<string | null>(null)
   const [pauseHabitId, setPauseHabitId] = useState<string | null>(null)
   const [isPauseTrackingOpen, setIsPauseTrackingOpen] = useState(false)
@@ -156,7 +144,6 @@ export function CramblePage({
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const openActivities = getOpenActivityCatalog(game)
-  const journey = getCrambleJourneyProgress(game)
   const activeProfilePause = getActiveProfilePause(game)
   const pausedOpenActivities = openActivities.filter(
     (activity) =>
@@ -172,7 +159,6 @@ export function CramblePage({
     (activity) => activity.id === managedActivityId,
   )
   const allTrackerTitles = [
-    ...catalog.map((quest) => quest.title),
     ...openActivities.map((activity) => activity.title),
   ]
   const line = getChronicleLine(game.currentDate)
@@ -307,93 +293,19 @@ export function CramblePage({
         }
       />
 
-      <nav
-        className="profile-action-bar profile-action-bar-cramble"
-        aria-label="Cramble actions"
-      >
-        <button
-          type="button"
-          onClick={() => setAddDialogInitialView('chooser')}
-          className="habit-add-button"
-          aria-label="Add a habit for Cramble"
-        >
-          <span className="habit-add-icon" aria-hidden="true">
-            <Plus className="size-5" />
-          </span>
-          <span className="profile-action-copy">
-            <span className="profile-action-label">Add habit</span>
-            <span className="profile-action-detail">
-              Add a scheduled habit or anytime log
-            </span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenObservatory}
-          className="profile-action-button"
-          aria-label={`Open the Observatory. ${journey.percent}% of the Sunward Road crossed`}
-        >
-          <span className="cramble-action-icon" aria-hidden="true">
-            <Star className="size-4" />
-          </span>
-          <span className="profile-action-copy">
-            <span className="profile-action-label">Observatory</span>
-            <span className="profile-action-detail">
-              {journey.percent}% of the Sunward Road crossed
-            </span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenSomeday}
-          className="profile-action-button"
-          aria-label="Open Cramble's Someday list"
-        >
-          <span className="cramble-action-icon" aria-hidden="true">
-            <Sunrise className="size-4" />
-          </span>
-          <span className="profile-action-copy">
-            <span className="profile-action-label">Someday</span>
-          </span>
-        </button>
-        {onOpenRhythm && <button type="button" onClick={onOpenRhythm} className="profile-action-button cramble-rhythm-action" aria-label="Open Cramble's Rhythm">
-          <span className="cramble-action-icon" aria-hidden="true"><Activity className="size-4" /></span>
-          <span className="profile-action-copy"><span className="profile-action-label">Rhythm</span></span>
-        </button>}
-        <button
-          type="button"
-          onClick={onOpenLedger}
-          className="profile-action-button"
-          aria-label="View the Ledger and read the rhythm of recent chapters"
-        >
-          <span className="cramble-action-icon" aria-hidden="true">
-            <BarChart3 className="size-4" />
-          </span>
-          <span className="profile-action-copy">
-            <span className="profile-action-label">Ledger</span>
-            <span className="profile-action-detail">
-              Read the rhythm of recent chapters
-            </span>
-          </span>
-        </button>
-      </nav>
+      <button type="button" className="cramble-inline-add" onClick={() => setAddDialogInitialView('anytime')}>
+        <Plus size={18} aria-hidden="true" /> Add habit
+      </button>
 
       {addDialogInitialView ? (
         <AddAnytimeLogDialog
           profile="cramble"
           initialView={addDialogInitialView}
+          allowScheduled={false}
           existingTitles={allTrackerTitles}
           onClose={() => setAddDialogInitialView(null)}
-          onChooseScheduled={() => setIsScheduledHabitOpen(true)}
+          onChooseScheduled={() => {}}
           onSubmit={onAddOpenActivity}
-        />
-      ) : null}
-      {isScheduledHabitOpen ? (
-        <AddHabitDialog
-          profile="cramble"
-          existingTitles={allTrackerTitles}
-          onClose={() => setIsScheduledHabitOpen(false)}
-          onSubmit={onAddHabit}
         />
       ) : null}
       {managedActivity && managedActivity.kind !== 'rating' ? (
@@ -461,6 +373,8 @@ export function CramblePage({
           onUndo={onUndoBackfill}
           onRecordActivity={onBackfillOpenActivity}
           onUndoActivity={onUndoBackfillOpenActivity}
+          onRecordEmotion={onRecordRecentEmotion}
+          activitiesOnly
         />
       ) : null}
       {isExportOpen ? (

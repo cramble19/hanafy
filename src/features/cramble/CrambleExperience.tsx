@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronLeft, Compass } from 'lucide-react'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
@@ -91,7 +91,7 @@ import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
 import { reconcileQuestGraduation } from '@/lib/questCompletion'
-import { setDailyEmotion } from '@/lib/dailyEmotions'
+import { recordRecentEmotion, setDailyEmotion } from '@/lib/dailyEmotions'
 import {
   advancePendingProfileSyncRevision,
   markPendingProfileSyncAttempted,
@@ -105,22 +105,16 @@ import { readLocalProfileState } from '@/lib/profileCache'
 import { RhythmPage } from '@/pages/RhythmPage'
 import { assignRhythmCategory, createRhythmCategory, getRhythmSettings } from '@/lib/rhythmCategories'
 import { getRhythmTrackers } from '@/lib/rhythmStats'
+import { CrambleNavigation } from '@/components/CrambleNavigation'
+import { useCrambleNavigation } from '@/hooks/useCrambleNavigation'
 
-type CrambleView =
-  | 'tracker'
-  | 'observatory'
-  | 'ledger'
-  | 'ledgerDetail'
-  | 'emotionHistory'
-  | 'someday'
-  | 'rhythm'
 type Props = {
   onBack?: () => void
 }
 
 export function CrambleExperience({ onBack }: Props) {
-  const [view, setView] = useState<CrambleView>('tracker')
-  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null)
+  const { route, navigate: setView, back } = useCrambleNavigation(onBack)
+  const { view, questId: selectedQuestId } = route
   const [initialLocal] = useState(() => readLocalProfileState('cramble'))
   const [game, setGame] = useState<HanaGameState | null>(
     initialLocal?.state ?? null,
@@ -891,7 +885,6 @@ export function CrambleExperience({ onBack }: Props) {
     }
 
     const existingTitles = [
-      ...getQuestCatalog(crambleQuests, previous).map((quest) => quest.title),
       ...previous.openActivities.map((activity) => activity.title),
     ]
     const validationError = getNewOpenActivityValidationError(
@@ -929,7 +922,6 @@ export function CrambleExperience({ onBack }: Props) {
     if (!activity) return 'That anytime log is unavailable.'
 
     const existingTitles = [
-      ...getQuestCatalog(crambleQuests, previous).map((quest) => quest.title),
       ...previous.openActivities
         .filter((candidate) => candidate.id !== activityId)
         .map((candidate) => candidate.title),
@@ -1018,6 +1010,14 @@ export function CrambleExperience({ onBack }: Props) {
     if (!previous || getActiveProfilePause(previous)) return
     const nextState = setDailyEmotion(previous, emotion)
     if (nextState !== previous) void commitGameState(nextState)
+  }
+
+  const recordCrambleRecentEmotion = (dateKey: string, emotion: DailyEmotion) => {
+    const previous = gameRef.current
+    if (!previous) return 'Cramble is not ready yet.'
+    const result = recordRecentEmotion(previous, dateKey, emotion)
+    if (!result.error && result.state !== previous) void commitGameState(result.state)
+    return result.error
   }
 
   const addCrambleSomedayItem = (input: NewSomedayItemInput) => {
@@ -1232,16 +1232,22 @@ export function CrambleExperience({ onBack }: Props) {
     )
   }
 
+  const withNavigation = (page: ReactNode) => <div className="cramble-app-shell">
+    {page}
+    <CrambleNavigation view={view} onNavigate={destination => destination === 'rhythm' ? openRhythm() : setView(destination)} />
+  </div>
+
   if (view === 'rhythm') {
-    return <RhythmPage game={game} onCreateCategory={createCategory} onAssignCategory={assignCategory}
+    return withNavigation(<RhythmPage game={game} onCreateCategory={createCategory} onAssignCategory={assignCategory}
+      sharedNavigation areaId={route.area ?? null} onOpenArea={area => setView('rhythm', area ? { area } : {})} onBackArea={back}
       onToday={() => setView('tracker')} onObservatory={() => setView('observatory')}
       onSomeday={() => setView('someday')} onLedger={() => setView('ledger')}
       syncStatus={cloudSyncStatus} hasPendingSave={Boolean(pendingDbSaveRef.current)}
-      saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} />
+      saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} />)
   }
 
   if (view === 'observatory') {
-    return (
+    return withNavigation(
       <ObservatoryPage
         game={game}
         onToggle={toggleQuest}
@@ -1254,21 +1260,19 @@ export function CrambleExperience({ onBack }: Props) {
         onDeleteHabit={deleteCrambleHabit}
         onResumeTracking={resumeAllCramble}
         onSkip={toggleSkip}
-        onBack={() => setView('tracker')}
+        onAddLesson={addCrambleHabit}
       />
     )
   }
 
   if (view === 'ledger') {
-    return (
+    return withNavigation(
       <CrambleLedgerPage
         game={game}
-        onBack={() => setView('tracker')}
         onRestoreHabit={restoreCrambleHabit}
         onDeleteHabit={deleteCrambleHabit}
         onOpenQuest={(questId) => {
-          setSelectedQuestId(questId)
-          setView('ledgerDetail')
+          setView('ledgerDetail', { questId })
         }}
         onOpenEmotion={() => setView('emotionHistory')}
       />
@@ -1276,7 +1280,7 @@ export function CrambleExperience({ onBack }: Props) {
   }
 
   if (view === 'someday') {
-    return (
+    return withNavigation(
       <SomedayPage
         profile="cramble"
         items={game.somedayItems ?? []}
@@ -1284,7 +1288,7 @@ export function CrambleExperience({ onBack }: Props) {
         onUpdate={updateCrambleSomedayItem}
         onDelete={deleteCrambleSomedayItem}
         onToggle={toggleCrambleSomedayItem}
-        onBack={() => setView('tracker')}
+        sharedNavigation
         onOpenToday={() => setView('tracker')}
         onOpenDestination={() => setView('observatory')}
         onOpenLedger={() => setView('ledger')}
@@ -1294,26 +1298,26 @@ export function CrambleExperience({ onBack }: Props) {
   }
 
   if (view === 'emotionHistory') {
-    return (
+    return withNavigation(
       <EmotionHistoryPage
         game={game}
         profileId="cramble"
-        onBack={() => setView('ledger')}
+        onBack={back}
       />
     )
   }
 
   if (view === 'ledgerDetail' && selectedQuestId) {
-    return (
+    return withNavigation(
       <CrambleQuestDetailPage
         game={game}
         questId={selectedQuestId}
-        onBack={() => setView('ledger')}
+        onBack={back}
       />
     )
   }
 
-  return (
+  return withNavigation(
     <CramblePage
       game={game}
       onAddHabit={addCrambleHabit}
@@ -1327,6 +1331,7 @@ export function CrambleExperience({ onBack }: Props) {
       }
       onSetOpenActivityRating={setCrambleOpenActivityRating}
       onSetDailyEmotion={setCrambleEmotion}
+      onRecordRecentEmotion={recordCrambleRecentEmotion}
       onPauseHabit={pauseCrambleHabit}
       onResumeHabit={resumeCrambleHabit}
       onArchiveHabit={archiveCrambleHabit}
@@ -1349,7 +1354,6 @@ export function CrambleExperience({ onBack }: Props) {
       lastCloudSyncAt={lastCloudSyncAt}
       hasPendingCloudSave={Boolean(pendingDbSaveRef.current)}
       saveConfirmedAt={saveConfirmedAt}
-      onBack={onBack}
     />
   )
 }

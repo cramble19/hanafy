@@ -1,8 +1,8 @@
-.rhythm-page,.rhythm-dialog{--rhythm-ink:#f1ecdf;--rhythm-muted:#b7b9c0;--rhythm-gold:#e0bc78;--rhythm-line:#42454f;color:var(--rhythm-ink);font-family:Inter,system-ui,sans-serif;color-scheme:dark}
-.rhythm-page{max-width:448px;min-height:100dvh;margin:auto;padding:28px 20px 128px;background:linear-gradient(140deg,#252932,#1b1d24 65%)}
+.rhythm-page,.rhythm-dialog,.cramble-bottom-nav{--rhythm-ink:#f5eddd;--rhythm-muted:#c5b9a7;--rhythm-gold:#d6a653;--rhythm-line:#42454f;color:var(--rhythm-ink);font-family:"Inter Variable",ui-sans-serif,system-ui,-apple-system,sans-serif;color-scheme:dark}
+.rhythm-page{max-width:448px;min-height:100dvh;margin:auto;padding:24px 20px 128px}
 .rhythm-brand{font:400 28px Georgia,serif;color:var(--rhythm-gold);text-align:center;letter-spacing:1px;margin:0 0 28px}
 .rhythm-heading,.rhythm-between{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.rhythm-heading h1{margin:0;min-width:0;overflow-wrap:anywhere;font:400 36px Georgia,serif}
+.rhythm-heading h1{margin:0;min-width:0;overflow-wrap:anywhere;font-family:inherit;font-size:clamp(2.4rem,11vw,3.2rem);font-weight:520;letter-spacing:-.055em;line-height:1}
 .rhythm-range{display:flex;gap:3px;padding:3px;border:1px solid var(--rhythm-line);border-radius:15px;flex-shrink:0}
 .rhythm-range button{min-width:44px;min-height:40px;border-radius:11px;font-size:13px}
 .rhythm-range button[aria-pressed=true]{background:linear-gradient(#e5c687,#cfac65);color:#24211a}
@@ -41,7 +41,7 @@
 .rhythm-bottom-nav button[aria-current=page]{color:var(--rhythm-gold)}
 .rhythm-dialog{position:fixed;inset:0;margin:auto;width:min(420px,calc(100% - 28px));max-height:calc(100dvh - 40px);overflow-y:auto;padding:24px 20px;background:#292c34;border:1px solid var(--rhythm-line);border-radius:26px;box-shadow:0 20px 80px #0008}
 .rhythm-dialog::backdrop{background:#0a0c13aa;backdrop-filter:blur(4px)}
-.rhythm-dialog h2{font:400 26px Georgia,serif;overflow-wrap:anywhere}
+.rhythm-dialog h2{font:520 26px "Inter Variable",system-ui,sans-serif;letter-spacing:-.035em;overflow-wrap:anywhere}
 .rhythm-eyebrow{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--rhythm-gold);margin-bottom:5px}
 .rhythm-close{min-width:44px;min-height:44px;display:grid;place-items:center;border:1px solid var(--rhythm-line);border-radius:50%;color:var(--rhythm-muted)}
 .rhythm-dialog-note{font-size:12px;line-height:1.6;color:var(--rhythm-muted);margin:17px 0}
@@ -63,4 +63,15 @@
 .rhythm-error{color:#f5b4a6;font-size:12px;line-height:1.5;margin-top:10px}
 .profile-action-bar-cramble:has(.cramble-rhythm-action){grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
 .profile-action-bar-cramble:has(.cramble-rhythm-action) .profile-action-label{font-size:10px}
-@media(max-width:360px){.rhythm-page{padding-right:14px;padding-left:14px}.rhythm-area{gap:9px;padding:14px 10px}.rhythm-area-icon{width:34px;height:34px}.rhythm-area .rhythm-between{flex-wrap:wrap;gap:4px}.rhythm-heading h1{font-size:30px}.rhythm-dialog{padding:20px 15px}}
+@media(max-width:360px){.rhythm-page{padding-right:14px;padding-left:14px}.rhythm-area{gap:9px;padding:14px 10px}.rhythm-area-icon{width:34px;height:34px}.rhythm-area .rhythm-between{flex-wrap:wrap;gap:4px}.rhythm-dialog{padding:20px 15px}}
+.rhythm-heading{flex-wrap:wrap}
+.cramble-app-shell{min-height:100dvh}
+.cramble-app-shell>.cramble-archive-shell{padding-bottom:calc(115px + env(safe-area-inset-bottom))}
+.cramble-inline-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:20px;border:1px dashed var(--border);border-radius:20px;color:var(--brass,#d6a653);position:relative;z-index:10}
+.backfill-emotion{padding:16px 12px;border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+.backfill-emotion h3{font-size:15px;font-weight:500}
+.backfill-emotion .daily-emotion-picker{margin:12px 0 8px;padding:0;border:0;background:transparent;box-shadow:none}
+.backfill-emotion .daily-emotion-option{display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;min-height:66px;padding:6px 0}
+.backfill-emotion .daily-emotion-option-icon{width:32px;height:32px}
+.backfill-emotion .daily-emotion-name{font-size:11px;font-weight:400}
+.backfill-emotion>p{font-size:11px;text-align:center;color:var(--muted);margin-top:8px}

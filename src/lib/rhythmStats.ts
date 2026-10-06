@@ -1,8 +1,7 @@
 import type { GameState, Quest } from '@/types'
-import { addDays, getQuestCatalog } from '@/lib/hanaGame'
+import { addDays } from '@/lib/hanaGame'
 import { isHabitArchivedOnDate, isHabitGraduatedOnDate, isHabitPausedOnDate } from '@/lib/habitLifecycle'
 import { getOpenActivityCatalog } from '@/lib/openActivities'
-import { formatQuestCadence, getHabitRangeStats } from '@/lib/hanaStats'
 
 export type RhythmRange = 7 | 30
 export type RhythmTracker = {
@@ -11,7 +10,7 @@ export type RhythmTracker = {
 }
 
 /** Actual dated records, never completion percentages or sums of reps/ratings. */
-export function getRhythmTrackers(state: GameState, quests: Quest[]): RhythmTracker[] {
+export function getRhythmTrackers(state: GameState, _quests: Quest[]): RhythmTracker[] {
   const current = (id: string) => !state.deletedHabitIds?.includes(id) &&
     !isHabitArchivedOnDate(state, id) && !isHabitGraduatedOnDate(state, id)
   const open: RhythmTracker[] = getOpenActivityCatalog(state)
@@ -24,18 +23,8 @@ export function getRhythmTrackers(state: GameState, quests: Quest[]): RhythmTrac
       return { id: item.id, title: item.title, created, dates, lastDate: dates.at(-1) ?? null,
         cadence: 'Anytime', paused: isHabitPausedOnDate(state, item.id), observation: item.kind === 'rating' }
     })
-  const scheduled: RhythmTracker[] = getQuestCatalog(quests, state).flatMap(quest => {
-    if (!current(quest.id) || quest.catalogState === 'legacy') return []
-    const stats = getHabitRangeStats(state, quests, 'cramble', quest.id, 'all')
-    const activation = state.questActivations?.[quest.id]
-    if (!(activation && activation <= state.currentDate) && !stats?.totalRecords) return []
-    const dates = (stats?.days ?? []).filter(day => day.count > 0).map(day => day.dateKey).sort()
-    return [{ id: quest.id, title: quest.title,
-      created: activation ?? quest.createdDate ?? state.startDate ?? state.currentDate,
-      dates, lastDate: dates.at(-1) ?? null, cadence: formatQuestCadence(quest),
-      paused: isHabitPausedOnDate(state, quest.id), observation: false }]
-  })
-  return [...open, ...scheduled]
+  // Scheduled quests belong to Observatory, not the habit-frequency page.
+  return open
 }
 
 export function getRhythmDates(end: string, range: RhythmRange) {

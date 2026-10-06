@@ -9,6 +9,8 @@ type Props = {
   profile: 'hana' | 'cramble'
   value: DailyEmotion | null
   disabled?: boolean
+  label?: string
+  showLabels?: boolean
   onChange: (emotion: DailyEmotion) => void
 }
 
@@ -16,13 +18,15 @@ export function DailyEmotionPicker({
   profile,
   value,
   disabled = false,
+  label = "Today's emotion",
+  showLabels = false,
   onChange,
 }: Props) {
   return (
     <div
       className={`daily-emotion-picker daily-emotion-picker-${profile}`}
       role="group"
-      aria-label="Today's emotion"
+      aria-label={label}
     >
       {DAILY_EMOTIONS.map((emotion) => (
         <button
@@ -40,6 +44,7 @@ export function DailyEmotionPicker({
             profile={profile}
             className="daily-emotion-option-icon"
           />
+          {showLabels && <span className="daily-emotion-name">{DAILY_EMOTION_LABELS[emotion]}</span>}
         </button>
       ))}
     </div>

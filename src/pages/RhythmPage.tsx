@@ -7,10 +7,15 @@ import { categoryRecordedDays, getRhythmDates, getRhythmTrackers, recordedDays, 
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { CloudSyncNotice, type CloudSyncNoticeStatus } from '@/components/CloudSyncNotice'
 import { downloadProfileJson } from '@/lib/habitExport'
+import { ProfileTopBar } from '@/components/ProfileTopBar'
 import './rhythm.css'
 
 type Props = {
   game: GameState
+  sharedNavigation?: boolean
+  areaId?: string | null
+  onOpenArea?: (area: string | null) => void
+  onBackArea?: () => void
   onCreateCategory: (name: string) => { id: string | null; error: string | null }
   onAssignCategory: (habitId: string, categoryId: string | null) => string | null
   onToday: () => void; onObservatory: () => void; onSomeday: () => void; onLedger: () => void
@@ -19,11 +24,13 @@ type Props = {
 const categoryIcons = { movement: Footprints, care: Heart, connection: Users, 'mind-play': BookOpen, unsorted: Ellipsis }
 const dateLabel = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-export function RhythmPage({ game, onCreateCategory, onAssignCategory, onToday, onObservatory, onSomeday, onLedger, syncStatus, hasPendingSave, saveConfirmedAt, onRetry }: Props) {
+export function RhythmPage({ sharedNavigation = false, areaId, onOpenArea, onBackArea, game, onCreateCategory, onAssignCategory, onToday, onObservatory, onSomeday, onLedger, syncStatus, hasPendingSave, saveConfirmedAt, onRetry }: Props) {
   const headingRef = usePageHeadingFocus()
   const [range, setRange] = useState<RhythmRange>(30)
   const [view, setView] = useState<'areas' | 'all'>('areas')
-  const [area, setArea] = useState<string | null>(null)
+  const [localArea, setLocalArea] = useState<string | null>(null)
+  const area = areaId === undefined ? localArea : areaId
+  const setArea = onOpenArea ?? setLocalArea
   const [editing, setEditing] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const trackers = useMemo(() => getRhythmTrackers(game, crambleQuests), [game])
@@ -52,9 +59,9 @@ export function RhythmPage({ game, onCreateCategory, onAssignCategory, onToday, 
     </li>
   }
 
-  return <div className="rhythm-page">
-    <div className="rhythm-brand">cramble</div>
-    {area && <button type="button" className="rhythm-text-button" onClick={() => setArea(null)}><ArrowLeft size={17} aria-hidden="true" />Life areas</button>}
+  return <div className="cramble-archive-shell rhythm-page">
+    <ProfileTopBar profile="cramble" />
+    {area && <button type="button" className="rhythm-text-button" onClick={onBackArea ?? (() => setArea(null))}><ArrowLeft size={17} aria-hidden="true" />Life areas</button>}
     <header className="rhythm-heading">
       <h1 ref={headingRef} tabIndex={-1}>{area ? categoryName(area) : 'Rhythm'}</h1>
       <div className="rhythm-range" aria-label="Record window">{([7, 30] as const).map(value => <button type="button" key={value} aria-pressed={range === value} onClick={() => setRange(value)}>{value}d</button>)}</div>
@@ -86,9 +93,9 @@ export function RhythmPage({ game, onCreateCategory, onAssignCategory, onToday, 
     </main>
     <p className="rhythm-status" role="status">{announcement}</p>
     <p className="rhythm-footnote">Days with a record, not a success score. Blank days stay neutral.</p>
-    <nav className="rhythm-bottom-nav" aria-label="Cramble navigation">
+    {!sharedNavigation && <nav className="rhythm-bottom-nav" aria-label="Cramble navigation">
       {([{ label: 'Today', icon: Sun, action: onToday }, { label: 'Observatory', icon: Sprout, action: onObservatory }, { label: 'Someday', icon: Star, action: onSomeday }, { label: 'Rhythm', icon: Activity }, { label: 'Ledger', icon: BookOpen, action: onLedger }]).map(({ label, icon: Icon, action }) => <button type="button" key={label} onClick={action} aria-current={label === 'Rhythm' ? 'page' : undefined}><Icon size={21} aria-hidden="true" /><span>{label}</span></button>)}
-    </nav>
+    </nav>}
     <CloudSyncNotice profile="cramble" status={syncStatus} hasPendingSave={hasPendingSave} saveConfirmedAt={saveConfirmedAt} onRetry={onRetry} onExportBackup={() => downloadProfileJson(game, crambleQuests, 'cramble')} />
     {(editing === 'new' || editedTracker) && <CategoryDialog
       key={editing} title={editedTracker?.title ?? null} categories={rhythm.categories}

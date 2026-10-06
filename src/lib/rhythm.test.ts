@@ -103,12 +103,13 @@ describe('Rhythm recorded-day ribbons', () => {
     expect(trackers.map(i=>i.id)).not.toContain('open-2')
     expect(trackers.find(i=>i.id==='open-3')).toMatchObject({paused:true,dates:['2026-10-01','2026-10-05']})
   })
-  it('includes only activated scheduled quests and preserves dated occurrence counts', () => {
+  it('keeps Observatory lessons out of Rhythm without changing their records', () => {
     const state=fixture();state.questActivations={'training-yard':'2026-09-01'}
     state.habitOccurrences={'2026-10-01':{'training-yard':3}}
     state.dailyCompletions={'2026-10-01':{'training-yard':true}}
     const tracker=getRhythmTrackers(state,crambleQuests).find(i=>i.id==='training-yard')
-    expect(tracker?.dates).toEqual(['2026-10-01'])
-    expect(getRhythmTrackers(state,crambleQuests).filter(i=>i.id==='training-yard')).toHaveLength(1)
+    expect(tracker).toBeUndefined()
+    expect(state.habitOccurrences['2026-10-01']['training-yard']).toBe(3)
+    expect(state.dailyCompletions['2026-10-01']['training-yard']).toBe(true)
   })
 })

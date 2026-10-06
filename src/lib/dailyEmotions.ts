@@ -1,4 +1,6 @@
 import type { DailyEmotion, GameState } from '@/types'
+import { MAX_BACKFILL_DAYS } from '@/lib/habitLifecycle'
+import { addDays } from '@/lib/hanaGame'
 
 export const DAILY_EMOTIONS: DailyEmotion[] = [
   'heavy',
@@ -49,6 +51,19 @@ export function normalizeDailyEmotions(value: unknown) {
     },
     {},
   )
+}
+
+/** Date-scoped correction: never changes today's emotion, rewards or activity logs. */
+export function recordRecentEmotion(state: GameState, dateKey: string, emotion: DailyEmotion) {
+  if (!isDateKey(dateKey) || !isDailyEmotion(emotion)) {
+    return { state, error: 'Choose a valid date and emotion.' }
+  }
+  if (!state.startDate || dateKey < state.startDate || dateKey >= state.currentDate ||
+      dateKey < addDays(state.currentDate, -MAX_BACKFILL_DAYS)) {
+    return { state, error: `Choose one of the previous ${MAX_BACKFILL_DAYS} tracker days.` }
+  }
+  if (state.dailyEmotions?.[dateKey] === emotion) return { state, error: null }
+  return { state: { ...state, dailyEmotions: { ...state.dailyEmotions, [dateKey]: emotion } }, error: null }
 }
 
 function isDailyEmotion(value: unknown): value is DailyEmotion {

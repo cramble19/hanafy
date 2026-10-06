@@ -28,6 +28,7 @@ type ErrorField = 'title' | 'description' | 'unit' | 'form'
 export type AddAnytimeLogDialogProps = {
   profile: AnytimeLogProfile
   existingTitles: string[]
+  allowScheduled?: boolean
   onClose: () => void
   /** Replaces this dialog with the existing scheduled-habit dialog. */
   onChooseScheduled: () => void
@@ -49,6 +50,7 @@ export type AddAnytimeLogDialogProps = {
 export function AddAnytimeLogDialog({
   profile,
   existingTitles,
+  allowScheduled = true,
   onClose,
   onChooseScheduled,
   onSubmit,
@@ -202,7 +204,7 @@ export function AddAnytimeLogDialog({
           </button>
         </div>
 
-        {!isEdit ? (
+        {!isEdit && allowScheduled ? (
           <fieldset className="anytime-tracker-kind" aria-describedby={descriptionId}>
             <legend className="sr-only">What would you like to add?</legend>
             <button

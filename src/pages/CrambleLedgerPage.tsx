@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ProfileTopBar } from '@/components/ProfileTopBar'
 import {
   BookOpen,
   ChevronLeft,
@@ -32,7 +33,7 @@ import { DAILY_EMOTION_LABELS } from '@/lib/dailyEmotions'
 
 type Props = {
   game: HanaGameState
-  onBack: () => void
+  onBack?: () => void
   onOpenQuest: (questId: string) => void
   onOpenEmotion: () => void
   onRestoreHabit?: (questId: string) => void
@@ -446,15 +447,16 @@ export function HabitLedgerPage({
         <div className="cramble-decor-layer" aria-hidden="true" />
       ) : null}
 
+      {isCramble && !onBack && <ProfileTopBar profile="cramble" />}
       <div className="relative z-10 mb-6 flex items-center justify-between gap-3">
-        <button
+        {onBack && <button
           type="button"
           onClick={onBack}
           aria-label={`Back to ${isCramble ? "Cramble's" : "Hana's"} tracker`}
           className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-ink shadow-sm outline-none transition active:scale-95 focus-visible:ring-2 focus-visible:ring-ink/40 motion-reduce:transition-none"
         >
           <ChevronLeft className="size-5" aria-hidden="true" />
-        </button>
+        </button>}
         <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-semibold text-muted">
           Quest record
         </span>

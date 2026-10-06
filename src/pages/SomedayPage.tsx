@@ -33,7 +33,8 @@ type Props = {
   onUpdate: (itemId: string, input: NewSomedayItemInput) => string | null
   onDelete: (itemId: string) => void
   onToggle: (itemId: string) => void
-  onBack: () => void
+  onBack?: () => void
+  sharedNavigation?: boolean
   onOpenToday: () => void
   onOpenDestination: () => void
   onOpenLedger: () => void
@@ -48,6 +49,7 @@ export function SomedayPage({
   onDelete,
   onToggle,
   onBack,
+  sharedNavigation = false,
   onOpenToday,
   onOpenDestination,
   onOpenLedger,
@@ -159,7 +161,7 @@ export function SomedayPage({
         </button>
       </main>
 
-      <nav
+      {!sharedNavigation && <nav
         className={`profile-action-bar profile-action-bar-${profile} someday-action-bar`}
         aria-label={`${profile === 'hana' ? 'Hana' : 'Cramble'} Someday actions`}
       >
@@ -187,7 +189,7 @@ export function SomedayPage({
           </span>
           <span className="profile-action-copy"><span className="profile-action-label">Ledger</span></span>
         </button>
-      </nav>
+      </nav>}
 
       {isAdding || editingItem ? (
         <AddSomedayDialog

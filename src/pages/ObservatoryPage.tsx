@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { ChevronLeft, Sword } from 'lucide-react'
+import { ChevronLeft, Plus, Sword } from 'lucide-react'
 import {
   CrambleQuestHubPanel,
   type CrambleQuestHubPanelProps,
@@ -14,12 +14,19 @@ import {
   getCrambleChapterProgress,
   getCrambleJourneyProgress,
 } from '@/lib/crambleGame'
+import { AddHabitDialog } from '@/components/AddHabitDialog'
+import { ProfileTopBar } from '@/components/ProfileTopBar'
+import { getQuestCatalog } from '@/lib/hanaGame'
+import { crambleQuests } from '@/data/crambleQuests'
+import type { NewHabitInput } from '@/lib/customHabits'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 type Props = CrambleQuestHubPanelProps & {
-  onBack: () => void
+  onBack?: () => void
+  onAddLesson?: (input: NewHabitInput) => string | null
 }
 
-export function ObservatoryPage({ game, onBack, ...questActions }: Props) {
+export function ObservatoryPage({ game, onBack, onAddLesson, ...questActions }: Props) {
+  const [adding, setAdding] = useState(false)
   const [view, setView] = useState<QuestHubView>('destination')
   const headingRef = usePageHeadingFocus()
   const chapter = getCrambleChapterProgress(game)
@@ -40,15 +47,16 @@ export function ObservatoryPage({ game, onBack, ...questActions }: Props) {
     <div className="cramble-archive-shell cramble-observatory-shell mx-auto min-h-full w-full max-w-md overflow-hidden px-5 pb-10 pt-6 text-white">
       <div className="cramble-observatory-sky" aria-hidden="true" />
 
+      {!onBack && <ProfileTopBar profile="cramble" />}
       <div className="relative z-10 mb-6 flex items-center justify-between gap-3">
-        <button
+        {onBack && <button
           type="button"
           onClick={onBack}
           aria-label="Back to Cramble's tracker"
           className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-sm outline-none backdrop-blur transition active:scale-95 focus-visible:ring-2 focus-visible:ring-white/60 motion-reduce:transition-none"
         >
           <ChevronLeft className="size-5" aria-hidden="true" />
-        </button>
+        </button>}
         <h1
           ref={headingRef}
           tabIndex={-1}
@@ -58,6 +66,10 @@ export function ObservatoryPage({ game, onBack, ...questActions }: Props) {
         </h1>
       </div>
 
+      {onAddLesson && <button type="button" className="cramble-inline-add relative z-10 mb-5" onClick={() => setAdding(true)}><Plus size={18} aria-hidden="true" />Add lesson</button>}
+      {adding && onAddLesson && <AddHabitDialog profile="cramble"
+        existingTitles={getQuestCatalog(crambleQuests, game).map(quest => quest.title)}
+        onClose={() => setAdding(false)} onSubmit={onAddLesson} />}
       <QuestHubTabs
         profile="cramble"
         value={view}
