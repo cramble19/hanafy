@@ -301,14 +301,14 @@ describe('profile sync API revision writes', () => {
     })
   })
 
-  it('rejects a schema-v5 client write after a schema-v6 snapshot exists', async () => {
-    database.storedSchemaVersion = 6
+  it.each([[5, 6], [7, 8]])('rejects a schema-v%i client write after a schema-v%i snapshot exists', async (clientVersion, storedVersion) => {
+    database.storedSchemaVersion = storedVersion
     database.currentRows = [
       { revision: 2, write_token: 'schema-v6-current-write' },
     ]
     const state = {
       ...createStartedHanaState('2026-08-11'),
-      schemaVersion: 5,
+      schemaVersion: clientVersion,
       syncRevision: 2,
     }
     const payload = createProfileCloudSyncPayload(

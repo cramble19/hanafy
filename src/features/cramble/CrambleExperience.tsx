@@ -102,6 +102,9 @@ import {
   type PendingProfileSync,
 } from '@/lib/profileSync'
 import { readLocalProfileState } from '@/lib/profileCache'
+import { RhythmPage } from '@/pages/RhythmPage'
+import { assignRhythmCategory, createRhythmCategory, getRhythmSettings } from '@/lib/rhythmCategories'
+import { getRhythmTrackers } from '@/lib/rhythmStats'
 
 type CrambleView =
   | 'tracker'
@@ -110,6 +113,7 @@ type CrambleView =
   | 'ledgerDetail'
   | 'emotionHistory'
   | 'someday'
+  | 'rhythm'
 type Props = {
   onBack?: () => void
 }
@@ -1189,6 +1193,29 @@ export function CrambleExperience({ onBack }: Props) {
     )
   }
 
+  const openRhythm = () => {
+    const current = gameRef.current
+    if (current && !current.rhythm) {
+      void commitGameState({ ...current, rhythm: getRhythmSettings(current, getRhythmTrackers(current, crambleQuests)) })
+    }
+    setView('rhythm')
+  }
+  const createCategory = (name: string) => {
+    const current = gameRef.current
+    if (!current) return { id: null, error: 'Cramble is not ready yet.' }
+    const seeded = { ...current, rhythm: getRhythmSettings(current, getRhythmTrackers(current, crambleQuests)) }
+    const result = createRhythmCategory(seeded, name)
+    if (!result.error) void commitGameState(result.state)
+    return { id: result.id, error: result.error }
+  }
+  const assignCategory = (habitId: string, categoryId: string | null) => {
+    const current = gameRef.current
+    if (!current || !getRhythmTrackers(current, crambleQuests).some(item => item.id === habitId)) return 'This task is no longer available.'
+    const result = assignRhythmCategory(current, habitId, categoryId)
+    if (!result.error) void commitGameState(result.state)
+    return result.error
+  }
+
   if (!game) {
     return <CrambleLoadingPage status={cloudSyncStatus} onBack={onBack} />
   }
@@ -1203,6 +1230,14 @@ export function CrambleExperience({ onBack }: Props) {
         statusText={getStartStatus(cloudSyncStatus)}
       />
     )
+  }
+
+  if (view === 'rhythm') {
+    return <RhythmPage game={game} onCreateCategory={createCategory} onAssignCategory={assignCategory}
+      onToday={() => setView('tracker')} onObservatory={() => setView('observatory')}
+      onSomeday={() => setView('someday')} onLedger={() => setView('ledger')}
+      syncStatus={cloudSyncStatus} hasPendingSave={Boolean(pendingDbSaveRef.current)}
+      saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} />
   }
 
   if (view === 'observatory') {
@@ -1253,6 +1288,7 @@ export function CrambleExperience({ onBack }: Props) {
         onOpenToday={() => setView('tracker')}
         onOpenDestination={() => setView('observatory')}
         onOpenLedger={() => setView('ledger')}
+        onOpenRhythm={openRhythm}
       />
     )
   }
@@ -1305,6 +1341,7 @@ export function CrambleExperience({ onBack }: Props) {
       onOpenObservatory={() => setView('observatory')}
       onOpenSomeday={() => setView('someday')}
       onOpenLedger={() => setView('ledger')}
+      onOpenRhythm={openRhythm}
       onNextDay={goToNextDay}
       onReset={reset}
       onSyncCloud={() => void refreshFromDb()}

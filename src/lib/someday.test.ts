@@ -117,7 +117,7 @@ describe('Someday life wishes', () => {
       quests,
       '2026-08-29',
     )
-    expect(migrated?.schemaVersion).toBe(7)
+    expect(migrated?.schemaVersion).toBe(8)
     expect(migrated?.somedayItems).toEqual([])
     expect(migrated?.currentDate).toBe('2026-08-29')
   })

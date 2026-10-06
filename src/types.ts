@@ -240,6 +240,8 @@ export type GameState = {
   dailyEmotions: Record<string, DailyEmotion>
   /** Life wishes, kept separate for each profile and never removed on completion. */
   somedayItems?: SomedayItem[]
+  /** Cramble's user-owned grouping; independent of all recorded habit history. */
+  rhythm?: RhythmSettings
   /** Profile-wide neutral intervals. */
   trackingPauses?: TrackingPause[]
   /** Provenance for corrections entered after their performed date. */
@@ -258,3 +260,10 @@ export type GameState = {
 
 /** Kept as an alias so Hana's existing feature code and stored shape stay stable. */
 export type HanaGameState = GameState
+
+export type RhythmSettings = {
+  version: 1
+  categories: Record<string, string>
+  /** Null explicitly means Unsorted, and must never be reseeded. */
+  assignments: Record<string, string | null>
+}

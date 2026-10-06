@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   CalendarDays,
   Plus,
@@ -97,6 +98,7 @@ type Props = {
   onOpenObservatory: () => void
   onOpenSomeday: () => void
   onOpenLedger: () => void
+  onOpenRhythm?: () => void
   onNextDay: () => void
   onReset: () => void
   onSyncCloud: () => void
@@ -132,6 +134,7 @@ export function CramblePage({
   onOpenObservatory,
   onOpenSomeday,
   onOpenLedger,
+  onOpenRhythm,
   onNextDay,
   onReset,
   onSyncCloud,
@@ -353,6 +356,10 @@ export function CramblePage({
             <span className="profile-action-label">Someday</span>
           </span>
         </button>
+        {onOpenRhythm && <button type="button" onClick={onOpenRhythm} className="profile-action-button cramble-rhythm-action" aria-label="Open Cramble's Rhythm">
+          <span className="cramble-action-icon" aria-hidden="true"><Activity className="size-4" /></span>
+          <span className="profile-action-copy"><span className="profile-action-label">Rhythm</span></span>
+        </button>}
         <button
           type="button"
           onClick={onOpenLedger}

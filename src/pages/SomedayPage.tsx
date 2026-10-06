@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   BookOpen,
   Check,
@@ -36,6 +37,7 @@ type Props = {
   onOpenToday: () => void
   onOpenDestination: () => void
   onOpenLedger: () => void
+  onOpenRhythm?: () => void
 }
 
 export function SomedayPage({
@@ -49,6 +51,7 @@ export function SomedayPage({
   onOpenToday,
   onOpenDestination,
   onOpenLedger,
+  onOpenRhythm,
 }: Props) {
   const [isAdding, setIsAdding] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -174,6 +177,10 @@ export function SomedayPage({
           <span className={profile === 'cramble' ? 'cramble-action-icon' : 'someday-nav-icon'} aria-hidden="true"><Sunrise /></span>
           <span className="profile-action-copy"><span className="profile-action-label">Someday</span></span>
         </button>
+        {profile === 'cramble' && onOpenRhythm && <button type="button" onClick={onOpenRhythm} className="profile-action-button cramble-rhythm-action" aria-label="Open Cramble's Rhythm">
+          <span className="cramble-action-icon" aria-hidden="true"><Activity /></span>
+          <span className="profile-action-copy"><span className="profile-action-label">Rhythm</span></span>
+        </button>}
         <button type="button" onClick={onOpenLedger} className="profile-action-button" aria-label="Open the Ledger">
           <span className={profile === 'cramble' ? 'cramble-action-icon' : 'someday-nav-icon'} aria-hidden="true">
             {profile === 'hana' ? <BookOpen /> : <BarChart3 />}

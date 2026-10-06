@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless'
 
-const CURRENT_STATE_SCHEMA_VERSION = 7
+const CURRENT_STATE_SCHEMA_VERSION = 8
 
 type ApiRequest = {
   method?: string
