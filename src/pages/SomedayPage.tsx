@@ -217,7 +217,7 @@ type Group = {
   items: SomedayItem[]
 }
 
-function groupActiveItems(items: SomedayItem[]): Group[] {
+export function groupActiveItems(items: SomedayItem[]): Group[] {
   const timeless = items.filter((item) => item.timing === 'timeless')
   const ageGroups = new Map<number, SomedayItem[]>()
   items
@@ -297,7 +297,7 @@ function SomedayGroup({
 const SOMEDAY_HOLD_DELAY_MS = 520
 const SOMEDAY_HOLD_MOVE_TOLERANCE_PX = 10
 
-function SomedayPressButton({
+export function SomedayPressButton({
   className,
   item,
   completed,
@@ -431,7 +431,7 @@ function SomedayPressButton({
   )
 }
 
-function formatCompletionDate(dateKey: string | null) {
+export function formatCompletionDate(dateKey: string | null) {
   if (!dateKey) return ''
   const [year, month, day] = dateKey.split('-').map(Number)
   return new Date(year, month - 1, day, 12).toLocaleDateString(undefined, {

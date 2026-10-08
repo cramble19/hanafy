@@ -14,6 +14,8 @@ type Props = {
   onSubmit: (input: NewSomedayItemInput) => string | null
   onUpdate?: (itemId: string, input: NewSomedayItemInput) => string | null
   onDelete?: (itemId: string) => void
+  categories?: Record<string, string>
+  categoryId?: string | null
 }
 
 export function AddSomedayDialog({
@@ -24,6 +26,8 @@ export function AddSomedayDialog({
   onSubmit,
   onUpdate,
   onDelete,
+  categories,
+  categoryId,
 }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -33,6 +37,7 @@ export function AddSomedayDialog({
   const [title, setTitle] = useState(item?.title ?? '')
   const [timing, setTiming] = useState<NewSomedayItemInput['timing']>(item?.timing ?? 'timeless')
   const [age, setAge] = useState(item?.targetAge?.toString() ?? '')
+  const [selectedCategory, setSelectedCategory] = useState(categoryId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const isEditing = item !== undefined
@@ -65,6 +70,7 @@ export function AddSomedayDialog({
       title: title.trim(),
       timing,
       targetAge: timing === 'beforeAge' ? Number(age) : null,
+      ...(categories ? { categoryId: selectedCategory || null } : {}),
     }
     const validationError = getNewSomedayItemValidationError(
       input,
@@ -136,6 +142,16 @@ export function AddSomedayDialog({
             autoComplete="off"
           />
         </label>
+
+        {categories && <label className="someday-field someday-category-field">
+          <span>Category</span>
+          <select value={selectedCategory} onChange={event => { setSelectedCategory(event.target.value); setError(null) }}>
+            <option value="">Unsorted</option>
+            {Object.entries(categories).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <small>Manage categories from the Someday settings gear.</small>
+          {item?.completedDate && <small>Changing this keeps your memory’s completion date.</small>}
+        </label>}
 
         <fieldset className="someday-timing-fieldset">
           <legend>When?</legend>

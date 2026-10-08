@@ -154,7 +154,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         current_date_key = ${payload.currentDate},
         total_flowers = ${payload.totalFlowers},
         state = jsonb_set(
-          ${JSON.stringify(payload.state)}::jsonb,
+          (CASE WHEN state ? 'somedayCategories'
+            THEN jsonb_build_object('somedayCategories', state -> 'somedayCategories')
+            ELSE '{}'::jsonb END) || ${JSON.stringify(payload.state)}::jsonb,
           '{syncRevision}',
           to_jsonb(hana_state_snapshots.revision + 1),
           true

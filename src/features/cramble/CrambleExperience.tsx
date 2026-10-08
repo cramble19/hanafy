@@ -73,7 +73,8 @@ import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
 import { ObservatoryPage } from '@/pages/ObservatoryPage'
-import { SomedayPage } from '@/pages/SomedayPage'
+import { CrambleSomedayPage } from '@/pages/CrambleSomedayPage'
+import { assignSomedayCategory, changeSomedayCategory, getSomedayCategories, type SomedayCategoryChange } from '@/lib/somedayCategories'
 import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
 import type {
   DailyEmotion,
@@ -1026,8 +1027,10 @@ export function CrambleExperience({ onBack }: Props) {
       return "Begin Cramble's First Oath before adding to Someday."
     }
     const result = appendSomedayItem(previous, input)
-    if (!result.error) void commitGameState(result.state)
-    return result.error
+    if (result.error) return result.error
+    const assigned = assignSomedayCategory(result.state, result.state.somedayItems!.at(-1)!.id, input.categoryId ?? null)
+    if (!assigned.error) void commitGameState(assigned.state)
+    return assigned.error
   }
 
   const toggleCrambleSomedayItem = (itemId: string) => {
@@ -1041,7 +1044,17 @@ export function CrambleExperience({ onBack }: Props) {
     const previous = gameRef.current
     if (!previous) return 'Cramble is unavailable right now.'
     const result = updateSomedayItem(previous, itemId, input)
-    if (!result.error && result.state !== previous) void commitGameState(result.state)
+    if (result.error) return result.error
+    const assigned = assignSomedayCategory(result.state, itemId, input.categoryId === undefined ? getSomedayCategories(previous).assignments[itemId] ?? null : input.categoryId)
+    if (!assigned.error) void commitGameState(assigned.state)
+    return assigned.error
+  }
+
+  const updateSomedayCategory = (change: SomedayCategoryChange) => {
+    const previous = gameRef.current
+    if (!previous) return 'Cramble is unavailable right now.'
+    const result = changeSomedayCategory(previous, change)
+    if (!result.error) void commitGameState(result.state)
     return result.error
   }
 
@@ -1281,18 +1294,14 @@ export function CrambleExperience({ onBack }: Props) {
 
   if (view === 'someday') {
     return withNavigation(
-      <SomedayPage
-        profile="cramble"
+      <CrambleSomedayPage
         items={game.somedayItems ?? []}
+        settings={getSomedayCategories(game)}
+        onCategoryChange={updateSomedayCategory}
         onAdd={addCrambleSomedayItem}
         onUpdate={updateCrambleSomedayItem}
         onDelete={deleteCrambleSomedayItem}
         onToggle={toggleCrambleSomedayItem}
-        sharedNavigation
-        onOpenToday={() => setView('tracker')}
-        onOpenDestination={() => setView('observatory')}
-        onOpenLedger={() => setView('ledger')}
-        onOpenRhythm={openRhythm}
       />
     )
   }

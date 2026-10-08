@@ -27,6 +27,7 @@ import {
 } from '@/lib/openActivities'
 import { normalizeDailyEmotions } from '@/lib/dailyEmotions'
 import { readRhythmSettings } from '@/lib/rhythmCategories'
+import { readSomedayCategories } from '@/lib/somedayCategories'
 import {
   getDefaultQuestCompletionCriteria,
   normalizeQuestCompletionCriteria,
@@ -162,6 +163,7 @@ export function resetProfileProgress(
       questActivations: { ...(state.questActivations ?? {}) },
       openActivities: [...(state.openActivities ?? [])],
       somedayItems: [...(state.somedayItems ?? [])],
+      ...(state.somedayCategories ? { somedayCategories: state.somedayCategories } : {}),
       ...(state.rhythm ? { rhythm: state.rhythm } : {}),
     },
     quests,
@@ -1369,6 +1371,7 @@ function normalizeHanaState(
     ),
     dailyEmotions: normalizeDailyEmotions(value.dailyEmotions),
     somedayItems: readSomedayItems(value.somedayItems),
+    ...(readSomedayCategories(value.somedayCategories) ? { somedayCategories: readSomedayCategories(value.somedayCategories) } : {}),
     ...(readRhythmSettings(value.rhythm) ? { rhythm: readRhythmSettings(value.rhythm) } : {}),
     trackingPauses: readTrackingPauses(value.trackingPauses),
     backfillAudit: readBackfillAudit(value.backfillAudit),

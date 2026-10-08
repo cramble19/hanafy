@@ -214,6 +214,10 @@ describe('profile sync API revision writes', () => {
 
     expect(statusCode).toBe(200)
     expect(responseBody).toMatchObject({ ok: true, revision: 3 })
+    // Older cached clients may not know this additive metadata field. Their
+    // unrelated saves must retain it; newer payloads override it atomically.
+    expect(database.transactionQueries.find(query => query.includes('UPDATE hana_state_snapshots')))
+      .toContain("jsonb_build_object('somedayCategories', state -> 'somedayCategories')")
     expect(database.transactionQueries).toEqual(
       expect.arrayContaining([
         expect.stringContaining('UPDATE hana_state_snapshots'),

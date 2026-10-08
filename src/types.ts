@@ -207,6 +207,13 @@ export type NewSomedayItemInput = {
   title: string
   timing: SomedayTiming
   targetAge?: number | null
+  categoryId?: string | null
+}
+
+export type SomedayCategories = {
+  version: 1
+  categories: Record<string, string>
+  assignments: Record<string, string | null>
 }
 
 export type GardenWeed = {
@@ -240,6 +247,8 @@ export type GameState = {
   dailyEmotions: Record<string, DailyEmotion>
   /** Life wishes, kept separate for each profile and never removed on completion. */
   somedayItems?: SomedayItem[]
+  /** Separate from habit categories; includes waiting wishes and completed memories. */
+  somedayCategories?: SomedayCategories
   /** Cramble's user-owned grouping; independent of all recorded habit history. */
   rhythm?: RhythmSettings
   /** Profile-wide neutral intervals. */
