@@ -166,12 +166,19 @@ export function HabitLedgerPage({
       activity.kind === 'count' ? 7 : 14,
     ),
     history: getOpenActivityRangeStats(game, activity.id, 'all'),
+    sevenDayFrequency: isCramble
+      ? getOpenActivityRangeStats(game, activity.id, 7)?.activeDays ?? 0
+      : 0,
     isArchived: isHabitArchivedOnDate(game, activity.id),
     isPaused: isHabitPausedOnDate(game, activity.id),
   }))
   const currentActivityRecords = activityRecords.filter(
     (record) => !record.isArchived,
   )
+  // Sort the display copy only. Stable ties preserve the catalog's existing order.
+  if (isCramble) {
+    currentActivityRecords.sort((a, b) => b.sevenDayFrequency - a.sevenDayFrequency)
+  }
   const archivedActivityRecords = activityRecords.filter(
     (record) => record.isArchived,
   )
