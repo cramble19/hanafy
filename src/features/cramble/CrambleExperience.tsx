@@ -1255,6 +1255,7 @@ export function CrambleExperience({ onBack }: Props) {
   if (view === 'rhythm') {
     return withNavigation(<RhythmPage game={game} onCreateCategory={createCategory} onAssignCategory={assignCategory}
       sharedNavigation areaId={route.area ?? null} onOpenArea={area => setView('rhythm', area ? { area } : {})} onBackArea={back}
+      taskId={route.taskId ?? null} onOpenTask={taskId => setView('rhythm', { area: route.area, taskId })}
       onToday={() => setView('tracker')} onObservatory={() => setView('observatory')}
       onSomeday={() => setView('someday')} onLedger={() => setView('ledger')}
       syncStatus={cloudSyncStatus} hasPendingSave={Boolean(pendingDbSaveRef.current)}

@@ -1,0 +1,20 @@
+.rhythm-progress h1{font-size:28px;font-weight:500;letter-spacing:-.035em;overflow-wrap:anywhere;margin:10px 0 20px}
+.rhythm-progress>.rhythm-range{width:fit-content}
+.rhythm-progress section{margin:26px 0}
+.progress-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.progress-heading h2{font-size:16px;font-weight:500;margin:0 0 5px}
+.progress-heading p{font-size:12px;color:var(--rhythm-muted);max-width:235px}
+.progress-heading strong{font-size:19px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+.progress-plot{width:100%;margin-top:12px}
+.progress-plot svg{display:block;overflow:visible}
+.progress-plot text{fill:var(--rhythm-muted);font:11px "Inter Variable",system-ui,sans-serif}
+.progress-grid{stroke:var(--rhythm-line);stroke-width:.65}
+.progress-fill{fill:var(--rhythm-gold);opacity:.08}
+.progress-line{fill:none;stroke:#e2b967;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.progress-guide{stroke:var(--rhythm-muted);opacity:.5}
+.progress-point{fill:#e2b967}
+.progress-inspector{display:grid;gap:4px;font-size:12px;color:var(--rhythm-muted)}
+.progress-inspector input{width:100%;min-height:44px;accent-color:var(--rhythm-gold)}
+.progress-detail{font-size:12px;line-height:1.6;min-height:40px}
+.rhythm-chart-trigger{width:100%;text-align:left;min-height:44px;display:block}
+.rhythm-chart-trigger .rhythm-ribbon{margin-top:12px}

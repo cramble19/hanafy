@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail' | 'emotionHistory' | 'someday' | 'rhythm'
-type Route = { view: CrambleView; questId?: string; area?: string; depth: number; dialogs: number }
+type Route = { view: CrambleView; questId?: string; area?: string; taskId?: string; depth: number; dialogs: number }
 const key = 'hanafyCramble'
 const views: CrambleView[] = ['tracker', 'observatory', 'ledger', 'ledgerDetail', 'emotionHistory', 'someday', 'rhythm']
 export function readCrambleRoute(value: unknown): Route | null {
@@ -55,9 +55,9 @@ export function useCrambleNavigation(onExit?: () => void) {
     observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open'] })
     return () => { observer.disconnect(); window.removeEventListener('popstate', pop) }
   }, [])
-  const navigate = useCallback((view: CrambleView, details: { questId?: string; area?: string } = {}) => {
+  const navigate = useCallback((view: CrambleView, details: { questId?: string; area?: string; taskId?: string } = {}) => {
     const previous = current.current
-    if (view === previous.view && details.questId === previous.questId && details.area === previous.area) return
+    if (view === previous.view && details.questId === previous.questId && details.area === previous.area && details.taskId === previous.taskId) return
     const next: Route = { view, ...details, depth: previous.depth + 1, dialogs: 0 }
     current.current = next
     window.history.pushState({ ...window.history.state, [key]: next }, '')

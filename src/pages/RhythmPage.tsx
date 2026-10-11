@@ -8,12 +8,15 @@ import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import { CloudSyncNotice, type CloudSyncNoticeStatus } from '@/components/CloudSyncNotice'
 import { downloadProfileJson } from '@/lib/habitExport'
 import { ProfileTopBar } from '@/components/ProfileTopBar'
+import { RhythmProgress } from '@/components/RhythmProgress'
 import './rhythm.css'
 
 type Props = {
   game: GameState
   sharedNavigation?: boolean
   areaId?: string | null
+  taskId?: string | null
+  onOpenTask?: (id: string) => void
   onOpenArea?: (area: string | null) => void
   onBackArea?: () => void
   onCreateCategory: (name: string) => { id: string | null; error: string | null }
@@ -24,7 +27,7 @@ type Props = {
 const categoryIcons = { movement: Footprints, care: Heart, connection: Users, 'mind-play': BookOpen, unsorted: Ellipsis }
 const dateLabel = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-export function RhythmPage({ sharedNavigation = false, areaId, onOpenArea, onBackArea, game, onCreateCategory, onAssignCategory, onToday, onObservatory, onSomeday, onLedger, syncStatus, hasPendingSave, saveConfirmedAt, onRetry }: Props) {
+export function RhythmPage({ sharedNavigation = false, areaId, taskId, onOpenTask, onOpenArea, onBackArea, game, onCreateCategory, onAssignCategory, onToday, onObservatory, onSomeday, onLedger, syncStatus, hasPendingSave, saveConfirmedAt, onRetry }: Props) {
   const headingRef = usePageHeadingFocus()
   const [range, setRange] = useState<RhythmRange>(30)
   const [view, setView] = useState<'areas' | 'all'>('areas')
@@ -32,6 +35,7 @@ export function RhythmPage({ sharedNavigation = false, areaId, onOpenArea, onBac
   const area = areaId === undefined ? localArea : areaId
   const setArea = onOpenArea ?? setLocalArea
   const [editing, setEditing] = useState<string | null>(null)
+  const [localTask, setLocalTask] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const trackers = useMemo(() => getRhythmTrackers(game, crambleQuests), [game])
   const rhythm = getRhythmSettings(game, trackers)
@@ -43,24 +47,28 @@ export function RhythmPage({ sharedNavigation = false, areaId, onOpenArea, onBac
     categoryRecordedDays(inArea(b), dates).length - categoryRecordedDays(inArea(a), dates).length)
   const displayed = sortRhythmTrackers(area ? inArea(area) : trackers, dates)
   const editedTracker = trackers.find(item => item.id === editing)
+  const selectedTracker = trackers.find(item => item.id === (taskId === undefined ? localTask : taskId))
 
   function trackerRow(item: RhythmTracker) {
     const recorded = recordedDays(item, dates)
     const isNew = item.created >= dates.at(-7)!
     return <li className="rhythm-task" key={item.id}>
-      <div className="rhythm-between"><span className="rhythm-task-title">{item.title}{isNew && <span className="rhythm-new">New</span>}</span><span className="rhythm-total">{recorded.length} {recorded.length === 1 ? 'day' : 'days'}</span></div>
+      <button type="button" className="rhythm-chart-trigger" onClick={() => (onOpenTask ?? setLocalTask)(item.id)} aria-label={`View progress for ${item.title}`}>
+        <span className="rhythm-between"><span className="rhythm-task-title">{item.title}{isNew && <span className="rhythm-new">New</span>}</span><span className="rhythm-total">{recorded.length} {recorded.length === 1 ? 'day' : 'days'}</span></span>
+        <RhythmRibbon dates={dates} recorded={recorded} created={item.created} label={`${item.title}: ${recorded.length} recorded days in ${range} days`} />
+      </button>
       <div className="rhythm-task-meta">
         <button type="button" className="rhythm-category-chip" onClick={() => setEditing(item.id)} aria-label={`Change category for ${item.title}`}>
           {categoryName(categoryFor(item.id))}<Pencil size={12} aria-hidden="true" />
         </button>
         {(item.paused || item.cadence !== 'Anytime' || item.observation) && <span>{item.paused ? 'Paused' : item.observation ? 'Check-in' : item.cadence}</span>}
       </div>
-      <RhythmRibbon dates={dates} recorded={recorded} created={item.created} label={`${item.title}: ${recorded.length} recorded days in ${range} days`} />
     </li>
   }
 
   return <div className="cramble-archive-shell rhythm-page">
     <ProfileTopBar profile="cramble" />
+    {selectedTracker ? <RhythmProgress key={selectedTracker.id} tracker={selectedTracker} end={game.currentDate} onBack={onBackArea ?? (() => setLocalTask(null))} /> : <>
     {area && <button type="button" className="rhythm-text-button" onClick={onBackArea ?? (() => setArea(null))}><ArrowLeft size={17} aria-hidden="true" />Life areas</button>}
     <header className="rhythm-heading">
       <h1 ref={headingRef} tabIndex={-1}>{area ? categoryName(area) : 'Rhythm'}</h1>
@@ -93,6 +101,7 @@ export function RhythmPage({ sharedNavigation = false, areaId, onOpenArea, onBac
     </main>
     <p className="rhythm-status" role="status">{announcement}</p>
     <p className="rhythm-footnote">Days with a record, not a success score. Blank days stay neutral.</p>
+    </>}
     {!sharedNavigation && <nav className="rhythm-bottom-nav" aria-label="Cramble navigation">
       {([{ label: 'Today', icon: Sun, action: onToday }, { label: 'Observatory', icon: Sprout, action: onObservatory }, { label: 'Someday', icon: Star, action: onSomeday }, { label: 'Rhythm', icon: Activity }, { label: 'Ledger', icon: BookOpen, action: onLedger }]).map(({ label, icon: Icon, action }) => <button type="button" key={label} onClick={action} aria-current={label === 'Rhythm' ? 'page' : undefined}><Icon size={21} aria-hidden="true" /><span>{label}</span></button>)}
     </nav>}
