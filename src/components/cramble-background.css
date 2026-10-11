@@ -1,0 +1,24 @@
+.cramble-cosmic-shell {
+  position: relative;
+  isolation: isolate;
+}
+.cramble-cosmic-background {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 448px);
+  height: 100vh;
+  height: 100dvh;
+  pointer-events: none;
+  z-index: -1;
+  background: #191a22;
+}
+/* Replace page decoration only. Card surfaces and scene artwork stay intact. */
+.cramble-cosmic-shell .cramble-archive-shell {
+  background: transparent;
+}
+.cramble-cosmic-shell .cramble-decor-layer,
+.cramble-cosmic-shell .cramble-observatory-sky {
+  display: none;
+}

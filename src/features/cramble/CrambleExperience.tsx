@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronLeft, Compass } from 'lucide-react'
+import { CrambleBackground } from '@/components/CrambleBackground'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
   createCustomHabitQuest,
@@ -1230,22 +1231,23 @@ export function CrambleExperience({ onBack }: Props) {
   }
 
   if (!game) {
-    return <CrambleLoadingPage status={cloudSyncStatus} onBack={onBack} />
+    return <div className="cramble-cosmic-shell"><CrambleBackground /><CrambleLoadingPage status={cloudSyncStatus} onBack={onBack} /></div>
   }
 
   if (!hasHanaStarted(game)) {
     return (
-      <CrambleStartPage
+      <div className="cramble-cosmic-shell"><CrambleBackground /><CrambleStartPage
         onBack={onBack}
         onStart={() => void startToday()}
         isSaving={cloudSyncStatus === 'syncing'}
         isOffline={cloudSyncStatus === 'offline'}
         statusText={getStartStatus(cloudSyncStatus)}
-      />
+      /></div>
     )
   }
 
-  const withNavigation = (page: ReactNode) => <div className="cramble-app-shell">
+  const withNavigation = (page: ReactNode) => <div className="cramble-app-shell cramble-cosmic-shell">
+    <CrambleBackground />
     {page}
     <CrambleNavigation view={view} onNavigate={destination => destination === 'rhythm' ? openRhythm() : setView(destination)} />
   </div>
