@@ -66,6 +66,10 @@
 @media(max-width:360px){.rhythm-page{padding-right:14px;padding-left:14px}.rhythm-area{gap:9px;padding:14px 10px}.rhythm-area-icon{width:34px;height:34px}.rhythm-area .rhythm-between{flex-wrap:wrap;gap:4px}.rhythm-dialog{padding:20px 15px}}
 .rhythm-heading{flex-wrap:wrap}
 .cramble-app-shell{min-height:100dvh}
+.cramble-app-shell .cramble-page-heading,.cramble-app-shell .someday-header h1,.cramble-app-shell .rhythm-heading h1{font-family:"Inter Variable",ui-sans-serif,system-ui,sans-serif;font-size:clamp(2.4rem,11vw,3.2rem);font-weight:520;letter-spacing:-.055em;line-height:1.1;overflow-wrap:anywhere}
+.cramble-app-shell .cramble-page-heading{background:none;border:0;border-radius:0;padding:0;backdrop-filter:none;color:var(--rhythm-ink,#f5eddd)}
+.cramble-settings-sections{display:grid;gap:12px;margin-top:24px}
+.cramble-settings-sections button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 16px;border:1px solid #766345;border-radius:16px;text-align:left}
 .cramble-app-shell>.cramble-archive-shell{padding-bottom:calc(115px + env(safe-area-inset-bottom))}
 .cramble-inline-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:20px;border:1px dashed var(--border);border-radius:20px;color:var(--brass,#d6a653);position:relative;z-index:10}
 .backfill-emotion{padding:16px 12px;border:1px solid var(--border);border-radius:20px;background:var(--surface)}

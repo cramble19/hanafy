@@ -266,7 +266,7 @@ export function AddHabitDialog({
                     : 'New archive lesson'}
               </p>
               <h2 id={titleId} className="mt-0.5 text-2xl font-semibold text-ink">
-                {mode === 'edit' ? 'Manage habit' : 'Add a habit'}
+                {profile === 'cramble' ? mode === 'edit' ? 'Edit lesson' : 'Add lesson' : mode === 'edit' ? 'Manage habit' : 'Add a habit'}
               </h2>
             </div>
           </div>
@@ -301,7 +301,7 @@ export function AddHabitDialog({
           />
 
           <label className="block">
-            <span className="add-habit-label">Habit name</span>
+            <span className="add-habit-label">{profile === 'cramble' ? 'Lesson name' : 'Habit name'}</span>
             <input
               ref={titleInputRef}
               name="habit-title"
@@ -752,7 +752,7 @@ export function AddHabitDialog({
             ) : (
               <Plus className="size-4" aria-hidden="true" />
             )}
-            {mode === 'edit' ? 'Save changes' : 'Add habit'}
+            {mode === 'edit' ? 'Save changes' : profile === 'cramble' ? 'Add lesson' : 'Add habit'}
           </button>
         </div>
       </form>

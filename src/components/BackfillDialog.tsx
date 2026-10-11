@@ -235,7 +235,7 @@ export function BackfillDialog({
             <div className="space-y-2" aria-labelledby="recent-anytime-heading">
               <div>
                 <h3 id="recent-anytime-heading" className="add-habit-label">
-                  Anytime logs
+                  {profile === 'cramble' ? 'Habits' : 'Anytime logs'}
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-faint">
                   Empty days stay neutral. Record only what happened.

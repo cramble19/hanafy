@@ -109,12 +109,17 @@ import { assignRhythmCategory, createRhythmCategory, getRhythmSettings } from '@
 import { getRhythmTrackers } from '@/lib/rhythmStats'
 import { CrambleNavigation } from '@/components/CrambleNavigation'
 import { useCrambleNavigation } from '@/hooks/useCrambleNavigation'
+import { CrambleSettings, CrambleSettingsContext, CrambleSharedSyncContext } from '@/components/CrambleSettings'
+import { CloudSyncNotice } from '@/components/CloudSyncNotice'
+import { downloadProfileJson } from '@/lib/habitExport'
+import { changeRhythmCategory } from '@/lib/rhythmCategories'
 
 type Props = {
   onBack?: () => void
 }
 
 export function CrambleExperience({ onBack }: Props) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const { route, navigate: setView, back } = useCrambleNavigation(onBack)
   const { view, questId: selectedQuestId } = route
   const [initialLocal] = useState(() => readLocalProfileState('cramble'))
@@ -902,10 +907,13 @@ export function CrambleExperience({ onBack }: Props) {
         previous.currentDate,
         existingTitles,
       )
-      void commitGameState({
+      const withActivity = {
         ...previous,
         openActivities: [...previous.openActivities, activity],
-      })
+      }
+      const categorized = assignRhythmCategory({ ...withActivity, rhythm: getRhythmSettings(previous, getRhythmTrackers(previous, crambleQuests)) }, activity.id, input.categoryId ?? null)
+      if (categorized.error) return categorized.error
+      void commitGameState(categorized.state)
       return null
     } catch (error) {
       return error instanceof Error ? error.message : 'Could not add this anytime log.'
@@ -948,12 +956,16 @@ export function CrambleExperience({ onBack }: Props) {
         input,
         existingTitles,
       )
-      void commitGameState({
+      const withActivity = {
         ...previous,
         openActivities: previous.openActivities.map((candidate) =>
           candidate.id === activityId ? updated : candidate,
         ),
-      })
+      }
+      const rhythm = getRhythmSettings(previous, getRhythmTrackers(previous, crambleQuests))
+      const categorized = assignRhythmCategory({ ...withActivity, rhythm }, activityId, input.categoryId === undefined ? rhythm.assignments[activityId] ?? null : input.categoryId)
+      if (categorized.error) return categorized.error
+      void commitGameState(categorized.state)
       return null
     } catch (error) {
       return error instanceof Error ? error.message : 'Could not update this anytime log.'
@@ -1248,7 +1260,15 @@ export function CrambleExperience({ onBack }: Props) {
 
   const withNavigation = (page: ReactNode) => <div className="cramble-app-shell cramble-cosmic-shell">
     <CrambleBackground />
-    {page}
+    <CrambleSettingsContext.Provider value={() => setSettingsOpen(true)}><CrambleSharedSyncContext.Provider value={true}>{page}</CrambleSharedSyncContext.Provider></CrambleSettingsContext.Provider>
+    <CloudSyncNotice profile="cramble" status={cloudSyncStatus} hasPendingSave={Boolean(pendingDbSaveRef.current)} saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} onExportBackup={() => downloadProfileJson(game, crambleQuests, 'cramble')} />
+    {settingsOpen && <CrambleSettings habits={getRhythmSettings(game, getRhythmTrackers(game, crambleQuests))} someday={getSomedayCategories(game)} habitIds={game.openActivities.map(item => item.id)} somedayIds={(game.somedayItems ?? []).map(item => item.id)} onClose={() => setSettingsOpen(false)} onSomedayChange={updateSomedayCategory} onHabitChange={change => {
+      const current = gameRef.current
+      if (!current) return 'Cramble is not ready.'
+      const result = changeRhythmCategory({ ...current, rhythm: getRhythmSettings(current, getRhythmTrackers(current, crambleQuests)) }, change)
+      if (!result.error) void commitGameState(result.state)
+      return result.error
+    }} />}
     <CrambleNavigation view={view} onNavigate={destination => destination === 'rhythm' ? openRhythm() : setView(destination)} />
   </div>
 

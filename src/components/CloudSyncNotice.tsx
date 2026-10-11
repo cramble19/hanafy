@@ -1,5 +1,6 @@
 import { Check, Download, RefreshCw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { CrambleSharedSyncContext } from './CrambleSettings'
 
 export type CloudSyncNoticeStatus =
   | 'idle'
@@ -32,6 +33,7 @@ export function CloudSyncNotice({
   onExportBackup,
 }: Props) {
   const [showSaved, setShowSaved] = useState(false)
+  const shared = useContext(CrambleSharedSyncContext)
 
   useEffect(() => {
     if (!saveConfirmedAt) return
@@ -52,6 +54,7 @@ export function CloudSyncNotice({
     hasPendingSave &&
     (status === 'offline' || status === 'error' || status === 'conflict')
 
+  if (profile === 'cramble' && shared) return null
   if (!needsRetry && (!showSaved || status !== 'synced')) return null
 
   if (needsRetry) {

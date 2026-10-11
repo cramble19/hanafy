@@ -28,7 +28,7 @@ describe('Ledger seven-day frequency ordering', () => {
   it('sorts Cramble by active dates, includes today and six prior days, preserves ties and archives separately', () => {
     const game = fixture(), before = JSON.stringify(game)
     const html = render(game, 'cramble')
-    const order = ['Frequent check', 'Tied check', 'Large count', 'Zero activity', 'Old activity', 'Archived anytime records', 'Archived activity']
+    const order = ['Frequent check', 'Tied check', 'Large count', 'Zero activity', 'Old activity', 'Archived habit records', 'Archived activity']
     const positions = order.map(title => html.indexOf(title))
     expect(positions.every(position => position >= 0)).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))

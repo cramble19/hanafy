@@ -465,7 +465,7 @@ export function HabitLedgerPage({
           <ChevronLeft className="size-5" aria-hidden="true" />
         </button>}
         <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-semibold text-muted">
-          Quest record
+          {isCramble ? 'Records' : 'Quest record'}
         </span>
       </div>
 
@@ -485,9 +485,9 @@ export function HabitLedgerPage({
             <h1
               ref={headingRef}
               tabIndex={-1}
-              className="mt-0.5 text-3xl font-semibold tracking-tight text-ink outline-none"
+              className={`mt-0.5 text-3xl font-semibold tracking-tight text-ink outline-none ${isCramble ? 'cramble-page-heading' : ''}`}
             >
-              The Ledger
+              {isCramble ? 'Ledger' : 'The Ledger'}
             </h1>
           </div>
         </div>
@@ -537,7 +537,7 @@ export function HabitLedgerPage({
               id={`${profileId}-anytime-records-heading`}
               className="mt-1 text-xl font-semibold text-ink"
             >
-              Anytime records
+              {isCramble ? 'Habit records' : 'Anytime records'}
             </h2>
             <div className="section-sigil-divider" aria-hidden="true">
               <span />
@@ -553,7 +553,7 @@ export function HabitLedgerPage({
             {archivedActivityRecords.length ? (
               <details className="ledger-record-group">
                 <summary>
-                  Archived anytime records{' '}
+                  {isCramble ? 'Archived habit records' : 'Archived anytime records'}{' '}
                   <span>{archivedActivityRecords.length}</span>
                 </summary>
                 <p className="mt-2 text-xs leading-5 text-faint">
@@ -638,7 +638,7 @@ export function HabitLedgerPage({
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-faint">
             Archive index
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">Quest records</h2>
+          <h2 className="mt-1 text-xl font-semibold text-ink">{isCramble ? 'Lesson records' : 'Quest records'}</h2>
           <div className="section-sigil-divider" aria-hidden="true">
             <span />
             <span />
@@ -657,7 +657,7 @@ export function HabitLedgerPage({
               {pausedRecords.length ? (
                 <details className="ledger-record-group" open>
                   <summary>
-                    Paused habits <span>{pausedRecords.length}</span>
+                    {isCramble ? 'Paused lessons' : 'Paused habits'} <span>{pausedRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
                     These periods are neutral and create no backlog.
@@ -675,8 +675,7 @@ export function HabitLedgerPage({
                     <span>{graduatedRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
-                    These quests finished their chapter and left Today. Their
-                    history and earned rewards remain.
+                    {isCramble ? 'These lessons finished their chapter. Their history and earned rewards remain.' : 'These quests finished their chapter and left Today. Their history and earned rewards remain.'}
                   </p>
                   <div className="mt-3 space-y-3">
                     {graduatedRecords.map((record) =>
@@ -692,8 +691,7 @@ export function HabitLedgerPage({
                     Earlier chapters <span>{legacyRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
-                    Cleaned-up quests stay here so their records and rewards
-                    keep their original meaning.
+                    {isCramble ? 'Earlier lessons stay here so their records and rewards keep their original meaning.' : 'Cleaned-up quests stay here so their records and rewards keep their original meaning.'}
                   </p>
                   <div className="mt-3 space-y-3">
                     {legacyRecords.map((record) => renderQuestRecord(record))}
@@ -704,7 +702,7 @@ export function HabitLedgerPage({
               {archivedRecords.length ? (
                 <details className="ledger-record-group" open>
                   <summary>
-                    Archived habits <span>{archivedRecords.length}</span>
+                    {isCramble ? 'Archived lessons' : 'Archived habits'} <span>{archivedRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
                     History and earned rewards remain. Restore one whenever it fits again.
@@ -718,11 +716,10 @@ export function HabitLedgerPage({
               {futureRecords.length ? (
                 <details className="ledger-record-group">
                   <summary>
-                    Future quests <span>{futureRecords.length}</span>
+                    {isCramble ? 'Future lessons' : 'Future quests'} <span>{futureRecords.length}</span>
                   </summary>
                   <p className="mt-2 text-xs leading-5 text-faint">
-                    Unlocking only makes a quest available. Add it from Today
-                    whenever it feels right; it creates no earlier misses.
+                    {isCramble ? 'Unlocking makes a lesson available in Observatory; it creates no earlier misses.' : 'Unlocking only makes a quest available. Add it from Today whenever it feels right; it creates no earlier misses.'}
                   </p>
                   <div className="mt-3 space-y-3">
                     {futureRecords.map((record) => renderQuestRecord(record))}

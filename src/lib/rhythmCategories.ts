@@ -1,4 +1,5 @@
 import type { GameState, RhythmSettings } from '@/types'
+import type { SomedayCategoryChange } from './somedayCategories'
 
 export const DEFAULT_RHYTHM_CATEGORIES: Record<string, string> = {
   movement: 'Movement', care: 'Care', connection: 'Connection', 'mind-play': 'Mind & Play',
@@ -11,6 +12,23 @@ const INITIAL_ASSIGNMENTS: Record<string, string> = {
 }
 export const CATEGORY_NAME_LIMIT = 40
 export const CATEGORY_LIMIT = 60
+export function changeRhythmCategory(state: GameState, change: SomedayCategoryChange): { state: GameState; error: string | null } {
+  if (!state.rhythm) return { state, error: 'Habit categories are not ready.' }
+  if (change.type === 'create') return createRhythmCategory(state, change.name)
+  if (!Object.hasOwn(state.rhythm.categories, change.id)) return { state, error: 'This category no longer exists.' }
+  const categories = { ...state.rhythm.categories }
+  let assignments = state.rhythm.assignments
+  if (change.type === 'delete') {
+    delete categories[change.id]
+    assignments = Object.fromEntries(Object.entries(assignments).map(([id, category]) => [id, category === change.id ? null : category]))
+  } else {
+    const name = change.name.trim().replace(/\s+/g, ' ')
+    if (!name || name.length > CATEGORY_NAME_LIMIT) return { state, error: 'Use a category name between 1 and 40 characters.' }
+    if (name.toLowerCase() === 'unsorted' || Object.entries(categories).some(([id, value]) => id !== change.id && value.toLowerCase() === name.toLowerCase())) return { state, error: 'That category name is already in use.' }
+    categories[change.id] = name
+  }
+  return { state: { ...state, rhythm: { ...state.rhythm, categories, assignments } }, error: null }
+}
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 

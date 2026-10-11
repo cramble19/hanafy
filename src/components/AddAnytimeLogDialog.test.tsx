@@ -18,11 +18,11 @@ describe('AddAnytimeLogDialog', () => {
       )
 
       expect(html).toContain('Record as')
-      expect(html).toContain(profile === 'hana' ? 'Habit name' : 'Activity name')
+      expect(html).toContain('Habit name')
       expect(html).not.toContain('Log icon')
       expect(html).not.toContain('emoji-picker')
       expect(html.indexOf('Record as')).toBeLessThan(
-        html.indexOf(profile === 'hana' ? 'Habit name' : 'Activity name'),
+        html.indexOf('Habit name'),
       )
     },
   )

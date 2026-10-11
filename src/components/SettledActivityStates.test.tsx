@@ -172,8 +172,9 @@ describe('settled activity states', () => {
       />,
     )
 
+    expect(hanaHtml).toContain('Tap a log to record · Hold to edit')
+    expect(crambleHtml).toContain('Tap a habit to record · Hold to edit')
     for (const html of [hanaHtml, crambleHtml]) {
-      expect(html).toContain('Tap a log to record · Hold to edit')
       expect(html.match(/class="anytime-log-card-toggle"/g)).toHaveLength(1)
       expect(html).not.toContain('anytime-log-check-button')
       expect(html).not.toContain('aria-label="Manage Saw a friend"')
@@ -305,7 +306,7 @@ describe('settled activity states', () => {
     expect(html).not.toContain('Energy recorded today.')
     expect(html).toContain('2 glasses today')
     expect(html).toContain('Energy logged: 4 of 5')
-    expect(html).toContain('Add a field log')
+    expect(html).toContain('Add habit')
     expect(html).toContain('aria-label="Subtract one glasses from Glasses of water"')
     expect(html).toContain('aria-label="Rate Energy 5 out of 5"')
   })

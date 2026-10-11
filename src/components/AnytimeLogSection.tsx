@@ -184,10 +184,10 @@ export function AnytimeLogSection({
         </span>
         <div>
           <h2 id={titleId}>
-            {profile === 'hana' ? "Today's activity log" : "Today's field log"}
+            {profile === 'hana' ? "Today's activity log" : "Today's habits"}
           </h2>
           <p id={interactionHintId} className="anytime-log-interaction-hint">
-            Tap a log to record · Hold to edit
+            {profile === 'cramble' ? 'Tap a habit to record · Hold to edit' : 'Tap a log to record · Hold to edit'}
           </p>
         </div>
       </div>
@@ -198,7 +198,7 @@ export function AnytimeLogSection({
             ref={filterRef}
             className="anytime-log-filter"
             role="group"
-            aria-label="Filter anytime logs"
+            aria-label={profile === 'cramble' ? 'Filter habits' : 'Filter anytime logs'}
           >
             {FILTER_OPTIONS.map((option) => (
               <button
@@ -230,7 +230,7 @@ export function AnytimeLogSection({
               <div
                 className="anytime-log-board"
                 role="list"
-                aria-label="Anytime logs"
+                aria-label={profile === 'cramble' ? 'Habits' : 'Anytime logs'}
               >
                 {mosaicGroups.map((group) => {
                   const orderedActivities =
@@ -297,7 +297,7 @@ export function AnytimeLogSection({
           onClick={onAdd}
         >
           <Plus aria-hidden="true" />
-          {profile === 'hana' ? 'Add a log' : 'Add a field log'}
+          {profile === 'hana' ? 'Add a log' : 'Add habit'}
         </button>
       ) : null}
 

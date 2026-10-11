@@ -180,6 +180,7 @@ export type OpenActivity = {
 }
 
 export type NewOpenActivityInput = {
+  categoryId?: string | null
   title: string
   description: string
   kind: CreatableOpenActivityKind

@@ -60,9 +60,9 @@ export function ObservatoryPage({ game, onBack, onAddLesson, ...questActions }: 
         <h1
           ref={headingRef}
           tabIndex={-1}
-          className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 outline-none backdrop-blur"
+          className="cramble-page-heading outline-none"
         >
-          Lantern Observatory
+          Observatory
         </h1>
       </div>
 

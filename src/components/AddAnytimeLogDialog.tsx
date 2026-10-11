@@ -39,6 +39,7 @@ export type AddAnytimeLogDialogProps = {
   initialView?: 'chooser' | 'anytime'
   /** Lock the meaning and unit after the first record so history remains truthful. */
   kindLocked?: boolean
+  categories?: Record<string, string>
   lifecycleStatus?: 'active' | 'paused' | 'archived'
   onRequestPause?: () => void
   onResume?: () => void
@@ -58,6 +59,7 @@ export function AddAnytimeLogDialog({
   initialValue,
   initialView = 'chooser',
   kindLocked = false,
+  categories,
   lifecycleStatus = 'active',
   onRequestPause,
   onResume,
@@ -71,6 +73,7 @@ export function AddAnytimeLogDialog({
   const unitInputRef = useRef<HTMLInputElement>(null)
   const titleId = useId()
   const descriptionId = useId()
+  const categoryFieldId = useId()
   const errorId = useId()
   const [showForm, setShowForm] = useState(
     mode === 'edit' || initialView === 'anytime',
@@ -83,6 +86,7 @@ export function AddAnytimeLogDialog({
     initialValue?.kind ?? 'check',
   )
   const [unit, setUnit] = useState(initialValue?.unit ?? '')
+  const [categoryId, setCategoryId] = useState(initialValue?.categoryId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [errorField, setErrorField] = useState<ErrorField | null>(null)
 
@@ -129,6 +133,7 @@ export function AddAnytimeLogDialog({
     event.preventDefault()
     const input: NewOpenActivityInput = {
       title: title.trim(),
+      ...(categories ? { categoryId: categoryId || null } : {}),
       description: description.trim(),
       kind,
       unit: kind === 'count' ? unit.trim() || null : null,
@@ -156,10 +161,10 @@ export function AddAnytimeLogDialog({
 
   const isEdit = mode === 'edit'
   const heading = isEdit
-    ? 'Manage anytime log'
+    ? profile === 'cramble' ? 'Edit habit' : 'Manage anytime log'
     : profile === 'hana'
       ? 'Add a habit'
-      : 'Add to tracker'
+      : 'Add habit'
 
   return (
     <dialog
@@ -189,7 +194,7 @@ export function AddAnytimeLogDialog({
           <div className="min-w-0 flex-1">
             {isEdit ? (
               <p className="anytime-dialog-eyebrow">
-                {profile === 'hana' ? 'Tend this record' : 'Revise this field note'}
+                {profile === 'hana' ? 'Tend this record' : 'Habit settings'}
               </p>
             ) : null}
             <h2 id={titleId}>{heading}</h2>
@@ -197,7 +202,7 @@ export function AddAnytimeLogDialog({
           <button
             type="button"
             onClick={closeDialog}
-            aria-label={isEdit ? 'Close manage anytime log' : 'Close add to tracker'}
+            aria-label={profile === 'cramble' ? isEdit ? 'Close edit habit' : 'Close add habit' : isEdit ? 'Close manage anytime log' : 'Close add to tracker'}
             className="anytime-dialog-close"
           >
             <X aria-hidden="true" />
@@ -259,6 +264,7 @@ export function AddAnytimeLogDialog({
         {showForm ? (
           <>
             <div className="anytime-dialog-fields">
+              {categories && <div className="someday-category-field"><label htmlFor={categoryFieldId}>Category</label><select id={categoryFieldId} value={categoryId} onChange={event => setCategoryId(event.target.value)}><option value="">Unsorted</option>{Object.entries(categories).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></div>}
               <fieldset>
                 <legend className="add-habit-label">Record as</legend>
                 <div className="anytime-record-kind-grid">
@@ -311,7 +317,7 @@ export function AddAnytimeLogDialog({
 
               <label className="block">
                 <span className="add-habit-label">
-                  {profile === 'hana' ? 'Habit name' : 'Activity name'}
+                  Habit name
                 </span>
                 <input
                   ref={titleInputRef}
@@ -335,7 +341,7 @@ export function AddAnytimeLogDialog({
                 <span className="add-habit-label">
                   {profile === 'hana'
                     ? 'What will you record?'
-                    : 'What counts as one log?'}
+                    : 'What counts as one record?'}
                 </span>
                 <textarea
                   ref={descriptionInputRef}
@@ -483,7 +489,7 @@ export function AddAnytimeLogDialog({
                 ? 'Save changes'
                 : profile === 'hana'
                   ? 'Create anytime log'
-                  : 'Add anytime log'}
+                  : 'Add habit'}
             </button>
           </>
         ) : null}

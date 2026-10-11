@@ -86,7 +86,7 @@ describe('Garden and Observatory quest hubs', () => {
 
     expect(html).toContain('aria-label="Observatory views"')
     expect(html.match(/<h1/g)).toHaveLength(1)
-    expect(html).toContain('Lantern Observatory</h1>')
+    expect(html).toContain('Observatory</h1>')
     expect(html).toContain('<h2')
     expect(html).toContain('The road remembers every step</h2>')
     expect(html).toMatch(

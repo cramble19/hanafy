@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  Plus,
   RefreshCw,
   RotateCcw,
 } from 'lucide-react'
@@ -42,6 +41,8 @@ import {
   hasOpenActivityHistory,
 } from '@/lib/openActivities'
 import { downloadProfileJson } from '@/lib/habitExport'
+import { getRhythmSettings } from '@/lib/rhythmCategories'
+import { getRhythmTrackers } from '@/lib/rhythmStats'
 
 export type CrambleSyncStatus =
   | 'idle'
@@ -144,6 +145,7 @@ export function CramblePage({
   const headingRef = usePageHeadingFocus()
   const catalog = getQuestCatalog(crambleQuests, game)
   const openActivities = getOpenActivityCatalog(game)
+  const categories = getRhythmSettings(game, getRhythmTrackers(game, crambleQuests))
   const activeProfilePause = getActiveProfilePause(game)
   const pausedOpenActivities = openActivities.filter(
     (activity) =>
@@ -245,7 +247,7 @@ export function CramblePage({
       />
       <PausedHabitsCard
         habits={pausedOpenActivities}
-        title="Paused field logs"
+        title="Paused habits"
         onResume={onResumeHabit}
         onManage={setManagedActivityId}
       />
@@ -293,15 +295,13 @@ export function CramblePage({
         }
       />
 
-      <button type="button" className="cramble-inline-add" onClick={() => setAddDialogInitialView('anytime')}>
-        <Plus size={18} aria-hidden="true" /> Add habit
-      </button>
 
       {addDialogInitialView ? (
         <AddAnytimeLogDialog
           profile="cramble"
           initialView={addDialogInitialView}
           allowScheduled={false}
+          categories={categories.categories}
           existingTitles={allTrackerTitles}
           onClose={() => setAddDialogInitialView(null)}
           onChooseScheduled={() => {}}
@@ -312,9 +312,11 @@ export function CramblePage({
         <AddAnytimeLogDialog
           profile="cramble"
           mode="edit"
+          categories={categories.categories}
           initialView="anytime"
           initialValue={{
             title: managedActivity.title,
+            categoryId: categories.assignments[managedActivity.id] ?? null,
             description: managedActivity.description,
             kind: managedActivity.kind,
             unit: managedActivity.unit,

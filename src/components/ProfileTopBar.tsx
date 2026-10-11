@@ -1,4 +1,6 @@
 import { ChevronLeft } from 'lucide-react'
+import { useContext } from 'react'
+import { CrambleSettingsContext } from './CrambleSettings'
 
 type ProfileTopBarProps = {
   profile: 'hana' | 'cramble'
@@ -8,6 +10,8 @@ type ProfileTopBarProps = {
 
 export function ProfileTopBar({ profile, onBack, onSettings }: ProfileTopBarProps) {
   const name = profile === 'hana' ? 'hana' : 'cramble'
+  const sharedSettings = useContext(CrambleSettingsContext)
+  if (profile === 'cramble' && sharedSettings) onSettings = sharedSettings
 
   return (
     <nav

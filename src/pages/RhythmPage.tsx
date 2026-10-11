@@ -88,15 +88,15 @@ export function RhythmPage({ sharedNavigation = false, areaId, taskId, onOpenTas
           return <button type="button" className="rhythm-area" key={id} onClick={() => setArea(id)} aria-label={`Open ${categoryName(id)}`}>
             <span className="rhythm-area-icon"><Icon size={23} aria-hidden="true" /></span>
             <span className="rhythm-area-content"><span className="rhythm-between"><span className="rhythm-area-name">{categoryName(id)}</span><span className="rhythm-total">{recorded.length} / {range} days</span></span>
-              <span className="rhythm-area-meta">{members.length} {members.length === 1 ? 'tracker' : 'trackers'}</span>
+              <span className="rhythm-area-meta">{members.length} {members.length === 1 ? 'habit' : 'habits'}</span>
               <RhythmRibbon dates={dates} recorded={recorded} label={`${categoryName(id)}: at least one record on ${recorded.length} days`} />
             </span>
           </button>
         })}
       </> : <>
-        <p className="rhythm-list-label">{displayed.length} {displayed.length === 1 ? 'tracker' : 'trackers'} · Most recorded first</p>
+        <p className="rhythm-list-label">{displayed.length} {displayed.length === 1 ? 'habit' : 'habits'} · Most recorded first</p>
         <ul className="rhythm-list">{displayed.map(trackerRow)}</ul>
-        {!displayed.length && <div className="rhythm-empty"><p>{area ? 'No tasks here yet.' : 'Your habits will appear here when you add them.'}</p>{area && <button type="button" className="rhythm-secondary" onClick={() => { setArea(null); setView('all') }}>Choose from all habits</button>}</div>}
+        {!displayed.length && <div className="rhythm-empty"><p>{area ? 'No habits here yet.' : 'Your habits will appear here when you add them.'}</p>{area && <button type="button" className="rhythm-secondary" onClick={() => { setArea(null); setView('all') }}>Choose from all habits</button>}</div>}
       </>}
     </main>
     <p className="rhythm-status" role="status">{announcement}</p>
