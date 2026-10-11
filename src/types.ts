@@ -194,6 +194,7 @@ export type SomedayTiming = 'timeless' | 'beforeAge'
 export type SomedayItem = {
   id: string
   title: string
+  description?: string
   timing: SomedayTiming
   /** Present only for age-based wishes. */
   targetAge: number | null
@@ -205,6 +206,7 @@ export type SomedayItem = {
 
 export type NewSomedayItemInput = {
   title: string
+  description?: string
   timing: SomedayTiming
   targetAge?: number | null
   categoryId?: string | null

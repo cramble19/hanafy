@@ -6,7 +6,8 @@ import type {
   TrackingPause,
 } from '@/types'
 
-export const GAME_STATE_SCHEMA_VERSION = 8 as const
+// Description-aware clients must not be overwritten by older serializers.
+export const GAME_STATE_SCHEMA_VERSION = 9 as const
 export const MAX_BACKFILL_DAYS = 3
 
 export const PAUSE_REASON_OPTIONS: Array<{

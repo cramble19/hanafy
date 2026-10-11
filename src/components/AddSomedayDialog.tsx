@@ -2,6 +2,7 @@ import { Hourglass, Infinity, Plus, Save, Trash2, X } from 'lucide-react'
 import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
 import {
   getNewSomedayItemValidationError,
+  countDescriptionWords,
   SOMEDAY_LIMITS,
 } from '@/lib/someday'
 import type { NewSomedayItemInput, SomedayItem } from '@/types'
@@ -35,6 +36,7 @@ export function AddSomedayDialog({
   const headingId = useId()
   const descriptionId = useId()
   const [title, setTitle] = useState(item?.title ?? '')
+  const [description, setDescription] = useState(item?.description ?? '')
   const [timing, setTiming] = useState<NewSomedayItemInput['timing']>(item?.timing ?? 'timeless')
   const [age, setAge] = useState(item?.targetAge?.toString() ?? '')
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? '')
@@ -68,6 +70,7 @@ export function AddSomedayDialog({
     event.preventDefault()
     const input: NewSomedayItemInput = {
       title: title.trim(),
+      ...(profile === 'cramble' ? { description: description.trim() } : {}),
       timing,
       targetAge: timing === 'beforeAge' ? Number(age) : null,
       ...(categories ? { categoryId: selectedCategory || null } : {}),
@@ -143,13 +146,19 @@ export function AddSomedayDialog({
           />
         </label>
 
+        {profile === 'cramble' && <label className="someday-field someday-description-field">
+          <span>Description · optional</span>
+          <textarea value={description} rows={5} onChange={event => { setDescription(event.target.value); setError(null) }} placeholder="The details, the feeling, or why it matters…" />
+          <small>{countDescriptionWords(description)} / {SOMEDAY_LIMITS.descriptionWords} words</small>
+        </label>}
+
         {categories && <label className="someday-field someday-category-field">
           <span>Category</span>
           <select value={selectedCategory} onChange={event => { setSelectedCategory(event.target.value); setError(null) }}>
             <option value="">Unsorted</option>
             {Object.entries(categories).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
-          <small>Manage categories from the Someday settings gear.</small>
+          <small>Tap cramble at the top of Someday to manage categories.</small>
           {item?.completedDate && <small>Changing this keeps your memory’s completion date.</small>}
         </label>}
 

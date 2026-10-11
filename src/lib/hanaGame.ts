@@ -1536,7 +1536,9 @@ function readSomedayItems(value: unknown): SomedayItem[] {
       return items
     }
     seenIds.add(id)
-    items.push({ id, title, timing, targetAge, createdDate, completedDate })
+    items.push({ id, title, timing, targetAge, createdDate, completedDate,
+      ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
+    })
     return items
   }, [])
 }

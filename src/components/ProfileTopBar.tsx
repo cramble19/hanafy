@@ -1,4 +1,4 @@
-import { ChevronLeft, Settings2 } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 type ProfileTopBarProps = {
   profile: 'hana' | 'cramble'
@@ -26,8 +26,8 @@ export function ProfileTopBar({ profile, onBack, onSettings }: ProfileTopBarProp
       ) : (
         <span className="profile-top-bar-spacer" aria-hidden="true" />
       )}
-      <span className="profile-top-bar-name">{name}</span>
-      {onSettings ? <button type="button" className="profile-top-bar-back" onClick={onSettings} aria-label="Open Someday category settings"><Settings2 aria-hidden="true" /></button> : <span className="profile-top-bar-spacer" aria-hidden="true" />}
+      {onSettings ? <button type="button" className="profile-top-bar-name profile-top-bar-settings" onClick={onSettings} aria-label={`${name} — open page settings`}>{name}</button> : <span className="profile-top-bar-name">{name}</span>}
+      <span className="profile-top-bar-spacer" aria-hidden="true" />
     </nav>
   )
 }

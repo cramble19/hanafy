@@ -10,6 +10,29 @@ import {
 } from '@/lib/someday'
 
 describe('Someday life wishes', () => {
+  it('preserves descriptions and dates through edits, completion and storage reload', () => {
+    const added = addSomedayItem(createStartedHanaState('2026-08-29'), {
+      title: 'Visit Japan', timing: 'timeless', description: '  Slow mornings.\nCherry blossoms.  ',
+    }).state
+    const id = added.somedayItems![0].id
+    const completed = toggleSomedayItem(added, id)
+    const edited = updateSomedayItem(completed, id, { title: 'Visit Japan', timing: 'timeless', description: 'New details' }).state
+    expect(edited.somedayItems![0]).toMatchObject({ description: 'New details', createdDate: '2026-08-29', completedDate: '2026-08-29' })
+    const reloaded = parseStoredHanaState(JSON.stringify(edited), quests)
+    expect(reloaded?.somedayItems).toEqual(edited.somedayItems)
+    const omitted = updateSomedayItem(edited, id, { title: 'Japan trip', timing: 'timeless' }).state
+    expect(omitted.somedayItems![0].description).toBe('New details')
+    expect(updateSomedayItem(omitted, id, { title: 'Japan trip', timing: 'timeless', description: '' }).state.somedayItems![0].description).toBe('')
+  })
+
+  it('allows 500 description words and rejects 501 without changing state', () => {
+    const input = { title: 'Travel', timing: 'timeless' as const, description: 'word '.repeat(500) }
+    expect(getNewSomedayItemValidationError(input)).toBeNull()
+    const state = createStartedHanaState('2026-08-29')
+    const result = addSomedayItem(state, { ...input, description: 'word '.repeat(501) })
+    expect(result.error).toContain('500 words')
+    expect(result.state).toBe(state)
+  })
   it('adds timeless and age-based items without touching tracker progress', () => {
     vi.stubGlobal('crypto', { randomUUID: () => 'wish-1' })
     const base = {
@@ -117,7 +140,7 @@ describe('Someday life wishes', () => {
       quests,
       '2026-08-29',
     )
-    expect(migrated?.schemaVersion).toBe(8)
+    expect(migrated?.schemaVersion).toBe(9)
     expect(migrated?.somedayItems).toEqual([])
     expect(migrated?.currentDate).toBe('2026-08-29')
   })

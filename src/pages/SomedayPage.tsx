@@ -298,6 +298,7 @@ const SOMEDAY_HOLD_DELAY_MS = 520
 const SOMEDAY_HOLD_MOVE_TOLERANCE_PX = 10
 
 export function SomedayPressButton({
+  review = false,
   className,
   item,
   completed,
@@ -306,6 +307,7 @@ export function SomedayPressButton({
   interactionHintId,
   children,
 }: {
+  review?: boolean
   className: string
   item: SomedayItem
   completed: boolean
@@ -423,8 +425,8 @@ export function SomedayPressButton({
       aria-describedby={interactionHintId}
       aria-keyshortcuts="Enter Space F2 Shift+F10 ContextMenu"
       aria-pressed={completed}
-      aria-label={`${completed ? 'Restore' : 'Complete'} ${item.title}. Hold or press F2 to edit.`}
-      title={`${completed ? 'Tap to restore' : 'Tap to complete'} · Hold to edit`}
+      aria-label={review ? `Review ${item.title}. Hold or press F2 for details.` : `${completed ? 'Restore' : 'Complete'} ${item.title}. Hold or press F2 to edit.`}
+      title={review ? 'Tap to review · Hold for details' : `${completed ? 'Tap to restore' : 'Tap to complete'} · Hold to edit`}
     >
       {children}
     </button>

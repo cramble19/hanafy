@@ -73,7 +73,7 @@ describe('daily emotion tracking', () => {
       '2026-08-10',
     )
 
-    expect(migrated.schemaVersion).toBe(8)
+    expect(migrated.schemaVersion).toBe(9)
     expect(migrated.dailyEmotions).toEqual({ '2026-08-08': 'good' })
     expect(resetProfileProgress(migrated, []).dailyEmotions).toEqual({})
   })

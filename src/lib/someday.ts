@@ -7,15 +7,23 @@ import type {
 export const SOMEDAY_LIMITS = {
   items: 250,
   title: 100,
+  descriptionWords: 500,
   minimumAge: 1,
   maximumAge: 120,
 } as const
+
+export function countDescriptionWords(value: string) {
+  return value.trim() ? value.trim().split(/\s+/u).length : 0
+}
 
 export function getNewSomedayItemValidationError(
   input: NewSomedayItemInput,
   existingItems: SomedayItem[] = [],
 ) {
   const title = input.title.trim()
+  if (countDescriptionWords(input.description ?? '') > SOMEDAY_LIMITS.descriptionWords) {
+    return 'Keep the description within 500 words.'
+  }
   if (!title) return 'Add the thing you want to do.'
   if (title.length > SOMEDAY_LIMITS.title) {
     return `Keep it under ${SOMEDAY_LIMITS.title} characters.`
@@ -47,6 +55,7 @@ export function createSomedayItem(
   return {
     id: createEventId('someday'),
     title: input.title.trim().slice(0, SOMEDAY_LIMITS.title),
+    ...(input.description !== undefined ? { description: input.description.trim() } : {}),
     timing: input.timing,
     targetAge:
       input.timing === 'beforeAge' && Number.isInteger(input.targetAge)
@@ -112,11 +121,13 @@ export function updateSomedayItem(
   if (error) return { state, error }
 
   const title = input.title.trim().slice(0, SOMEDAY_LIMITS.title)
+  const description = input.description?.trim() ?? item.description
   const targetAge = input.timing === 'beforeAge' && Number.isInteger(input.targetAge)
     ? input.targetAge as number
     : null
   if (
     item.title === title &&
+    item.description === description &&
     item.timing === input.timing &&
     item.targetAge === targetAge
   ) {
@@ -128,7 +139,7 @@ export function updateSomedayItem(
       ...state,
       somedayItems: items.map((candidate) =>
         candidate.id === itemId
-          ? { ...candidate, title, timing: input.timing, targetAge }
+          ? { ...candidate, title, description, timing: input.timing, targetAge }
           : candidate,
       ),
     },
