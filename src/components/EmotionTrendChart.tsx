@@ -29,7 +29,7 @@ export function EmotionTrendChart({ game, range }: { game: GameState; range: Emo
   const [viewport, setViewport] = useState(280)
   const [left, setLeft] = useState(0)
   const [selectedDate, setSelectedDate] = useState(game.currentDate)
-  const spacing = range === 7 ? viewport / Math.max(1, days.length) : 44
+  const spacing = range === 7 ? Math.max(36, viewport / 7) : 44
   const width = Math.max(viewport, days.length * spacing)
   const selected = days.find(day => day.dateKey === selectedDate) ?? days.at(-1)
   const selectedIndex = selected ? days.indexOf(selected) : -1
@@ -50,7 +50,7 @@ export function EmotionTrendChart({ game, range }: { game: GameState; range: Emo
   const lastVisible = Math.max(0, Math.min(days.length - 1, Math.floor((left + viewport - 1) / spacing)))
   const scroll = (direction: number) => scroller.current?.scrollBy({ left: direction * viewport * .8, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   return <div className="emotion-trend">
-    <div className="emotion-trend-legend"><span><i />Daily mood</span><span><i className="is-average" />{range}-day average</span></div>
+    <div className="emotion-trend-legend"><span><i />Daily mood</span><span><i className="is-average" />{range}-day weighted average</span></div>
     <div className="emotion-trend-row">
       <div className="emotion-trend-axis" aria-hidden="true">{labels.map((label, index) => <span key={label} style={{ top: 24 + index * 42 }}>{label}</span>)}</div>
       <div ref={scroller} className="emotion-trend-scroll" role="region" aria-label={`Scrollable ${range}-day emotion chart`} onScroll={event => setLeft(event.currentTarget.scrollLeft)}>
@@ -75,7 +75,7 @@ export function EmotionTrendChart({ game, range }: { game: GameState; range: Emo
       <button type="button" aria-label="Scroll to later mood dates" disabled={left + viewport >= width - 1} onClick={() => scroll(1)}><ChevronRight size={18} /></button>
     </div>}
     {selected && <div className="emotion-trend-detail" aria-live="polite"><p>{fullDate(selected.dateKey)} · {selected.emotion ? DAILY_EMOTION_LABELS[selected.emotion] : 'Not recorded'}</p><p>{range}-day average: {selected.average === null ? 'No records in this window' : `${selected.average.toFixed(1)}/5 · ${selected.count} recorded ${selected.count === 1 ? 'day' : 'days'}`}</p></div>}
-    <p className="emotion-trend-note">Average uses recorded moods in the preceding {range} days, including each date. Missing days aren’t zero. Daily gaps stay visible.</p>
+    <p className="emotion-trend-note">Heavy & Bright have 2× weight; other moods have 1× weight. Each average uses the preceding {range} days, including that date. Missing days are excluded.{range === 7 ? ' Scroll through 30 days of history.' : ''}</p>
     {!days.some(day => day.value !== null || day.average !== null) && <p className="emotion-history-empty">No moods recorded yet in these windows.</p>}
   </div>
 }

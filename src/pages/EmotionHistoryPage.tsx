@@ -6,6 +6,7 @@ import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import {
   EMOTIONS_BEST_FIRST,
   getEmotionHistoryStats,
+  getEmotionHistoryDisplayRange,
   getEmotionTimelineRuns,
   type EmotionHistoryRange,
 } from '@/lib/emotionHistory'
@@ -43,9 +44,10 @@ export function EmotionHistoryPage({ game, profileId, onBack }: Props) {
   const headingRef = usePageHeadingFocus()
   const [range, setRange] = useState<EmotionHistoryRange>(30)
   const resultsId = useId()
+  const displayRange = isCramble ? getEmotionHistoryDisplayRange(range) : range
   const stats = useMemo(
-    () => getEmotionHistoryStats(game, range),
-    [game, range],
+    () => getEmotionHistoryStats(game, displayRange),
+    [game, displayRange],
   )
   const runs = getEmotionTimelineRuns(stats.days)
   const indexByDate = new Map(
@@ -117,7 +119,7 @@ export function EmotionHistoryPage({ game, profileId, onBack }: Props) {
           ))}
         </div>
         <p className="sr-only" aria-live="polite" aria-atomic="true">
-          Showing the past {range} days. {stats.recordedDays}{' '}
+          Showing the past {displayRange} days. {stats.recordedDays}{' '}
           {stats.recordedDays === 1 ? 'day' : 'days'} recorded.
         </p>
 

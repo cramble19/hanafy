@@ -46,7 +46,7 @@ describe('EmotionHistoryPage', () => {
     expect(html).toContain('cramble-archive-shell')
     expect(html).toContain('A field record, never a judgment.')
     expect(html).toContain('Past 90 days')
-    expect(html).toContain('30-day average')
+    expect(html).toContain('30-day weighted average')
     expect(html).toContain('emotion-trend-scroll')
   })
 })

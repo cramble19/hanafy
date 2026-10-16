@@ -9,6 +9,18 @@ import {
 } from '@/lib/emotionHistory'
 
 describe('emotion history', () => {
+  it('shows a month of seven-day averages with double-weighted extremes', () => {
+    const state = { ...createStartedHanaState('2026-01-01'), currentDate: '2026-10-17', dailyEmotions: {
+      '2026-10-15': 'heavy' as const, '2026-10-16': 'good' as const, '2026-10-17': 'good' as const,
+      '2026-09-17': 'bright' as const,
+    } }
+    const days = getRollingEmotionHistory(state, 7)
+    expect(days).toHaveLength(30)
+    expect(days[0]).toMatchObject({ dateKey: '2026-09-18', average: 5, count: 1 })
+    expect(days.at(-1)).toMatchObject({ average: 2.5, count: 3 })
+    const brightState = { ...state, dailyEmotions: { ...state.dailyEmotions, '2026-10-15': 'bright' as const } }
+    expect(getRollingEmotionHistory(brightState, 7).at(-1)?.average).toBe(4.5)
+  })
   it('adapts the trailing average to 7, 30 and 90 calendar days without mutating moods', () => {
     const state = { ...createStartedHanaState('2026-01-01'), currentDate: '2026-10-17', dailyEmotions: {
       '2026-10-17': 'bright' as const,
@@ -17,7 +29,7 @@ describe('emotion history', () => {
     } }
     const before = JSON.stringify(state)
     expect(getRollingEmotionHistory(state, 7).at(-1)?.average).toBe(5)
-    expect(getRollingEmotionHistory(state, 30).at(-1)?.average).toBe(4)
+    expect(getRollingEmotionHistory(state, 30).at(-1)?.average).toBeCloseTo(13 / 3)
     expect(getRollingEmotionHistory(state, 90).at(-1)?.average).toBe(3)
     expect(JSON.stringify(state)).toBe(before)
   })
@@ -27,7 +39,7 @@ describe('emotion history', () => {
       '2026-08-02': 'good' as const,
     } }
     const days = getRollingEmotionHistory(state, 7)
-    expect(days[0]).toMatchObject({ dateKey: '2026-08-04', value: null, average: 4, count: 1 })
+    expect(days.find(day => day.dateKey === '2026-08-04')).toMatchObject({ value: null, average: 4, count: 1 })
     expect(days.find(day => day.dateKey === '2026-08-08')?.average).toBe(4)
     expect(days.find(day => day.dateKey === '2026-08-09')?.average).toBeNull()
   })
