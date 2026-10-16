@@ -25,6 +25,19 @@ to the complete snapshot if a domain's source revision is unavailable.
 
 ## Deployment and recovery
 
+### Retired Observatory and Lifetime
+
+Cramble no longer exposes Observatory routes, lesson edits or reminders. Its date
+rollover preserves saved quest plans and renown without awarding progression.
+The sync API leaves Cramble's legacy lesson/weed projection rows untouched.
+No tables or historical records are dropped. Hana retains its existing behavior.
+
+Lifetime counters are additive `lifetimeCounters` metadata in the profile snapshot,
+separate from habit records and Someday items. Each counter holds an undated starting
+total and individually identified dated occurrences, allowing concurrent records to
+merge. The composed view retains this metadata. Legacy payloads omitting the field
+cannot erase it. No migration is needed for this addition.
+
 1. Rehearse the migration and `tests/cramble_domains.sql` in a transaction ending
    in `ROLLBACK`. The tests mutate a temporary source row, never real profile rows.
 2. Compare profile snapshot fingerprints, revisions and original history counts.

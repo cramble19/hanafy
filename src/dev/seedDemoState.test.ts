@@ -37,7 +37,7 @@ describe('localhost demo profiles', () => {
     expect(cramble.openActivityLogs[cramble.currentDate])
       .not.toHaveProperty('open-cramble-demo-kind-moment')
     expect(hana.totalFlowers).toBeGreaterThan(0)
-    expect(cramble.totalFlowers).toBeGreaterThan(0)
+    expect(cramble.totalFlowers).toBe(0) // Retired Observatory no longer awards progression.
   })
 
   it('writes only the two local caches and clears pending cloud envelopes', () => {

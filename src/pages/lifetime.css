@@ -1,0 +1,16 @@
+.lifetime-page{color:var(--rhythm-ink,#f5eddd)}
+.lifetime-page>header,.lifetime-page>main,.lifetime-page>.lifetime-subtitle{position:relative;z-index:1}
+.lifetime-dialog h3{margin-top:22px;font-weight:500}
+.lifetime-subtitle,.lifetime-empty p{color:var(--rhythm-muted,#b7b1ab);font-size:13px;line-height:1.7;margin:10px 0 20px}
+.lifetime-card{border:1px solid #ffffff1a;border-radius:22px;padding:20px;margin:14px 0;background:linear-gradient(130deg,#292a33,#20222a)}
+.lifetime-eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#dfbc77;margin-bottom:12px}
+.lifetime-card h2{font-size:17px;font-weight:500;overflow-wrap:anywhere}
+.lifetime-value-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 6px}
+.lifetime-value{font-size:42px;font-weight:400;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.lifetime-value small{font-size:12px;color:#b7b1ab;margin-left:10px}
+.lifetime-plus{display:grid;place-items:center;width:46px;height:46px;flex-shrink:0;background:#dfbc7713;border:1px solid #dfbc7750;color:#dfbc77;border-radius:50%}
+.lifetime-text-button{font-size:12px;min-height:44px;padding:8px 6px;color:#c8bea9;text-align:left}
+.lifetime-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin-top:22px;border:1px dashed #dfbc7750;border-radius:22px;color:#dfbc77}
+.lifetime-empty{padding:24px 0}.lifetime-empty h2{font-size:20px}.lifetime-notice{font-size:13px;color:#c8bea9}
+.lifetime-dialog{padding:24px;color:#f5eddd}.lifetime-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.lifetime-dialog-heading h2{font-size:23px;overflow-wrap:anywhere}.lifetime-dialog-heading button{min-width:44px;min-height:44px;display:grid;place-items:center}
+.lifetime-dialog label{display:block;font-size:13px;margin:16px 0}.lifetime-dialog input,.lifetime-dialog textarea{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid #ffffff30;border-radius:12px;background:#191b23;color:#f5eddd;font-size:16px;color-scheme:dark;min-width:0}.lifetime-dialog textarea{min-height:90px}.lifetime-save{border-radius:14px;background:#dfbc77;color:#201c16;padding:12px 18px;min-height:44px}.lifetime-history{margin-top:10px}.lifetime-history li{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid #ffffff1a;font-size:13px;padding:8px 0}.lifetime-description{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7}

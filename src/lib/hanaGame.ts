@@ -28,6 +28,7 @@ import {
 import { normalizeDailyEmotions } from '@/lib/dailyEmotions'
 import { readRhythmSettings } from '@/lib/rhythmCategories'
 import { readSomedayCategories } from '@/lib/somedayCategories'
+import { readLifetimeCounters } from '@/lib/lifetime'
 import {
   getDefaultQuestCompletionCriteria,
   normalizeQuestCompletionCriteria,
@@ -58,6 +59,8 @@ export const SPRING_ARC = {
 export const STORAGE_KEY = 'hana-game/v1'
 
 export type QuestPlanOptions = {
+  /** Preserve saved lesson state without planning or awarding progression. */
+  disabled?: boolean
   /** Replace expired long-term quests with the next eligible catalog entries. */
   rotateExpiredLongTerm?: boolean
 }
@@ -165,6 +168,7 @@ export function resetProfileProgress(
       somedayItems: [...(state.somedayItems ?? [])],
       ...(state.somedayCategories ? { somedayCategories: state.somedayCategories } : {}),
       ...(state.rhythm ? { rhythm: state.rhythm } : {}),
+      ...(state.lifetimeCounters ? { lifetimeCounters: state.lifetimeCounters } : {}),
     },
     quests,
     options,
@@ -454,6 +458,7 @@ export function syncActiveQuestPlan(
   quests: Quest[],
   options: QuestPlanOptions = {},
 ) {
+  if (options.disabled) return state
   const catalog = getQuestCatalog(quests, state)
   const plannedState: HanaGameState = {
     ...state,
@@ -532,7 +537,7 @@ export function syncStateToDate(
     {
       ...state,
       currentDate: dateKey,
-      totalFlowers: recomputeTotalFlowers(state, quests),
+      totalFlowers: options.disabled ? state.totalFlowers : recomputeTotalFlowers(state, quests),
     },
     quests,
     options,
@@ -1373,6 +1378,7 @@ function normalizeHanaState(
     somedayItems: readSomedayItems(value.somedayItems),
     ...(readSomedayCategories(value.somedayCategories) ? { somedayCategories: readSomedayCategories(value.somedayCategories) } : {}),
     ...(readRhythmSettings(value.rhythm) ? { rhythm: readRhythmSettings(value.rhythm) } : {}),
+    ...(Array.isArray(value.lifetimeCounters) ? { lifetimeCounters: readLifetimeCounters(value.lifetimeCounters) } : {}),
     trackingPauses: readTrackingPauses(value.trackingPauses),
     backfillAudit: readBackfillAudit(value.backfillAudit),
     activeDailyQuests: readActiveQuestRecord(value.activeDailyQuests),
@@ -1427,7 +1433,8 @@ function normalizeHanaState(
     })
   })
 
-  migratedState.totalFlowers = recomputeTotalFlowers(migratedState, catalog)
+  migratedState.totalFlowers = options.disabled && typeof value.totalFlowers === 'number' && Number.isFinite(value.totalFlowers)
+    ? value.totalFlowers : recomputeTotalFlowers(migratedState, catalog)
   return syncActiveQuestPlan(migratedState, catalog, options)
 }
 

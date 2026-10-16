@@ -156,6 +156,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         state = jsonb_set(
           (CASE WHEN state ? 'somedayCategories'
             THEN jsonb_build_object('somedayCategories', state -> 'somedayCategories')
+            ELSE '{}'::jsonb END) ||
+          (CASE WHEN state ? 'lifetimeCounters'
+            THEN jsonb_build_object('lifetimeCounters', state -> 'lifetimeCounters')
             ELSE '{}'::jsonb END) || ${JSON.stringify(payload.state)}::jsonb,
           '{syncRevision}',
           to_jsonb(hana_state_snapshots.revision + 1),
@@ -233,6 +236,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     // A deleted built-in remains in source code, so the snapshot carries a
     // tombstone. Remove only those quest projections; other historical rows
     // (notably expired long-term windows) cannot always be reconstructed.
+    // Cramble's Observatory is retired. Keep its existing lesson projections
+    // untouched while continuing to save independent habit/counter snapshots.
+    if (payload.profileId !== 'cramble') {
     deletedHabitIds.forEach((habitId) => {
       syncQueries.push(sql`
         DELETE FROM hana_quest_statuses
@@ -364,6 +370,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       )
     })
 
+    }
     const transactionResults = await sql.transaction(syncQueries)
     const snapshotRows = transactionResults[1].length
       ? transactionResults[1]

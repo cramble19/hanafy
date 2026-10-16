@@ -3,13 +3,6 @@ import { ChevronLeft, Compass } from 'lucide-react'
 import { CrambleBackground } from '@/components/CrambleBackground'
 import { crambleQuests } from '@/data/crambleQuests'
 import {
-  createCustomHabitQuest,
-  getNewHabitValidationError,
-  hasSameHabitScoringRules,
-  updateCustomHabitQuest,
-  type NewHabitInput,
-} from '@/lib/customHabits'
-import {
   CRAMBLE_PENDING_STORAGE_KEY,
   CRAMBLE_QUEST_PLAN_OPTIONS,
   CRAMBLE_STORAGE_KEY,
@@ -18,27 +11,17 @@ import {
   addDays,
   createInitialHanaState,
   createStartedHanaState,
-  getQuestCatalog,
-  getSkipEventKey,
-  getSkipProgress,
-  getSkipWeekKey,
   hasHanaStarted,
   parseStoredHanaState,
-  recomputeTotalFlowers,
-  recordQuestCompletionForDate,
   resetProfileProgress,
   syncActiveQuestPlan,
   syncStateToDate,
   todayKey,
-  toggleQuestCompletion,
-  undoQuestCompletionForDate,
-  undoQuestCompletion,
 } from '@/lib/hanaGame'
 import {
   archiveHabit,
   deleteHabitPermanently,
   getActiveProfilePause,
-  hasHabitHistory,
   isHabitGraduatedOnDate,
   restoreHabit,
   restoreGraduatedHabit,
@@ -46,8 +29,6 @@ import {
   resumeProfileTracking,
   startHabitPause,
   startProfilePause,
-  updateHabitPreferences,
-  updateHabitWording,
   type PauseInput,
 } from '@/lib/habitLifecycle'
 import {
@@ -73,7 +54,8 @@ import {
 import { CrambleStartPage } from '@/pages/CrambleStartPage'
 import { CrambleLedgerPage } from '@/pages/CrambleLedgerPage'
 import { CrambleQuestDetailPage } from '@/pages/CrambleQuestDetailPage'
-import { ObservatoryPage } from '@/pages/ObservatoryPage'
+import { LifetimePage } from '@/pages/LifetimePage'
+import { changeLifetime } from '@/lib/lifetime'
 import { CrambleSomedayPage } from '@/pages/CrambleSomedayPage'
 import { assignSomedayCategory, changeSomedayCategory, getSomedayCategories, type SomedayCategoryChange } from '@/lib/somedayCategories'
 import { EmotionHistoryPage } from '@/pages/EmotionHistoryPage'
@@ -90,9 +72,7 @@ import {
   updateSomedayItem,
 } from '@/lib/someday'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
-import { useHabitReminders } from '@/hooks/useHabitReminders'
 import { millisecondsUntilNextLogicalDay } from '@/lib/logicalDay'
-import { reconcileQuestGraduation } from '@/lib/questCompletion'
 import { recordRecentEmotion, setDailyEmotion } from '@/lib/dailyEmotions'
 import {
   advancePendingProfileSyncRevision,
@@ -126,7 +106,6 @@ export function CrambleExperience({ onBack }: Props) {
   const [game, setGame] = useState<HanaGameState | null>(
     initialLocal?.state ?? null,
   )
-  useHabitReminders('cramble', game, crambleQuests)
   const gameRef = useRef<HanaGameState | null>(game)
   const pendingDbSaveRef = useRef<PendingProfileSync | null>(
     initialLocal?.pending ?? null,
@@ -272,10 +251,7 @@ export function CrambleExperience({ onBack }: Props) {
                     ...rebased,
                     state: {
                       ...stateForToday,
-                      totalFlowers: recomputeTotalFlowers(
-                        stateForToday,
-                        crambleQuests,
-                      ),
+                      totalFlowers: stateForToday.totalFlowers,
                     },
                   }
                   pendingDbSaveRef.current = recovered
@@ -727,160 +703,9 @@ export function CrambleExperience({ onBack }: Props) {
     syncConflictRef.current = false
   }
 
-  const toggleQuest = (id: string) => {
-    const previous = gameRef.current
-    if (!previous) return
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const quest = catalog.find((item) => item.id === id)
-    if (!quest) return
 
-    const next = toggleQuestCompletion(previous, quest)
-    const withUpdatedRenown = {
-      ...next,
-      totalFlowers: recomputeTotalFlowers(next, catalog),
-    }
-    void commitGameState(
-      reconcileQuestGraduation(
-        withUpdatedRenown,
-        crambleQuests,
-        'cramble',
-        quest,
-      ),
-    )
-  }
+  const addCrambleHabit = () => 'Observatory is disabled.'
 
-  const undoQuestOccurrence = (id: string) => {
-    const previous = gameRef.current
-    if (!previous) return
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const quest = catalog.find((item) => item.id === id)
-    if (!quest || quest.schedule?.kind !== 'periodTarget') return
-
-    const next = undoQuestCompletion(previous, quest)
-    if (next === previous) return
-    const withUpdatedRenown = {
-      ...next,
-      totalFlowers: recomputeTotalFlowers(next, catalog),
-    }
-    void commitGameState(
-      reconcileQuestGraduation(
-        withUpdatedRenown,
-        crambleQuests,
-        'cramble',
-        quest,
-      ),
-    )
-  }
-
-  const toggleSkip = (id: string) => {
-    const previous = gameRef.current
-    if (!previous) return
-    const quest = getQuestCatalog(crambleQuests, previous).find(
-      (item) => item.id === id,
-    )
-    if (!quest) return
-
-    const skipKey = getSkipEventKey(previous, quest)
-    const storedWeekKey = Object.entries(previous.questSkips ?? {}).find(
-      ([, skips]) => skips[skipKey] === true,
-    )?.[0]
-    const weekKey = storedWeekKey ?? getSkipWeekKey(previous.currentDate)
-    const skipsThisWeek = previous.questSkips?.[weekKey] ?? {}
-    const isSkipped = Boolean(skipsThisWeek[skipKey])
-    if (!isSkipped && getSkipProgress(previous).remaining <= 0) return
-
-    void commitGameState({
-      ...previous,
-      questSkips: {
-        ...previous.questSkips,
-        [weekKey]: {
-          ...skipsThisWeek,
-          [skipKey]: !isSkipped,
-        },
-      },
-    })
-  }
-
-  const addCrambleHabit = (input: NewHabitInput) => {
-    const previous = gameRef.current
-    if (!previous || !hasHanaStarted(previous)) {
-      return "Begin Cramble's First Oath before adding a habit."
-    }
-
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const existingTitles = catalog.map((quest) => quest.title)
-    const validationError = getNewHabitValidationError(input, existingTitles)
-    if (validationError) {
-      return validationError
-    }
-
-    const customHabit = createCustomHabitQuest(
-      input,
-      'cramble',
-      previous.currentDate,
-      existingTitles,
-    )
-    const withHabit: HanaGameState = {
-      ...previous,
-      customHabits: [...previous.customHabits, customHabit],
-      questActivations: {
-        ...(previous.questActivations ?? {}),
-        [customHabit.id]: addDays(previous.currentDate, 1),
-      },
-    }
-    void commitGameState(
-      updateHabitPreferences(withHabit, customHabit.id, {
-        cue: input.cue ?? '',
-        reminderTime: input.reminderTime ?? null,
-      }),
-    )
-    return null
-  }
-
-  const editCrambleHabit = (habitId: string, input: NewHabitInput) => {
-    const previous = gameRef.current
-    if (!previous) return 'Cramble’s tracker is not ready.'
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const habit = previous.customHabits.find((item) => item.id === habitId)
-    const existingTitles = catalog
-      .filter((quest) => quest.id !== habitId)
-      .map((quest) => quest.title)
-    const validationError = getNewHabitValidationError(input, existingTitles)
-    if (validationError) return validationError
-    if (!habit) {
-      if (!catalog.some((quest) => quest.id === habitId)) {
-        return 'That habit is unavailable.'
-      }
-      const withWording = updateHabitWording(previous, habitId, input)
-      void commitGameState(
-        updateHabitPreferences(withWording, habitId, {
-          cue: input.cue ?? '',
-          reminderTime: input.reminderTime ?? null,
-        }),
-      )
-      return null
-    }
-    if (
-      hasHabitHistory(previous, habitId) &&
-      !hasSameHabitScoringRules(habit, input)
-    ) {
-      return 'Frequency and effort cannot change after tracking begins. Archive this habit and add its new rhythm instead.'
-    }
-    const updatedHabit = updateCustomHabitQuest(habit, input, existingTitles)
-    const withDefinition: HanaGameState = {
-      ...previous,
-      customHabits: previous.customHabits.map((item) =>
-        item.id === habitId ? updatedHabit : item,
-      ),
-    }
-    void commitGameState(
-      updateHabitPreferences(withDefinition, habitId, {
-        cue: input.cue ?? '',
-        reminderTime: input.reminderTime ?? null,
-      }),
-    )
-    return null
-  }
 
   const addCrambleOpenActivity = (input: NewOpenActivityInput) => {
     const previous = gameRef.current
@@ -1107,10 +932,9 @@ export function CrambleExperience({ onBack }: Props) {
     const previous = gameRef.current
     if (!previous) return
     const purged = deleteHabitPermanently(previous, habitId)
-    const catalog = getQuestCatalog(crambleQuests, purged)
     void commitGameState({
       ...purged,
-      totalFlowers: recomputeTotalFlowers(purged, catalog),
+      totalFlowers: previous.totalFlowers,
     })
   }
 
@@ -1124,51 +948,8 @@ export function CrambleExperience({ onBack }: Props) {
     if (previous) void commitGameState(resumeProfileTracking(previous))
   }
 
-  const backfillCramble = (dateKey: string, habitId: string) => {
-    const previous = gameRef.current
-    if (!previous) return 'Cramble’s tracker is not ready.'
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const quest = catalog.find((item) => item.id === habitId)
-    if (!quest) return 'That habit is unavailable.'
-    const result = recordQuestCompletionForDate(previous, quest, dateKey)
-    if (result.error) return result.error
-    const withUpdatedRenown = {
-      ...result.state,
-      totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    }
-    void commitGameState(
-      reconcileQuestGraduation(
-        withUpdatedRenown,
-        crambleQuests,
-        'cramble',
-        quest,
-      ),
-    )
-    return null
-  }
-
-  const undoBackfillCramble = (dateKey: string, habitId: string) => {
-    const previous = gameRef.current
-    if (!previous) return "Cramble's tracker is not ready."
-    const catalog = getQuestCatalog(crambleQuests, previous)
-    const quest = catalog.find((item) => item.id === habitId)
-    if (!quest) return 'That habit is unavailable.'
-    const result = undoQuestCompletionForDate(previous, quest, dateKey)
-    if (result.error) return result.error
-    const withUpdatedRenown = {
-      ...result.state,
-      totalFlowers: recomputeTotalFlowers(result.state, catalog),
-    }
-    void commitGameState(
-      reconcileQuestGraduation(
-        withUpdatedRenown,
-        crambleQuests,
-        'cramble',
-        quest,
-      ),
-    )
-    return null
-  }
+  const backfillCramble = () => 'Observatory is disabled.'
+  const undoBackfillCramble = () => 'Observatory is disabled.'
 
   const backfillCrambleOpenActivity = (
     dateKey: string,
@@ -1282,22 +1063,15 @@ export function CrambleExperience({ onBack }: Props) {
       saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} />)
   }
 
-  if (view === 'observatory') {
+  if (view === 'lifetime' || view === 'observatory') {
     return withNavigation(
-      <ObservatoryPage
-        game={game}
-        onToggle={toggleQuest}
-        onUndoOccurrence={undoQuestOccurrence}
-        onEditHabit={editCrambleHabit}
-        onPauseHabit={pauseCrambleHabit}
-        onResumeHabit={resumeCrambleHabit}
-        onArchiveHabit={archiveCrambleHabit}
-        onRestoreHabit={restoreCrambleHabit}
-        onDeleteHabit={deleteCrambleHabit}
-        onResumeTracking={resumeAllCramble}
-        onSkip={toggleSkip}
-        onAddLesson={addCrambleHabit}
-      />
+      <LifetimePage counters={game.lifetimeCounters ?? []} today={game.currentDate} onChange={change => {
+        const current = gameRef.current
+        if (!current) return 'Cramble is not ready yet.'
+        const result = changeLifetime(current, change)
+        if (!result.error) void commitGameState(result.state)
+        return result.error
+      }} />
     )
   }
 
@@ -1339,7 +1113,7 @@ export function CrambleExperience({ onBack }: Props) {
     )
   }
 
-  if (view === 'ledgerDetail' && selectedQuestId) {
+  if (view === 'ledgerDetail' && selectedQuestId && game.openActivities.some(item => item.id === selectedQuestId)) {
     return withNavigation(
       <CrambleQuestDetailPage
         game={game}

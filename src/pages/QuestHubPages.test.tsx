@@ -73,7 +73,7 @@ describe('Garden and Observatory quest hubs', () => {
     const game = syncActiveQuestPlan(
       createStartedHanaState('2026-08-19'),
       crambleQuests,
-      CRAMBLE_QUEST_PLAN_OPTIONS,
+      { ...CRAMBLE_QUEST_PLAN_OPTIONS, disabled: false },
     )
 
     const html = renderToStaticMarkup(

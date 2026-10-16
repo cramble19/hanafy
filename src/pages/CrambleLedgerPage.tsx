@@ -571,7 +571,7 @@ export function HabitLedgerPage({
         </section>
       ) : null}
 
-      <section className="relative z-10 mt-5 grid grid-cols-3 gap-3">
+      {!isCramble && <><section className="relative z-10 mt-5 grid grid-cols-3 gap-3">
         <LedgerMetric
           icon={<CircleCheck className="size-4" />}
           label="Records"
@@ -737,6 +737,7 @@ export function HabitLedgerPage({
         </div>
       </section>
 
+      </>}
       <p className="relative z-10 mt-8 text-center text-xs leading-5 text-faint">
         {isCramble
           ? 'The page turns. Begin again whenever you are ready.'

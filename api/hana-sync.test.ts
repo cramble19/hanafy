@@ -218,6 +218,9 @@ describe('profile sync API revision writes', () => {
     // unrelated saves must retain it; newer payloads override it atomically.
     expect(database.transactionQueries.find(query => query.includes('UPDATE hana_state_snapshots')))
       .toContain("jsonb_build_object('somedayCategories', state -> 'somedayCategories')")
+    expect(database.transactionQueries.find(query => query.includes('UPDATE hana_state_snapshots')))
+      .toContain("jsonb_build_object('lifetimeCounters', state -> 'lifetimeCounters')")
+    expect(database.transactionQueries.join('\n')).not.toMatch(/(?:INSERT INTO|DELETE FROM) hana_(?:quest_statuses|weed_statuses)/)
     expect(database.transactionQueries).toEqual(
       expect.arrayContaining([
         expect.stringContaining('UPDATE hana_state_snapshots'),

@@ -5,10 +5,11 @@ import { readCrambleRoute, type CrambleView } from '@/hooks/useCrambleNavigation
 
 describe('shared Cramble navigation', () => {
   it('uses the same five destinations on every Cramble page and highlights the parent for details', () => {
-    const views: CrambleView[] = ['tracker','observatory','someday','rhythm','ledger','ledgerDetail','emotionHistory']
+    const views: CrambleView[] = ['tracker','lifetime','observatory','someday','rhythm','ledger','ledgerDetail','emotionHistory']
     for (const view of views) {
       const html = renderToStaticMarkup(<CrambleNavigation view={view} onNavigate={() => {}} />)
-      for (const label of ['Today','Observatory','Someday','Rhythm','Ledger']) expect(html).toContain(label)
+      for (const label of ['Today','Lifetime','Someday','Rhythm','Ledger']) expect(html).toContain(label)
+      expect(html).not.toContain('Observatory')
       expect(html.match(/<button/g)).toHaveLength(5)
       expect(html.match(/aria-current="page"/g)).toHaveLength(1)
       expect(html).not.toContain('Add habit')

@@ -4,6 +4,7 @@ import type { HanaGameState } from '@/types'
 export const CRAMBLE_STORAGE_KEY = 'cramble-game/v1'
 export const CRAMBLE_PENDING_STORAGE_KEY = 'cramble-game/pending-v1'
 export const CRAMBLE_QUEST_PLAN_OPTIONS = {
+  disabled: true,
   rotateExpiredLongTerm: true,
 } as const
 

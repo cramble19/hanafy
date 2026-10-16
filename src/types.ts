@@ -227,6 +227,8 @@ export type GardenWeed = {
 }
 
 export type GameState = {
+  /** Independent lifetime counters; no habit scoring or Observatory rewards. */
+  lifetimeCounters?: LifetimeCounter[]
   schemaVersion?: number
   /** Null means this profile has not started its tracker yet. */
   startDate: string | null
@@ -278,4 +280,13 @@ export type RhythmSettings = {
   categories: Record<string, string>
   /** Null explicitly means Unsorted, and must never be reseeded. */
   assignments: Record<string, string | null>
+}
+
+export type LifetimeCounter = {
+  id: string
+  title: string
+  description: string
+  startingTotal: number
+  createdDate: string
+  entries: { id: string; date: string; amount: number }[]
 }

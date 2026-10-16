@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export type CrambleView = 'tracker' | 'observatory' | 'ledger' | 'ledgerDetail' | 'emotionHistory' | 'someday' | 'rhythm'
+export type CrambleView = 'tracker' | 'observatory' | 'lifetime' | 'ledger' | 'ledgerDetail' | 'emotionHistory' | 'someday' | 'rhythm'
 type Route = { view: CrambleView; questId?: string; area?: string; taskId?: string; depth: number; dialogs: number }
 const key = 'hanafyCramble'
-const views: CrambleView[] = ['tracker', 'observatory', 'ledger', 'ledgerDetail', 'emotionHistory', 'someday', 'rhythm']
+const views: CrambleView[] = ['tracker', 'observatory', 'lifetime', 'ledger', 'ledgerDetail', 'emotionHistory', 'someday', 'rhythm']
 export function readCrambleRoute(value: unknown): Route | null {
   const route = (value as Record<string, Route> | null)?.[key]
   return route && views.includes(route.view) && Number.isInteger(route.depth) && route.depth >= 0
