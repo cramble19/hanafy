@@ -29,7 +29,7 @@ describe('EmotionHistoryPage', () => {
     expect(html).not.toContain('success rate')
   })
 
-  it('uses Cramble archive copy without changing the graph structure', () => {
+  it('uses the new Cramble chart with a range-dependent average', () => {
     const game = {
       ...createStartedHanaState('2026-08-01'),
       currentDate: '2026-08-10',
@@ -46,5 +46,7 @@ describe('EmotionHistoryPage', () => {
     expect(html).toContain('cramble-archive-shell')
     expect(html).toContain('A field record, never a judgment.')
     expect(html).toContain('Past 90 days')
+    expect(html).toContain('30-day average')
+    expect(html).toContain('emotion-trend-scroll')
   })
 })

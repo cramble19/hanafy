@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronLeft, CircleHelp } from 'lucide-react'
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
+import { EmotionTrendChart } from '@/components/EmotionTrendChart'
 import { usePageHeadingFocus } from '@/hooks/usePageHeadingFocus'
 import {
   EMOTIONS_BEST_FIRST,
@@ -128,7 +129,7 @@ export function EmotionHistoryPage({ game, profileId, onBack }: Props) {
           <h2 id={`${resultsId}-heading`} className="sr-only">
             Emotion timeline for the selected range
           </h2>
-          <svg
+          {isCramble ? <EmotionTrendChart key={range} game={game} range={range} /> : <svg
             className="emotion-history-chart"
             viewBox={`0 0 ${CHART.width} ${CHART.height}`}
             role="img"
@@ -211,9 +212,9 @@ export function EmotionHistoryPage({ game, profileId, onBack }: Props) {
                 </g>
               )
             })}
-          </svg>
+          </svg>}
 
-          {stats.recordedDays === 0 ? (
+          {!isCramble && (stats.recordedDays === 0 ? (
             <p className="emotion-history-empty">
               No emotions recorded in this range. Empty days stay neutral.
             </p>
@@ -221,7 +222,7 @@ export function EmotionHistoryPage({ game, profileId, onBack }: Props) {
             <p className="mt-1 text-center text-[11px] leading-5 text-muted">
               Blank dates are neutral gaps.
             </p>
-          )}
+          ))}
 
           <ol className="sr-only">
             {stats.days

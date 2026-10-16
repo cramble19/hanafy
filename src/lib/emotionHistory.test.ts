@@ -5,9 +5,41 @@ import {
   getCombinedEmotionStats,
   getEmotionHistoryStats,
   getEmotionTimelineRuns,
+  getRollingEmotionHistory,
 } from '@/lib/emotionHistory'
 
 describe('emotion history', () => {
+  it('adapts the trailing average to 7, 30 and 90 calendar days without mutating moods', () => {
+    const state = { ...createStartedHanaState('2026-01-01'), currentDate: '2026-10-17', dailyEmotions: {
+      '2026-10-17': 'bright' as const,
+      '2026-10-01': 'okay' as const,
+      '2026-08-01': 'heavy' as const,
+    } }
+    const before = JSON.stringify(state)
+    expect(getRollingEmotionHistory(state, 7).at(-1)?.average).toBe(5)
+    expect(getRollingEmotionHistory(state, 30).at(-1)?.average).toBe(4)
+    expect(getRollingEmotionHistory(state, 90).at(-1)?.average).toBe(3)
+    expect(JSON.stringify(state)).toBe(before)
+  })
+
+  it('uses pre-visible history and carries averages through blanks until the window is empty', () => {
+    const state = { ...createStartedHanaState('2026-08-01'), currentDate: '2026-08-10', dailyEmotions: {
+      '2026-08-02': 'good' as const,
+    } }
+    const days = getRollingEmotionHistory(state, 7)
+    expect(days[0]).toMatchObject({ dateKey: '2026-08-04', value: null, average: 4, count: 1 })
+    expect(days.find(day => day.dateKey === '2026-08-08')?.average).toBe(4)
+    expect(days.find(day => day.dateKey === '2026-08-09')?.average).toBeNull()
+  })
+
+  it('ignores records before profile start and after the inspected date', () => {
+    const state = { ...createStartedHanaState('2026-08-08'), currentDate: '2026-08-10', dailyEmotions: {
+      '2026-08-07': 'bright' as const,
+      '2026-08-10': 'heavy' as const,
+      '2026-08-11': 'good' as const,
+    } }
+    expect(getRollingEmotionHistory(state, 90).map(day => day.average)).toEqual([null, null, 1])
+  })
   it('builds the selected inclusive logical-day range', () => {
     const state = {
       ...createStartedHanaState('2026-07-01'),

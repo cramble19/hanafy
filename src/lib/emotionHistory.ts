@@ -41,6 +41,25 @@ export const EMOTIONS_BEST_FIRST: DailyEmotion[] = [
   'heavy',
 ]
 
+export const EMOTION_VALUES: Record<DailyEmotion, number> = { heavy: 1, low: 2, okay: 3, good: 4, bright: 5 }
+
+/** Trailing calendar windows include the current date and ignore missing moods.
+ * Read the full history, including records before the visible chart's left edge.
+ * An average is absent only if its entire window contains no recorded moods.
+ */
+export function getRollingEmotionHistory(state: GameState, range: EmotionHistoryRange) {
+  return getEmotionHistoryStats(state, range).days.map(day => {
+    let sum = 0, count = 0
+    for (let offset = 0; offset < range; offset++) {
+      const date = addDays(day.dateKey, -offset)
+      if (state.startDate && date < state.startDate) break
+      const emotion = state.dailyEmotions[date]
+      if (emotion && Object.hasOwn(EMOTION_VALUES, emotion)) { sum += EMOTION_VALUES[emotion]; count++ }
+    }
+    return { ...day, value: day.emotion ? EMOTION_VALUES[day.emotion] : null, average: count ? sum / count : null, count }
+  })
+}
+
 export function getEmotionHistoryStats(
   state: GameState,
   range: EmotionHistoryRange,
