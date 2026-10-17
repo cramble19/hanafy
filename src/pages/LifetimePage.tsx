@@ -22,14 +22,20 @@ export function LifetimePage({ counters, today, onChange }: Props) {
   return <div className="cramble-archive-shell rhythm-page lifetime-page">
     <ProfileTopBar profile="cramble" />
     <header className="rhythm-heading"><h1 ref={heading} tabIndex={-1}>Lifetime</h1></header>
-    <p className="lifetime-subtitle">Your life, counted over time.</p>
+    <p className="lifetime-subtitle">A quiet record of your life.</p>
     <main>
       {counters.length === 0 && <div className="lifetime-empty"><h2>Keep a lifetime tally</h2><p>Create a counter for something you want to keep track of. Start at zero, or enter an earlier total.</p></div>}
-      {counters.map(item => <article className="lifetime-card" key={item.id}>
-        <p className="lifetime-eyebrow">Lifetime counter</p><h2>{item.title}</h2>
-        <div className="lifetime-value-row"><span className="lifetime-value">{lifetimeTotal(item).toLocaleString()}<small>times</small></span><button type="button" className="lifetime-plus" aria-label={`Record one occurrence of ${item.title}`} onClick={() => record(item)}><Plus aria-hidden="true" /></button></div>
-        <button className="lifetime-text-button" onClick={() => setSelected(item.id)}>Details &amp; history</button>
-      </article>)}
+      {counters.map(item => {
+        const lastDate = item.entries.reduce<string | null>((latest, entry) => !latest || entry.date > latest ? entry.date : latest, null)
+        return <article className="lifetime-card" key={item.id}>
+          <button type="button" className="lifetime-card-open" aria-label={`View details and edit ${item.title}`} onClick={() => setSelected(item.id)}>
+            <span className="lifetime-card-title">{item.title}</span>
+            <span className="lifetime-card-meta">{lastDate ? `Last recorded · ${new Date(lastDate + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No dated records yet'}</span>
+            <span className="lifetime-card-total">{lifetimeTotal(item).toLocaleString()}<small>times</small></span>
+          </button>
+          <button type="button" className="lifetime-plus" aria-label={`Record one occurrence of ${item.title}`} onClick={() => record(item)}><Plus aria-hidden="true" /></button>
+        </article>
+      })}
       <div className="lifetime-notice" aria-live="polite">{notice}{undo?.entryId && <button className="lifetime-text-button" onClick={() => { const error = onChange({ type: 'undo', ...undo }); setNotice(error ?? 'Last record undone.'); if (!error) setUndo(null) }}>Undo</button>}</div>
       <button type="button" className="lifetime-add" onClick={() => setSelected('new')}><Plus size={18} aria-hidden="true" />Add counter</button>
     </main>
