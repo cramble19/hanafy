@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './styles/globals.css'
 import App from './App'
+import './styles/cramble-quiet-glass.css'
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
 
 async function bootstrap() {

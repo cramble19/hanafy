@@ -1,0 +1,67 @@
+/* One surface for existing Cramble cards. Layout, charts, navigation and Hana
+   remain owned by their existing components. Lifetime is the reference. */
+.cramble-app-shell {
+  --quiet-glass-surface: linear-gradient(125deg, #ffffff0d, #ffffff02);
+  --quiet-glass-border: #ffffff14;
+  --quiet-glass-shadow: inset 0 1px #ffffff0b, 0 8px 20px #0002;
+  --quiet-glass-radius: 24px;
+  --quiet-glass-ink: #eeeae1;
+  --quiet-glass-muted: #b6b0bc;
+  --quiet-glass-recorded: linear-gradient(125deg, #dfbc7714, #ffffff02);
+}
+
+.cramble-app-shell .cramble-archive-shell :is(
+  .lifetime-card,
+  .rhythm-area,
+  .sc-live-item,
+  .habit-ledger-card:not(.cramble-page-heading),
+  .anytime-log-card-board
+) {
+  background: var(--quiet-glass-surface);
+  border-color: var(--quiet-glass-border);
+  border-radius: var(--quiet-glass-radius);
+  box-shadow: var(--quiet-glass-shadow);
+  color: var(--quiet-glass-ink);
+}
+
+.cramble-app-shell .cramble-archive-shell .habit-ledger-card::after {
+  content: none;
+}
+
+.cramble-app-shell .cramble-archive-shell .anytime-log-section-cramble
+  .anytime-log-mosaic-group > .anytime-log-card-board[data-mosaic-size] {
+  border-radius: var(--quiet-glass-radius);
+}
+
+.cramble-app-shell .cramble-archive-shell :is(
+  .anytime-log-card-board[data-recorded='true'],
+  .sc-live-item.is-memory
+) {
+  background: var(--quiet-glass-recorded);
+  border-color: #dfbc7738;
+  color: var(--quiet-glass-ink);
+}
+
+.cramble-app-shell .cramble-archive-shell .anytime-log-card-board .anytime-log-copy h3 {
+  color: var(--quiet-glass-ink);
+  text-shadow: none;
+}
+.cramble-app-shell .cramble-archive-shell .anytime-log-card-board :is(.anytime-log-copy p, .anytime-log-today-count) {
+  color: var(--quiet-glass-muted);
+  text-shadow: none;
+}
+.cramble-app-shell .cramble-archive-shell .anytime-log-recorded-label,
+.cramble-app-shell .cramble-archive-shell .anytime-log-stepper :is(button, output) {
+  color: #dfbc77;
+  text-shadow: none;
+}
+.cramble-app-shell .cramble-archive-shell .anytime-log-rating button {
+  color: var(--quiet-glass-ink);
+  border-color: var(--quiet-glass-border);
+  background: #ffffff08;
+}
+.cramble-app-shell .cramble-archive-shell .anytime-log-rating button[aria-pressed='true'] {
+  color: #211d16;
+  border-color: #dfbc77;
+  background: #dfbc77;
+}
