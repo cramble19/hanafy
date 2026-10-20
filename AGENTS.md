@@ -39,3 +39,30 @@ For every user-facing UI change or feature, regardless of size:
 This applies to new screens, components, layout changes, styling changes,
 responsive behavior, user-facing flows, and visual states. Purely internal
 changes with no user-visible effect do not require a mockup.
+
+## Dashboard identity and shared easter egg
+
+These are required product conventions for every Project World Domination project,
+including when this repository is opened independently.
+
+- Design and maintain a distinctive project icon for the central Command Center
+  dashboard. Keep an editable vector asset in this repository and make it legible
+  at small sizes. Register matching artwork and its icon key in the dashboard;
+  a generic placeholder is not a completed integration.
+- Keep `project.yaml` dashboard metadata current. In the parent workspace, follow
+  `docs/repository-architecture.md` and update the current README/launcher catalogs
+  as required; metadata alone does not yet register a project. When working
+  standalone, report any parent/dashboard changes still needed and verify actual
+  registration before claiming the project appears there.
+- Add a shared easter egg to every user-facing project UI: a single click or tap
+  on the main project icon at the top left must visibly display exactly
+  **I love you 81141**. Do not require a double click, long press or secret sequence.
+  Support keyboard activation with an accessible button or link. Use a small,
+  readable toast or dismissible message consistent with the project's design.
+- Preserve the icon's existing navigation or sidebar action, and ensure that
+  action does not immediately hide the message. Do not change saved data or
+  authentication state when showing the easter egg.
+- Verify the icon, dashboard integration and easter egg during UI implementation
+  and release checks, including touch and keyboard use. A project with no UI must
+  retain this requirement for its first UI; do not invent a top-left CLI control.
+  Instructions describe required behavior, not proof that it is implemented.
