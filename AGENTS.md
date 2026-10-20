@@ -8,6 +8,12 @@
   `npm test`, `npm run typecheck`, and `npm run build` before publishing changes.
 - Preserve existing Git history and remotes. The GitHub `origin` remains the
   existing deployment source; the additional NVIDIA GitLab remote is `nvidia`.
+- NVIDIA GitLab is the primary source repository. For a release, push the same
+  tested commit to `nvidia` first, then to GitHub `origin` to trigger the existing
+  Vercel deployments. Verify both branch tips and deployment status; report any
+  partial push or failed deployment. Never force-push to resolve divergence.
+- Git stores source history, not application data backups. Do not commit database
+  dumps or secrets; saved user data needs its own private backup process.
 - Push child changes before publishing a parent submodule reference. Never
   force-push, reset dirty work, or import another project's source directly.
 - Keep all saved logs, moods, aspirations and counters intact. Do not run database

@@ -44,6 +44,21 @@ The additional `nvidia` remote is the independent workspace repository:
 Publish child commits before updating the parent workspace's submodule pin.
 GitLab pushes do not replace the existing GitHub-to-Vercel deployment workflow.
 
+NVIDIA GitLab is the primary source repository; GitHub is the selected hosting
+mirror. After checking both remotes for newer work and running the required checks,
+publish the same release commit to both:
+
+```sh
+git push nvidia main
+git push origin main
+```
+
+Verify both remote branch tips and the existing Vercel deployments before reporting
+a release as live. These remotes do not synchronize automatically. If a push fails
+or histories diverge, preserve both histories and resolve it without force-pushing.
+Git copies protect committed source history, not database records or uncommitted
+work. Application data requires separate private backups; never add it to Git.
+
 ## Testing
 
 ```sh
