@@ -1,5 +1,22 @@
 # Project Working Rules
 
+## Standalone development and workspace integration
+
+- This repository is Hanafy, an independent React/TypeScript application. It can
+  also be checked out as `projects/hanafy` in Project World Domination.
+- Use `npm ci` for setup, `npm run dev` for local UI development, and run
+  `npm test`, `npm run typecheck`, and `npm run build` before publishing changes.
+- Preserve existing Git history and remotes. The GitHub `origin` remains the
+  existing deployment source; the additional NVIDIA GitLab remote is `nvidia`.
+- Push child changes before publishing a parent submodule reference. Never
+  force-push, reset dirty work, or import another project's source directly.
+- Keep all saved logs, moods, aspirations and counters intact. Do not run database
+  migrations or production mutations for documentation or workspace integration.
+- Keep secrets, environment values and personal data out of commits. Use isolated
+  local fixtures for browser testing and preserve Hana/Cramble scope boundaries.
+- Dashboard registration only supplies launch links; it does not host this app
+  or alter its existing Vercel projects, database, or runtime configuration.
+
 ## Mockup-first UI workflow
 
 For every user-facing UI change or feature, regardless of size:

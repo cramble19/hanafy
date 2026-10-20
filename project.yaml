@@ -1,0 +1,22 @@
+name: hanafy
+description: "Personal habits, mood history, life aspirations and lifetime counters"
+status: active
+type: application
+language: TypeScript
+created: 2026-07-07
+dashboard:
+  name: "Hanafy"
+  category: "Habits & wellbeing"
+  icon: fitness
+  hidden: false
+  url: "https://hanafy-green.vercel.app"
+  resources:
+    - label: "Open Cramble"
+      url: "https://hanafy-cramble.vercel.app"
+commands:
+  setup: "npm ci"
+  dev: "npm run dev"
+  test: "npm test"
+  lint: "npm run typecheck"
+  format: null
+  build: "npm run build"
