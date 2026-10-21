@@ -17,6 +17,9 @@ describe('Lifetime quiet glass cards', () => {
     expect(html).toContain('Earlier reading')
     expect(html).toContain('dates unknown')
     expect(html).toContain('&lt;script&gt;context&lt;/script&gt;')
+    expect(html).toContain('Edit record from 2026-10-20')
+    expect(html).toContain('>Edit</button>')
+    expect(html).toContain('Remove record from 2026-10-20')
   })
   it('exposes details and editing separately from recording, showing the latest date', () => {
     const html = renderToStaticMarkup(<LifetimePage today="2026-10-17" onChange={vi.fn()} counters={[{

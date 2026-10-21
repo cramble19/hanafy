@@ -1043,7 +1043,11 @@ export function CrambleExperience({ onBack }: Props) {
     <CrambleBackground />
     <CrambleSettingsContext.Provider value={() => setSettingsOpen(true)}><CrambleSharedSyncContext.Provider value={true}>{page}</CrambleSharedSyncContext.Provider></CrambleSettingsContext.Provider>
     <CloudSyncNotice profile="cramble" status={cloudSyncStatus} hasPendingSave={Boolean(pendingDbSaveRef.current)} saveConfirmedAt={saveConfirmedAt} onRetry={() => void refreshFromDb()} onExportBackup={() => downloadProfileJson(game, crambleQuests, 'cramble')} />
-    {settingsOpen && <CrambleSettings habits={getRhythmSettings(game, getRhythmTrackers(game, crambleQuests))} someday={getSomedayCategories(game)} habitIds={game.openActivities.map(item => item.id)} somedayIds={(game.somedayItems ?? []).map(item => item.id)} onClose={() => setSettingsOpen(false)} onSomedayChange={updateSomedayCategory} onHabitChange={change => {
+    {settingsOpen && <CrambleSettings habits={getRhythmSettings(game, getRhythmTrackers(game, crambleQuests))} someday={getSomedayCategories(game)} habitIds={game.openActivities.map(item => item.id)} habitTitles={Object.fromEntries(game.openActivities.map(item => [item.id, item.title]))} onTodayOrderChange={today => {
+      const current = gameRef.current
+      if (!current) return
+      void commitGameState({ ...current, rhythm: { ...getRhythmSettings(current, getRhythmTrackers(current, crambleQuests)), today } })
+    }} somedayIds={(game.somedayItems ?? []).map(item => item.id)} onClose={() => setSettingsOpen(false)} onSomedayChange={updateSomedayCategory} onHabitChange={change => {
       const current = gameRef.current
       if (!current) return 'Cramble is not ready.'
       const result = changeRhythmCategory({ ...current, rhythm: getRhythmSettings(current, getRhythmTrackers(current, crambleQuests)) }, change)

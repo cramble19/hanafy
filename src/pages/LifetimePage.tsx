@@ -43,6 +43,7 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
   const [editing, setEditing] = useState(!counter)
   const [recording, setRecording] = useState(initialRecording)
   const [note, setNote] = useState('')
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
   const entryId = useRef(crypto.randomUUID())
   const [title, setTitle] = useState(counter?.title ?? '')
   const [description, setDescription] = useState(counter?.description ?? '')
@@ -59,18 +60,19 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
     return () => { document.body.style.overflow = overflow; opener?.focus() }
   }, [])
   return <dialog ref={ref} className="add-habit-dialog add-habit-dialog-cramble lifetime-dialog" aria-label={counter ? 'Counter details' : 'Add counter'} onCancel={onClose}>
-    <div className="lifetime-dialog-heading"><h2>{recording ? 'Record occurrence' : editing ? counter ? 'Edit counter' : 'Add counter' : counter?.title}</h2><button type="button" aria-label="Close counter" onClick={onClose}><X /></button></div>
+    <div className="lifetime-dialog-heading"><h2>{recording ? editingEntryId ? 'Edit entry' : 'Record occurrence' : editing ? counter ? 'Edit counter' : 'Add counter' : counter?.title}</h2><button type="button" aria-label="Close counter" onClick={onClose}><X /></button></div>
     {recording && counter ? <form onSubmit={event => {
       event.preventDefault()
-      const result = onChange({ type: 'record', id: counter.id, date, note, entryId: entryId.current })
+      const result = onChange(editingEntryId ? { type: 'edit-entry', id: counter.id, date, note, entryId: editingEntryId } : { type: 'record', id: counter.id, date, note, entryId: entryId.current })
       setError(result)
-      if (!result) { onRecorded?.(counter.id, entryId.current); setRecording(false); setNote(''); entryId.current = crypto.randomUUID() }
+      if (!result) { if (!editingEntryId) onRecorded?.(counter.id, entryId.current); setRecording(false); setEditingEntryId(null); setNote(''); setDate(today); entryId.current = crypto.randomUUID() }
     }}>
       <p className="lifetime-subtitle">{counter.title}</p>
       <label>Date<input type="date" required max={today} value={date} onChange={event => setDate(event.target.value)} /></label>
-      <label>What prompted it? · optional<textarea maxLength={2000} value={note} onChange={event => setNote(event.target.value)} placeholder="An occasion, a feeling, or a little context…" /></label>
+      <label>{editingEntryId ? 'Description · optional' : 'What prompted it? · optional'}<textarea maxLength={2000} value={note} onChange={event => setNote(event.target.value)} placeholder="An occasion, a feeling, or a little context…" /></label>
       <p className="lifetime-subtitle">Up to 2,000 characters.</p>
-      <div className="lifetime-record-actions"><button type="button" className="lifetime-text-button" onClick={() => { setRecording(false); setNote(''); setError(null) }}>Cancel</button><button className="lifetime-save" type="submit">Save +1</button></div>
+      {editingEntryId && <p className="lifetime-subtitle">Editing this entry won’t change your total.</p>}
+      <div className="lifetime-record-actions"><button type="button" className="lifetime-text-button" onClick={() => { setRecording(false); setEditingEntryId(null); setNote(''); setDate(today); setError(null) }}>Cancel</button><button className="lifetime-save" type="submit">{editingEntryId ? 'Save changes' : 'Save +1'}</button></div>
     </form> : editing ? <form onSubmit={event => { event.preventDefault(); const result = onChange({ type: 'save', id: counter?.id, title, description, startingDescription, startingTotal: startingTotal === '' ? NaN : Number(startingTotal) }); setError(result); if (!result) { if (counter) setEditing(false); else onClose() } }}>
       <label>Name<input required maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="Times I drank alcohol" /></label>
       <label>Description<textarea maxLength={2000} value={description} onChange={event => setDescription(event.target.value)} placeholder="What counts as one occurrence?" /></label>
@@ -87,6 +89,7 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
       {counter.startingDescription && <p className="lifetime-description">{counter.startingDescription}</p>}
       <ul className="lifetime-history">{[...counter.entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <li key={entry.id}>
         <div className="lifetime-entry-context"><span>{new Date(entry.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · +{entry.amount}</span>{entry.note && <p className="lifetime-description">{entry.note}</p>}</div>
+        <button type="button" className="lifetime-text-button" aria-label={`Edit record from ${entry.date}${entry.note ? `: ${entry.note}` : ''}`} onClick={() => { setEditingEntryId(entry.id); setDate(entry.date); setNote(entry.note ?? ''); setRecording(true); setRemoveId(null); setError(null) }}>Edit</button>
         {removeId === entry.id ? <span><button className="lifetime-text-button" onClick={() => { setError(onChange({ type: 'undo', id: counter.id, entryId: entry.id })); setRemoveId(null) }}>Confirm removal</button><button className="lifetime-text-button" onClick={() => setRemoveId(null)}>Cancel</button></span> : <button className="lifetime-text-button" aria-label={`Remove record from ${entry.date}`} onClick={() => setRemoveId(entry.id)}>Remove</button>}
       </li>)}</ul>
     </>}

@@ -7,6 +7,45 @@ import { queuePendingProfileSync, rebasePendingProfileSync } from './profileSync
 
 const fixture = () => changeLifetime({ ...createStartedHanaState('2026-10-16'), totalFlowers: 23, dailyCompletions: { '2026-10-01': { old: true } } }, { type: 'save', title: 'Alcohol occasions', description: 'One session', startingTotal: 12 }).state
 describe('Lifetime counters and retired Observatory', () => {
+  it('edits the exact entry while preserving amounts, baseline and other records', () => {
+    const base = fixture(), id = base.lifetimeCounters![0].id
+    const recorded = changeLifetime(base, { type: 'record', id, date: base.currentDate, entryId: 'first' }).state
+    const original = changeLifetime(recorded, { type: 'record', id, date: base.currentDate, entryId: 'second', note: 'Keep me' }).state
+    const result = changeLifetime(original, { type: 'edit-entry', id, entryId: 'first', date: '2025-10-01', note: ' Vietnam ' })
+    expect(result.error).toBeNull()
+    expect(result.state.lifetimeCounters![0].entries).toEqual([{ id: 'first', amount: 1, date: '2025-10-01', note: 'Vietnam' }, original.lifetimeCounters![0].entries[1]])
+    expect(lifetimeTotal(result.state.lifetimeCounters![0])).toBe(14)
+    expect(result.state.dailyCompletions).toBe(original.dailyCompletions)
+    expect(result.state.lifetimeCounters![0].startingTotal).toBe(12)
+    const cleared = changeLifetime(result.state, { type: 'edit-entry', id, entryId: 'first', date: '2025-10-01', note: '' })
+    expect(cleared.state.lifetimeCounters![0].entries[0].note).toBe('')
+    expect(readLifetimeCounters(cleared.state.lifetimeCounters)).toEqual(cleared.state.lifetimeCounters)
+  })
+  it('rejects invalid edits and missing entries without changing data', () => {
+    const base = fixture(), id = base.lifetimeCounters![0].id
+    const state = changeLifetime(base, { type: 'record', id, date: base.currentDate, entryId: 'entry' }).state
+    for (const date of ['2026-10-17', '2026-02-30', 'bad']) {
+      const result = changeLifetime(state, { type: 'edit-entry', id, entryId: 'entry', date, note: '' })
+      expect(result.error).toBeTruthy()
+      expect(result.state).toBe(state)
+    }
+    for (const [entryId, note] of [['missing', ''], ['entry', 'x'.repeat(2001)]]) {
+      const result = changeLifetime(state, { type: 'edit-entry', id, entryId, date: base.currentDate, note })
+      expect(result.error).toBeTruthy()
+      expect(result.state).toBe(state)
+    }
+  })
+  it('preserves an entry edit alongside a concurrent new record through sync and reload', () => {
+    const initial = fixture(), id = initial.lifetimeCounters![0].id
+    const base = changeLifetime(initial, { type: 'record', id, date: initial.currentDate, entryId: 'entry' }).state
+    const local = changeLifetime(base, { type: 'edit-entry', id, entryId: 'entry', date: '2025-10-01', note: 'Vietnam' }).state
+    const remote = changeLifetime(base, { type: 'record', id, date: base.currentDate, entryId: 'new' }).state
+    const merged = rebasePendingProfileSync(queuePendingProfileSync(base, local, null), remote, 5)!.state
+    const loaded = parseStoredHanaState(JSON.stringify(merged), crambleQuests, base.currentDate, CRAMBLE_QUEST_PLAN_OPTIONS)!
+    expect(loaded.lifetimeCounters![0].entries).toContainEqual({ id: 'entry', date: '2025-10-01', amount: 1, note: 'Vietnam' })
+    expect(loaded.lifetimeCounters![0].entries).toHaveLength(2)
+    expect(lifetimeTotal(loaded.lifetimeCounters![0])).toBe(14)
+  })
   it('adds starting context to an existing total without inventing dates or changing records', () => {
     const base = fixture(), counter = base.lifetimeCounters![0]
     const state = changeLifetime(base, { type: 'save', id: counter.id, title: counter.title, description: counter.description, startingTotal: 12, startingDescription: ' Estimated before tracking ' }).state

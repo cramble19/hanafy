@@ -1,0 +1,6 @@
+.today-group-heading{grid-column:1 / -1;margin:20px 0 4px;color:#ded8c9;font-size:15px;font-weight:500}
+.today-order-buttons{display:flex;align-items:center;gap:2px}
+.today-order-buttons button{min-width:44px;min-height:44px;display:grid;place-items:center}
+.today-order-buttons button:disabled{opacity:.3}
+.sc-category-dialog .sc-category-row{flex-wrap:wrap}
+.sc-category-dialog select{width:100%;min-height:44px;background:#272a33;border:1px solid #ffffff26;border-radius:12px;color:#eeeae3;padding:10px;font-size:16px;color-scheme:dark}

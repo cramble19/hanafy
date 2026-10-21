@@ -6,6 +6,7 @@ import {
   useId,
   useRef,
   useState,
+  Fragment,
 } from 'react'
 import { EmotionFaceIcon } from '@/components/icons/EmotionFaceIcon'
 import type { DailyEmotion, OpenActivity } from '@/types'
@@ -47,6 +48,7 @@ export type AnytimeLogMosaicGroup = {
  */
 export function groupAnytimeActivitiesForMosaic(
   activities: OpenActivity[],
+  preserveOrder = false,
 ): AnytimeLogMosaicGroup[] {
   const groups: AnytimeLogMosaicGroup[] = []
   let pending: OpenActivity[] = []
@@ -61,14 +63,15 @@ export function groupAnytimeActivitiesForMosaic(
       (activity) => activity.kind === 'count',
     )
     const featureIndex = ratingIndex >= 0 ? ratingIndex : countIndex
-    const resolvedFeatureIndex = featureIndex >= 0 ? featureIndex : 0
+    const featureSide = preserveOrder && ratingIndex >= 0 ? 'left' : groups.length % 2 === 0 ? 'left' : 'right'
+    const resolvedFeatureIndex = preserveOrder ? (featureSide === 'left' ? 0 : pending.length - 1) : featureIndex >= 0 ? featureIndex : 0
     const feature = pending[resolvedFeatureIndex]
     const compact = pending.filter((_, index) => index !== resolvedFeatureIndex)
 
     groups.push({
       feature,
       compact,
-      featureSide: groups.length % 2 === 0 ? 'left' : 'right',
+      featureSide,
     })
     pending = []
   }
@@ -77,7 +80,7 @@ export function groupAnytimeActivitiesForMosaic(
     const hasRatingLog = pending.some(
       (pendingActivity) => pendingActivity.kind === 'rating',
     )
-    if (activity.kind === 'rating' && hasRatingLog) finishGroup()
+    if (activity.kind === 'rating' && (hasRatingLog || preserveOrder)) finishGroup()
 
     pending.push(activity)
     if (pending.length === 3) finishGroup()
@@ -111,6 +114,7 @@ export function isAnytimeLogManageKey(
 export type AnytimeLogSectionProps = {
   profile: AnytimeLogProfile
   activities: OpenActivity[]
+  sections?: { id: string; title: string; activities: OpenActivity[] }[]
   /** Counts for the current 04:00-to-04:00 tracker day. */
   todayCounts: Record<string, number>
   /** Profile pauses can leave the field notes visible while preventing new logs. */
@@ -125,6 +129,7 @@ export type AnytimeLogSectionProps = {
 export function AnytimeLogSection({
   profile,
   activities,
+  sections,
   todayCounts,
   disabled = false,
   onIncrement,
@@ -146,7 +151,9 @@ export function AnytimeLogSection({
     filter,
   )
   const boardActivities = filteredActivities
-  const mosaicGroups = groupAnytimeActivitiesForMosaic(boardActivities)
+  const mosaicGroups = (sections ?? [{ id: 'all', title: '', activities: boardActivities }]).flatMap(section =>
+    groupAnytimeActivitiesForMosaic(section.activities.filter(item => boardActivities.some(visible => visible.id === item.id)), Boolean(sections))
+      .map((group, index) => ({ ...group, sectionTitle: index === 0 ? section.title : '' })))
   const moveFocusBeforeRemoval = (activityId: string) => {
     const cards = Array.from(
       resultsRef.current?.querySelectorAll<HTMLElement>(
@@ -239,6 +246,8 @@ export function AnytimeLogSection({
                       : [...group.compact, group.feature]
 
                   return (
+                    <Fragment key={group.feature.id}>
+                    {group.sectionTitle && <h3 className="today-group-heading">{group.sectionTitle}</h3>}
                     <div
                       key={group.feature.id}
                       className="anytime-log-mosaic-group"
@@ -269,6 +278,7 @@ export function AnytimeLogSection({
                         />
                       ))}
                     </div>
+                    </Fragment>
                   )
                 })}
               </div>

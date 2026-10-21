@@ -6,6 +6,7 @@ const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Numbe
 export type LifetimeChange =
   | { type: 'save'; id?: string; title: string; description: string; startingTotal: number; startingDescription?: string }
   | { type: 'record'; id: string; date: string; entryId?: string; note?: string }
+  | { type: 'edit-entry'; id: string; entryId: string; date: string; note: string }
   | { type: 'undo'; id: string; entryId: string }
 
 export function changeLifetime(state: GameState, change: LifetimeChange): { state: GameState; error: string | null } {
@@ -25,12 +26,17 @@ export function changeLifetime(state: GameState, change: LifetimeChange): { stat
     updated = { ...(counter ?? { id: crypto.randomUUID(), createdDate: state.currentDate, entries: [] }), title, description, startingTotal: change.startingTotal, startingDescription }
   } else {
     if (!counter) return fail('This counter is no longer available.')
-    if (change.type === 'record') {
+    if (change.type === 'record' || change.type === 'edit-entry') {
       const note = (change.note ?? '').trim()
       if (note.length > 2000) return fail('Keep the event note under 2,000 characters.')
       if (!validDate(change.date) || change.date > state.currentDate) return fail('Choose a valid date no later than today.')
-      if (change.entryId && counter.entries.some(entry => entry.id === change.entryId)) return { state, error: null }
-      updated = { ...counter, entries: [...counter.entries, { id: change.entryId ?? crypto.randomUUID(), date: change.date, amount: 1, note }] }
+      if (change.type === 'edit-entry') {
+        if (!counter.entries.some(entry => entry.id === change.entryId)) return fail('This entry is no longer available.')
+        updated = { ...counter, entries: counter.entries.map(entry => entry.id === change.entryId ? { ...entry, date: change.date, note } : entry) }
+      } else {
+        if (change.entryId && counter.entries.some(entry => entry.id === change.entryId)) return { state, error: null }
+        updated = { ...counter, entries: [...counter.entries, { id: change.entryId ?? crypto.randomUUID(), date: change.date, amount: 1, note }] }
+      }
     } else {
       updated = { ...counter, entries: counter.entries.filter(entry => entry.id !== change.entryId) }
     }

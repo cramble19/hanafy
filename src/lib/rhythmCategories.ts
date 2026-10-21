@@ -41,7 +41,14 @@ export function readRhythmSettings(value: unknown): RhythmSettings | undefined {
   const assignments = Object.fromEntries(Object.entries(value.assignments).filter(([id]) =>
     id.length > 0 && id.length <= 200,
   ).map(([id, category]) => [id, typeof category === 'string' && Object.hasOwn(categories, category) ? category : null]))
-  return { version: 1, categories, assignments }
+  const today = record(value.today) && ['groups', 'manual', '7', '30'].includes(String(value.today.sort))
+    ? { sort: value.today.sort as NonNullable<RhythmSettings['today']>['sort'],
+      groupOrder: readOrder(value.today.groupOrder), habitOrder: readOrder(value.today.habitOrder) } : undefined
+  return { version: 1, categories, assignments, ...(today ? { today } : {}) }
+}
+
+function readOrder(value: unknown): string[] {
+  return Array.isArray(value) ? [...new Set(value.filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 200))].slice(0, 2000) : []
 }
 
 /** Titles are matched only for this initial seed; every later operation uses stable IDs. */

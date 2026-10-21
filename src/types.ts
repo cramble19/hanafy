@@ -280,6 +280,7 @@ export type RhythmSettings = {
   categories: Record<string, string>
   /** Null explicitly means Unsorted, and must never be reseeded. */
   assignments: Record<string, string | null>
+  today?: { sort: 'groups' | 'manual' | '7' | '30'; groupOrder: string[]; habitOrder: string[] }
 }
 
 export type LifetimeCounter = {

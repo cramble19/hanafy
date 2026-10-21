@@ -43,6 +43,7 @@ import {
 import { downloadProfileJson } from '@/lib/habitExport'
 import { getRhythmSettings } from '@/lib/rhythmCategories'
 import { getRhythmTrackers } from '@/lib/rhythmStats'
+import { todaySections } from '@/lib/todayOrder'
 
 export type CrambleSyncStatus =
   | 'idle'
@@ -237,6 +238,7 @@ export function CramblePage({
       <AnytimeLogSection
         profile="cramble"
         activities={activeOpenActivities}
+        sections={todaySections(activeOpenActivities, getRhythmSettings(game, getRhythmTrackers(game, crambleQuests)), game.openActivityLogs, game.currentDate)}
         todayCounts={game.openActivityLogs[game.currentDate] ?? {}}
         disabled={Boolean(activeProfilePause)}
         onIncrement={onIncrementOpenActivity}
