@@ -1,4 +1,4 @@
-import chronicles from '../data/crambleChronicles.json'
+import chronicles from '../data/crambleChronicles.json' with { type: 'json' }
 
 export type PushSchedule = { quoteHour: number; reminderHours: number[] }
 export const defaultPushSchedule: PushSchedule = { quoteHour: 8, reminderHours: [22, 0, 2] }

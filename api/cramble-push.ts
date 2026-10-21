@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 import webpush from 'web-push'
-import { indiaClock, profilePaused, pushMessage, validPushSchedule } from '../src/lib/pushSchedule'
+import { indiaClock, profilePaused, pushMessage, validPushSchedule } from '../src/lib/pushSchedule.js'
 
 type Request = { method?: string; body?: unknown; query?: Record<string, string | string[] | undefined>; headers: Record<string, string | string[] | undefined> }
 type Response = { setHeader(name: string, value: string): void; status(code: number): Response; json(body: unknown): void }
