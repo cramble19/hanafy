@@ -17,7 +17,7 @@ import {
   ProfilePauseBanner,
   TodayUtilityActions,
 } from '@/components/TodayHabitControls'
-import crambleChronicles from '@/data/crambleChronicles.json'
+import { getChronicleLine } from '@/lib/pushSchedule'
 import { crambleQuests } from '@/data/crambleQuests'
 import { type NewHabitInput } from '@/lib/customHabits'
 import {
@@ -54,11 +54,6 @@ export type CrambleSyncStatus =
   | 'conflict'
   | 'offline'
   | 'disabled'
-
-type ChronicleLine = {
-  id: string
-  text: string
-}
 
 type Props = {
   game: HanaGameState
@@ -103,8 +98,6 @@ type Props = {
   saveConfirmedAt: number | null
   onBack?: () => void
 }
-
-const chronicleLines = crambleChronicles as ChronicleLine[]
 
 export function CramblePage({
   game,
@@ -391,13 +384,6 @@ export function CramblePage({
       ) : null}
     </div>
   )
-}
-
-function getChronicleLine(dateKey: string) {
-  const index =
-    dateKey.split('').reduce((sum, character) => sum + character.charCodeAt(0), 0) %
-    chronicleLines.length
-  return chronicleLines[index]
 }
 
 function getSyncLabel(

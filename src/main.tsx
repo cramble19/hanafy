@@ -7,6 +7,9 @@ import './styles/cramble-quiet-glass.css'
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
 
 async function bootstrap() {
+  if (new URLSearchParams(window.location.search).get('notification') === 'cramble') {
+    window.history.replaceState({ ...window.history.state, hanafyCramble: { view: 'tracker', depth: 0, dialogs: 0 } }, '')
+  }
   if (import.meta.env.VITE_APP_ENTRY === 'cramble') {
     document.title = 'Cramble'
   }

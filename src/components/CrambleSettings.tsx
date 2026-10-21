@@ -6,6 +6,7 @@ import '@/pages/someday-categories.css'
 import { defaultTodayOrder, orderedIds, type TodayOrder } from '@/lib/todayOrder'
 import { OrderButtons, TodaySortSelect } from './TodayOrderControls'
 import './today-order.css'
+import { NotificationSettings } from './NotificationSettings'
 
 export const CrambleSettingsContext = createContext<(() => void) | undefined>(undefined)
 export const CrambleSharedSyncContext = createContext(false)
@@ -21,7 +22,7 @@ type Props = {
 }
 export function CrambleSettings({ habits, someday, habitIds, somedayIds, onHabitChange, onSomedayChange, onClose, habitTitles = {}, onTodayOrderChange }: Props) {
   const ref = useRef<HTMLDialogElement>(null), headingId = useId()
-  const [section, setSection] = useState<'habits' | 'someday' | null>(null)
+  const [section, setSection] = useState<'habits' | 'someday' | 'notifications' | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -50,8 +51,8 @@ export function CrambleSettings({ habits, someday, habitIds, somedayIds, onHabit
   }
   return <dialog ref={ref} className="someday-dialog someday-dialog-cramble sc-category-dialog" aria-labelledby={headingId} onCancel={event => { event.preventDefault(); onClose() }}>
     <div className="someday-dialog-panel">
-      <div className="someday-dialog-heading"><h2 id={headingId}>{section ? section === 'habits' ? 'Today settings' : 'Someday categories' : 'Settings'}</h2><button type="button" aria-label="Close settings" onClick={onClose}><X aria-hidden="true" /></button></div>
-      {!section ? <div className="cramble-settings-sections">{(['habits', 'someday'] as const).map(value => <button type="button" key={value} onClick={() => changeSection(value)}>{value === 'habits' ? 'Today · sorting & groups' : 'Someday categories'}<ChevronRight size={18} aria-hidden="true" /></button>)}</div> : <>
+      <div className="someday-dialog-heading"><h2 id={headingId}>{section ? section === 'notifications' ? 'Notifications' : section === 'habits' ? 'Today settings' : 'Someday categories' : 'Settings'}</h2><button type="button" aria-label="Close settings" onClick={onClose}><X aria-hidden="true" /></button></div>
+      {!section ? <div className="cramble-settings-sections">{(['habits', 'someday', 'notifications'] as const).map(value => <button type="button" key={value} onClick={() => changeSection(value)}>{value === 'notifications' ? 'Notifications' : value === 'habits' ? 'Today · sorting & groups' : 'Someday categories'}<ChevronRight size={18} aria-hidden="true" /></button>)}</div> : section === 'notifications' ? <><button type="button" className="rhythm-text-button" onClick={() => changeSection(null)}><ArrowLeft size={16} aria-hidden="true" />Settings</button><NotificationSettings /></> : <>
         <button type="button" className="rhythm-text-button" onClick={() => changeSection(null)}><ArrowLeft size={16} aria-hidden="true" />Settings</button>
         <p className="someday-dialog-intro">{section === 'habits' ? 'Groups are shared with Rhythm. Your records stay unchanged.' : 'For Somedays and completed memories only. Habit categories stay separate.'}</p>
         {section === 'habits' && onTodayOrderChange && <>

@@ -79,6 +79,7 @@ export default defineConfig(({ command, mode }) => {
         ],
       },
       workbox: {
+        importScripts: ['/push-events.js'],
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}'],
