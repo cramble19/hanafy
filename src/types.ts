@@ -287,6 +287,7 @@ export type LifetimeCounter = {
   title: string
   description: string
   startingTotal: number
+  startingDescription?: string
   createdDate: string
-  entries: { id: string; date: string; amount: number }[]
+  entries: { id: string; date: string; amount: number; note?: string }[]
 }

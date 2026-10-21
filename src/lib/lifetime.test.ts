@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changeLifetime, lifetimeTotal } from './lifetime'
+import { changeLifetime, lifetimeTotal, readLifetimeCounters } from './lifetime'
 import { createStartedHanaState, parseStoredHanaState, resetProfileProgress, syncStateToDate } from './hanaGame'
 import { CRAMBLE_QUEST_PLAN_OPTIONS } from './crambleGame'
 import { crambleQuests } from '@/data/crambleQuests'
@@ -7,6 +7,34 @@ import { queuePendingProfileSync, rebasePendingProfileSync } from './profileSync
 
 const fixture = () => changeLifetime({ ...createStartedHanaState('2026-10-16'), totalFlowers: 23, dailyCompletions: { '2026-10-01': { old: true } } }, { type: 'save', title: 'Alcohol occasions', description: 'One session', startingTotal: 12 }).state
 describe('Lifetime counters and retired Observatory', () => {
+  it('adds starting context to an existing total without inventing dates or changing records', () => {
+    const base = fixture(), counter = base.lifetimeCounters![0]
+    const state = changeLifetime(base, { type: 'save', id: counter.id, title: counter.title, description: counter.description, startingTotal: 12, startingDescription: ' Estimated before tracking ' }).state
+    expect(state.lifetimeCounters![0].startingDescription).toBe('Estimated before tracking')
+    expect(state.lifetimeCounters![0].entries).toEqual([])
+    expect(lifetimeTotal(state.lifetimeCounters![0])).toBe(12)
+    const renamed = changeLifetime(state, { type: 'save', id: counter.id, title: 'Renamed', description: '', startingTotal: 12 }).state
+    expect(renamed.lifetimeCounters![0].startingDescription).toBe('Estimated before tracking')
+    expect(readLifetimeCounters(base.lifetimeCounters)).toEqual(base.lifetimeCounters)
+  })
+  it('persists individual notes and baseline context through reload and concurrent synchronization', () => {
+    const base = fixture(), counter = base.lifetimeCounters![0]
+    const local = changeLifetime(base, { type: 'record', id: counter.id, date: '2026-10-16', entryId: 'noted', note: ' Birthday dinner ' }).state
+    const remote = changeLifetime(base, { type: 'save', id: counter.id, title: counter.title, description: counter.description, startingTotal: 12, startingDescription: 'Earlier occasions' }).state
+    const merged = rebasePendingProfileSync(queuePendingProfileSync(base, local, null), remote, 5)!.state
+    const loaded = parseStoredHanaState(JSON.stringify(merged), crambleQuests, base.currentDate, CRAMBLE_QUEST_PLAN_OPTIONS)!
+    expect(loaded.lifetimeCounters![0].startingDescription).toBe('Earlier occasions')
+    expect(loaded.lifetimeCounters![0].entries[0].note).toBe('Birthday dinner')
+    expect(lifetimeTotal(loaded.lifetimeCounters![0])).toBe(13)
+    const repeated = changeLifetime(loaded, { type: 'record', id: counter.id, date: '2026-10-16', entryId: 'noted', note: 'Birthday dinner' }).state
+    expect(repeated).toBe(loaded)
+  })
+  it('rejects oversized notes without changing totals and permits empty notes', () => {
+    const base = fixture(), counter = base.lifetimeCounters![0]
+    expect(changeLifetime(base, { type: 'record', id: counter.id, date: base.currentDate, note: 'x'.repeat(2001) }).state).toBe(base)
+    expect(changeLifetime(base, { type: 'save', id: counter.id, title: counter.title, description: '', startingTotal: 12, startingDescription: 'x'.repeat(2001) }).state).toBe(base)
+    expect(changeLifetime(base, { type: 'record', id: counter.id, date: base.currentDate, note: '' }).error).toBeNull()
+  })
   it('records repeated dates, corrects starting totals, and undoes the exact occurrence', () => {
     const original = fixture(), id = original.lifetimeCounters![0].id
     let state = changeLifetime(original, { type: 'record', id, date: '2026-10-16', entryId: 'first' }).state

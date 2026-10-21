@@ -4,8 +4,8 @@ export const lifetimeTotal = (counter: LifetimeCounter) => counter.startingTotal
 const validNumber = (value: number) => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 export type LifetimeChange =
-  | { type: 'save'; id?: string; title: string; description: string; startingTotal: number }
-  | { type: 'record'; id: string; date: string; entryId?: string }
+  | { type: 'save'; id?: string; title: string; description: string; startingTotal: number; startingDescription?: string }
+  | { type: 'record'; id: string; date: string; entryId?: string; note?: string }
   | { type: 'undo'; id: string; entryId: string }
 
 export function changeLifetime(state: GameState, change: LifetimeChange): { state: GameState; error: string | null } {
@@ -15,18 +15,22 @@ export function changeLifetime(state: GameState, change: LifetimeChange): { stat
   let updated: LifetimeCounter
   if (change.type === 'save') {
     const title = change.title.trim(), description = change.description.trim()
+    const startingDescription = (change.startingDescription ?? counter?.startingDescription ?? '').trim()
+    if (startingDescription.length > 2000) return fail('Keep the starting-total description under 2,000 characters.')
     if (!title || title.length > 100) return fail('Use a name between 1 and 100 characters.')
     if (description.length > 2000) return fail('Keep the description under 2,000 characters.')
     if (!validNumber(change.startingTotal)) return fail('Starting total must be a whole number from 0 to 1,000,000,000.')
     if (change.id && !counter) return fail('This counter is no longer available.')
     if (!counter && counters.length >= 200) return fail('You can create up to 200 counters.')
-    updated = { ...(counter ?? { id: crypto.randomUUID(), createdDate: state.currentDate, entries: [] }), title, description, startingTotal: change.startingTotal }
+    updated = { ...(counter ?? { id: crypto.randomUUID(), createdDate: state.currentDate, entries: [] }), title, description, startingTotal: change.startingTotal, startingDescription }
   } else {
     if (!counter) return fail('This counter is no longer available.')
     if (change.type === 'record') {
+      const note = (change.note ?? '').trim()
+      if (note.length > 2000) return fail('Keep the event note under 2,000 characters.')
       if (!validDate(change.date) || change.date > state.currentDate) return fail('Choose a valid date no later than today.')
       if (change.entryId && counter.entries.some(entry => entry.id === change.entryId)) return { state, error: null }
-      updated = { ...counter, entries: [...counter.entries, { id: change.entryId ?? crypto.randomUUID(), date: change.date, amount: 1 }] }
+      updated = { ...counter, entries: [...counter.entries, { id: change.entryId ?? crypto.randomUUID(), date: change.date, amount: 1, note }] }
     } else {
       updated = { ...counter, entries: counter.entries.filter(entry => entry.id !== change.entryId) }
     }

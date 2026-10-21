@@ -1,4 +1,7 @@
 .lifetime-page{color:var(--rhythm-ink,#f5eddd)}
+.lifetime-record-actions{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:20px}
+.lifetime-entry-context{flex:1;min-width:0;overflow-wrap:anywhere}
+.lifetime-entry-context .lifetime-description{margin-top:6px}
 .lifetime-page>header,.lifetime-page>main,.lifetime-page>.lifetime-subtitle{position:relative;z-index:1}
 .lifetime-dialog h3{margin-top:22px;font-weight:500}
 .lifetime-subtitle,.lifetime-empty p{color:var(--rhythm-muted,#b7b1ab);font-size:13px;line-height:1.7;margin:10px 0 20px}

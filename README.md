@@ -17,6 +17,9 @@ Active. The existing deployments remain unchanged:
 - Daily habits with once-per-day, count and rating records.
 - Ledger and Rhythm history, categories, and mood charts.
 - Someday aspirations and editable lifetime counters.
+- Lifetime occurrences support optional event notes (up to 2,000 characters).
+  Existing starting totals can have a separate editable description for earlier,
+  undated occurrences. Notes do not change counts or create historical dates.
 - Separate Hana and Cramble experiences and installable PWA support.
 
 ## Quick start
