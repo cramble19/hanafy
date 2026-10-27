@@ -2,6 +2,16 @@
 .lifetime-record-actions{display:flex;justify-content:flex-end;align-items:center;gap:16px;margin-top:20px}
 .lifetime-entry-context{flex:1;min-width:0;overflow-wrap:anywhere}
 .lifetime-entry-context .lifetime-description{margin-top:6px}
+.add-habit-dialog.lifetime-dialog{padding:0;max-height:calc(100dvh - 2rem);overflow:hidden;border:1px solid #ffffff20;border-radius:24px;background:#24252e;color:#f5eddd;box-shadow:0 20px 50px #0005}
+.lifetime-dialog[open]{display:flex;flex-direction:column}
+.lifetime-dialog .lifetime-dialog-heading{flex-shrink:0;margin:0;padding:16px 20px;border-bottom:1px solid #ffffff16}
+.lifetime-dialog-heading h2{min-width:0}
+.lifetime-dialog-heading button{flex-shrink:0}
+.lifetime-dialog-body{min-height:0;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;padding:16px 20px 24px;scrollbar-color:#706779 #24252e}
+.lifetime-dialog-body:focus-visible{outline:2px solid #dfbc77;outline-offset:-3px}
+.lifetime-dialog .lifetime-history li{display:block;padding:14px 0}
+.lifetime-entry-actions,.lifetime-entry-actions>span{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px}
+.lifetime-dialog textarea{resize:vertical;max-height:40dvh;overflow-y:auto}
 .lifetime-page>header,.lifetime-page>main,.lifetime-page>.lifetime-subtitle{position:relative;z-index:1}
 .lifetime-dialog h3{margin-top:22px;font-weight:500}
 .lifetime-subtitle,.lifetime-empty p{color:var(--rhythm-muted,#b7b1ab);font-size:13px;line-height:1.7;margin:10px 0 20px}

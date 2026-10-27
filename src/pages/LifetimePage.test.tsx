@@ -3,6 +3,29 @@ import { describe, expect, it, vi } from 'vitest'
 import { CounterDialog, LifetimePage } from './LifetimePage'
 
 describe('Lifetime quiet glass cards', () => {
+  it('keeps full long descriptions and later records inside a keyboard-scrollable body without changing data', () => {
+    const note = 'A long dream with every detail preserved.\n'.repeat(45)
+    const counter = { id: 'dream', title: 'Dream', description: note, startingTotal: 3, startingDescription: note, createdDate: '2026-01-01', entries: [
+      { id: 'one', date: '2026-10-27', amount: 1, note },
+      { id: 'two', date: '2026-10-26', amount: 1, note: 'Second dream remains readable.' },
+    ] }
+    const before = JSON.stringify(counter)
+    const onChange = vi.fn()
+    const html = renderToStaticMarkup(<CounterDialog counter={counter} today="2026-10-27" onChange={onChange} onClose={vi.fn()} />)
+    expect(html).toContain('class="lifetime-dialog-body" role="region" aria-label="Counter content" tabindex="0"')
+    expect(html.indexOf('Close counter')).toBeLessThan(html.indexOf('lifetime-dialog-body'))
+    expect(html.split(note)).toHaveLength(5) // description, baseline, note and accessible edit label
+    expect(html).toContain('Second dream remains readable.')
+    expect(html).toContain('5<small>times')
+    expect(html).toContain('lifetime-entry-actions')
+    expect(JSON.stringify(counter)).toBe(before)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+  it('uses the same scroll region for the add-counter form', () => {
+    const html = renderToStaticMarkup(<CounterDialog today="2026-10-27" onChange={vi.fn()} onClose={vi.fn()} />)
+    expect(html.indexOf('lifetime-dialog-body')).toBeLessThan(html.indexOf('<form'))
+    expect(html).toContain('Save counter')
+  })
   it('shows an optional event note and explicit save without recording on render', () => {
     const onChange = vi.fn()
     const html = renderToStaticMarkup(<CounterDialog today="2026-10-21" onChange={onChange} onClose={vi.fn()} initialRecording counter={{ id: 'one', title: 'Books', description: '', startingTotal: 12, createdDate: '2026-01-01', entries: [] }} />)

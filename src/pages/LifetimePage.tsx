@@ -40,6 +40,7 @@ export function LifetimePage({ counters, today, onChange }: Props) {
 
 export function CounterDialog({ counter, today, onChange, onClose, initialRecording = false, onRecorded }: { counter?: LifetimeCounter; today: string; onChange: Props['onChange']; onClose: () => void; initialRecording?: boolean; onRecorded?: (id: string, entryId: string) => void }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(!counter)
   const [recording, setRecording] = useState(initialRecording)
   const [note, setNote] = useState('')
@@ -53,6 +54,9 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
   const [error, setError] = useState<string | null>(null)
   const [removeId, setRemoveId] = useState<string | null>(null)
   useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0
+  }, [editing, recording, editingEntryId])
+  useEffect(() => {
     const opener = document.activeElement as HTMLElement | null
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -61,6 +65,7 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
   }, [])
   return <dialog ref={ref} className="add-habit-dialog add-habit-dialog-cramble lifetime-dialog" aria-label={counter ? 'Counter details' : 'Add counter'} onCancel={onClose}>
     <div className="lifetime-dialog-heading"><h2>{recording ? editingEntryId ? 'Edit entry' : 'Record occurrence' : editing ? counter ? 'Edit counter' : 'Add counter' : counter?.title}</h2><button type="button" aria-label="Close counter" onClick={onClose}><X /></button></div>
+    <div ref={bodyRef} className="lifetime-dialog-body" role="region" aria-label="Counter content" tabIndex={0}>
     {recording && counter ? <form onSubmit={event => {
       event.preventDefault()
       const result = onChange(editingEntryId ? { type: 'edit-entry', id: counter.id, date, note, entryId: editingEntryId } : { type: 'record', id: counter.id, date, note, entryId: entryId.current })
@@ -89,10 +94,12 @@ export function CounterDialog({ counter, today, onChange, onClose, initialRecord
       {counter.startingDescription && <p className="lifetime-description">{counter.startingDescription}</p>}
       <ul className="lifetime-history">{[...counter.entries].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <li key={entry.id}>
         <div className="lifetime-entry-context"><span>{new Date(entry.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · +{entry.amount}</span>{entry.note && <p className="lifetime-description">{entry.note}</p>}</div>
-        <button type="button" className="lifetime-text-button" aria-label={`Edit record from ${entry.date}${entry.note ? `: ${entry.note}` : ''}`} onClick={() => { setEditingEntryId(entry.id); setDate(entry.date); setNote(entry.note ?? ''); setRecording(true); setRemoveId(null); setError(null) }}>Edit</button>
+        <div className="lifetime-entry-actions"><button type="button" className="lifetime-text-button" aria-label={`Edit record from ${entry.date}${entry.note ? `: ${entry.note}` : ''}`} onClick={() => { setEditingEntryId(entry.id); setDate(entry.date); setNote(entry.note ?? ''); setRecording(true); setRemoveId(null); setError(null) }}>Edit</button>
         {removeId === entry.id ? <span><button className="lifetime-text-button" onClick={() => { setError(onChange({ type: 'undo', id: counter.id, entryId: entry.id })); setRemoveId(null) }}>Confirm removal</button><button className="lifetime-text-button" onClick={() => setRemoveId(null)}>Cancel</button></span> : <button className="lifetime-text-button" aria-label={`Remove record from ${entry.date}`} onClick={() => setRemoveId(entry.id)}>Remove</button>}
+        </div>
       </li>)}</ul>
     </>}
     {error && <p role="alert">{error}</p>}
+    </div>
   </dialog>
 }
